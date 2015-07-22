@@ -1,0 +1,8 @@
+*.opensdf
+*.sdf
+*.suo
+*.filters
+*.obj
+*.exe
+*.dll
+x64/
