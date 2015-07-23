@@ -1,0 +1,3 @@
+[submodule "deps"]
+	path = deps
+	url = https://alexbudmisc.visualstudio.com/DefaultCollection/tools/_git/dbgscript_deps

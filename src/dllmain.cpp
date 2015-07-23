@@ -1,4 +1,8 @@
-#include <windows.h>
+#pragma warning(push)
+#pragma warning(disable: 4510 4512 4610 4100)
+#include <ruby.h>
+#pragma warning(pop)
+
 #include <dbgeng.h>
 
 #define DLLEXPORT extern "C" __declspec(dllexport)
