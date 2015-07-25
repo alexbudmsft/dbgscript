@@ -3,14 +3,14 @@
 // Later: #include "rubyscriptprovider.h"
 //
 
+// TODO: Every provider will expose a factor method to create itself.
+// All installed providers will be created on DLL load. Appropriate one is then
+// invoked based on file extension claims.
+//
 IScriptProvider*
-CreateScriptProvider(
-	_In_z_ const char* scriptName)
+CreateScriptProvider()
 {
-	// TODO: check file extension.
-	//
-
-	IScriptProvider* prov = new CPythonScriptProvider(scriptName);
+	IScriptProvider* prov = new CPythonScriptProvider();
 
 	return prov;
 }

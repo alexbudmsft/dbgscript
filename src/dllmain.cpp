@@ -51,6 +51,25 @@ DLLEXPORT HRESULT DebugExtensionInitialize(
 		goto exit;
 	}
 
+	// TODO: Initialize all registered script providers.
+	//
+
+	// For now we only have one.
+	//
+	g_DllGlobals.ScriptProvider = CreateScriptProvider();
+	if (!g_DllGlobals.ScriptProvider)
+	{
+		// Handle error.
+		//
+		hr = E_FAIL;
+		goto exit;
+	}
+
+	hr = g_DllGlobals.ScriptProvider->Init();
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
 exit:
 	// Here all the registered engines should be initialized.
 	//
@@ -62,6 +81,12 @@ exit:
 DLLEXPORT void CALLBACK 
 DebugExtensionUninitialize()
 {
+	if (g_DllGlobals.ScriptProvider)
+	{
+		g_DllGlobals.ScriptProvider->Cleanup();
+		g_DllGlobals.ScriptProvider = nullptr;
+	}
+
 	if (g_DllGlobals.DebugControl)
 	{
 		g_DllGlobals.DebugControl->Release();
@@ -109,7 +134,6 @@ runscript(
 	_In_opt_ PCSTR         args)
 {
 	HRESULT hr = S_OK;
-	IScriptProvider* prov = nullptr;
 
 	hr = GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "Executing script '%s'\n", args);
 	if (FAILED(hr))
@@ -120,37 +144,18 @@ runscript(
 
 	// We should examine the extension of the script and walk the list
 	// of registered providers to find the first one that claims the extension.
+	// For now, we only have one provider.
 	//
-
-	prov = CreateScriptProvider(scriptName);
-	if (!prov)
-	{
-		// Handle error.
-		//
-		hr = E_FAIL;
-		goto exit;
-	}
-
-	hr = prov->Init();
+	hr = GetDllGlobals()->ScriptProvider->Run(scriptName);
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
-
-	// TODO: Have a run method.
-	//
-
 exit:
 	if (FAILED(hr))
 	{
 		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
 	}
-	if (prov)
-	{
-		prov->Cleanup();
-		prov = nullptr;
-	}
-
 	return hr;
 }
 

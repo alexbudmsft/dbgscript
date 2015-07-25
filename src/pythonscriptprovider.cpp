@@ -113,16 +113,13 @@ static void redirectStdOut()
 	PySys_SetObject("stderr", g_dbgScriptOut);
 }
 
-CPythonScriptProvider::CPythonScriptProvider(
-	_In_z_ const char* scriptName) :
-	m_ScriptName(scriptName)
+CPythonScriptProvider::CPythonScriptProvider()
 {}
 
 _Check_return_ HRESULT
 CPythonScriptProvider::Init()
 {
 	HRESULT hr = S_OK;
-	FILE* fp = nullptr;
 	PyImport_AppendInittab(x_ModuleName, PyInit_dbgscript);
 
 	// Can optionally use Py_SetPythonHome to point to a place where the python
@@ -135,18 +132,33 @@ CPythonScriptProvider::Init()
 	//
 	PyImport_ImportModule(x_ModuleName);
 	redirectStdOut();
+	return hr;
+}
 
-	fp = fopen(m_ScriptName, "r");
+_Check_return_ HRESULT
+CPythonScriptProvider::Run(
+	_In_z_ const char* scriptName)
+{
+	HRESULT hr = S_OK;
+	FILE* fp = nullptr;
+	fp = fopen(scriptName, "r");
 	if (!fp)
 	{
 		ULONG err = 0;
 		_get_doserrno(&err);
-		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Failed to open file '%s'. Error %d (%s).\n", m_ScriptName, err, strerror(errno));
+
+		GetDllGlobals()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Failed to open file '%s'. Error %d (%s).\n",
+			scriptName,
+			err,
+			strerror(errno));
+
 		hr = HRESULT_FROM_WIN32(err);
 		goto exit;
 	}
 
-	PyRun_SimpleFile(fp, m_ScriptName);
+	PyRun_SimpleFile(fp, scriptName);
 
 exit:
 	if (fp)
