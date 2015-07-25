@@ -18,3 +18,6 @@ firstThread = threads[0]
 print (firstThread.engine_id, firstThread.thread_id, hex(firstThread.teb))
 
 print (type(firstThread.teb)) # --> int
+
+
+# del threads[0].thread_id # Fails: readonly attribute

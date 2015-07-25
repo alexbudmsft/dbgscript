@@ -28,8 +28,6 @@ static PyTypeObject ThreadType =
 	sizeof(ThreadObj)       /* tp_basicsize */
 };
 
-static PyObject* g_Thread;
-
 static PyObject*
 Thread_get_teb(
 	_In_ PyObject* /* self */,
