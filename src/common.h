@@ -11,6 +11,7 @@ struct DllGlobals
 	HINSTANCE HModule;
 	IDebugClient* DebugClient;
 	IDebugControl* DebugControl;
+	IDebugSystemObjects* DebugSysObj;
 
 	// FUTURE: This will be a list of all script providers.
 	//
