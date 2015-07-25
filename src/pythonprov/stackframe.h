@@ -8,4 +8,5 @@ InitStackFrameType();
 
 _Check_return_ PyObject*
 AllocStackFrameObj(
-	_In_ ULONG frameNum);
+	_In_ ULONG frameNum,
+	_In_ UINT64 instructionOffset);

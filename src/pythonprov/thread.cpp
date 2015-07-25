@@ -1,4 +1,5 @@
 #include "thread.h"
+#include "stackframe.h"
 #include <structmember.h>
 
 struct ThreadObj
@@ -60,6 +61,105 @@ Thread_set_teb(PyObject* /* self */, PyObject* /* value */, void* /* closure */)
 	return -1;
 }
 
+class CAutoSwitchThread
+{
+public:
+	CAutoSwitchThread(
+		_In_ ULONG newEngineThreadId);
+	~CAutoSwitchThread();
+private:
+	ULONG m_PrevThreadId;
+};
+
+CAutoSwitchThread::CAutoSwitchThread(
+	_In_ ULONG newEngineThreadId)
+{
+	// Get current thread id.
+	//
+	IDebugSystemObjects* sysObj = GetDllGlobals()->DebugSysObj;
+	HRESULT hr = sysObj->GetCurrentThreadId(&m_PrevThreadId);
+	assert(SUCCEEDED(hr));
+
+	hr = sysObj->SetCurrentThreadId(newEngineThreadId);
+	assert(SUCCEEDED(hr));
+}
+
+CAutoSwitchThread::~CAutoSwitchThread()
+{
+	// Revert to previous thread.
+	//
+	HRESULT hr = GetDllGlobals()->DebugSysObj->SetCurrentThreadId(m_PrevThreadId);
+	assert(SUCCEEDED(hr));
+}
+
+static PyObject*
+Thread_get_stack(
+	_In_ PyObject* self,
+	_In_ PyObject* /* args */)
+{
+	// TODO: The bulk of this code is not Python-specific. Factor it out when
+	// implementing Ruby provider.
+
+	ThreadObj* thd = (ThreadObj*)self;
+	HRESULT hr = S_OK;
+
+	PyObject* tuple = nullptr;
+
+	DEBUG_STACK_FRAME frames[512];
+	ULONG framesFilled = 0;
+
+	{
+		// Need to switch thread context to 'this' thread, capture stack, then
+		// switch back.
+		//
+		CAutoSwitchThread autoSwitchThd(thd->EngineId);
+
+		hr = GetDllGlobals()->DebugControl->GetStackTrace(
+			0, 0, 0, frames, _countof(frames), &framesFilled);
+		if (FAILED(hr))
+		{
+			PyErr_Format(PyExc_OSError, "Failed to get stacktrace. Error 0x%08x.", hr);
+			goto exit;
+		}
+	}
+
+	assert(framesFilled > 0);
+
+	tuple = PyTuple_New(framesFilled);
+
+	// Build a tuple of Thread objects.
+	//
+	for (ULONG i = 0; i < framesFilled; ++i)
+	{
+		PyObject* frame = AllocStackFrameObj(i, frames[i].InstructionOffset);
+		if (!frame)
+		{
+			// Exception has already been setup by callee.
+			//
+			hr = E_OUTOFMEMORY;
+			goto exit;
+		}
+		if (PyTuple_SetItem(tuple, i, frame) != 0)
+		{
+			// Failed to set the item. Do not decref it. PyTuple_SetItem does
+			// it internally.
+			//
+			hr = E_OUTOFMEMORY;
+			goto exit;
+		}
+	}
+
+exit:
+	if (FAILED(hr))
+	{
+		// Release the tuple. This will release any held object inside the tuple.
+		//
+		Py_DECREF(tuple);
+		tuple = nullptr;
+	}
+	return tuple;
+}
+
 static PyGetSetDef Thread_GetSetDef[] =
 {
 	{
@@ -72,6 +172,17 @@ static PyGetSetDef Thread_GetSetDef[] =
 	{ NULL }  /* Sentinel */
 };
 
+static PyMethodDef Thread_MethodDef[] =
+{
+	{
+		"get_stack",
+		Thread_get_stack,
+		METH_NOARGS,
+		PyDoc_STR("Return the callstack as a tuple of StackFrame objects.")
+	},
+	{ NULL }  /* Sentinel */
+};
+
 _Check_return_ bool
 InitThreadType()
 {
@@ -79,6 +190,7 @@ InitThreadType()
 	ThreadType.tp_doc = PyDoc_STR("dbgscript.Thread objects");
 	ThreadType.tp_getset = Thread_GetSetDef;
 	ThreadType.tp_members = Thread_MemberDef;
+	ThreadType.tp_methods = Thread_MethodDef;
 	ThreadType.tp_new = PyType_GenericNew;
 
 	// Finalize the type definition.

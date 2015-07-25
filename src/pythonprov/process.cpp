@@ -89,7 +89,8 @@ exit:
 	return tuple;
 }
 
-static PyMethodDef Process_MethodDef[] = {
+static PyMethodDef Process_MethodDef[] = 
+{
 	{
 		"get_threads",
 		Process_get_threads,

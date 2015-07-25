@@ -8,11 +8,16 @@ struct StackFrameObj
 	// Frame Number.
 	//
 	ULONG FrameNumber;
+
+	// See DEBUG_STACK_FRAME::InstructionOffset.
+	//
+	UINT64 InstructionOffset;
 };
 
 static PyMemberDef StackFrame_MemberDef[] =
 {
 	{ "frame_number", T_ULONG, offsetof(StackFrameObj, FrameNumber), READONLY },
+	{ "instruction_offset", T_ULONGLONG, offsetof(StackFrameObj, InstructionOffset), READONLY },
 	{ NULL }
 };
 
@@ -42,7 +47,8 @@ InitStackFrameType()
 
 _Check_return_ PyObject*
 AllocStackFrameObj(
-	_In_ ULONG frameNum)
+	_In_ ULONG frameNum,
+	_In_ UINT64 instructionOffset)
 {
 	PyObject* obj = nullptr;
 
@@ -60,6 +66,7 @@ AllocStackFrameObj(
 	//
 	StackFrameObj* stackFrame = (StackFrameObj*)obj;
 	stackFrame->FrameNumber = frameNum;
+	stackFrame->InstructionOffset = instructionOffset;
 
 	return obj;
 }
