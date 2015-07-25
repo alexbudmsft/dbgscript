@@ -25,7 +25,7 @@ static PyMemberDef Thread_MemberDef [] =
 static PyTypeObject ThreadType =
 {
 	PyVarObject_HEAD_INIT(0, 0)
-	"dbgscript.ThreadType",     /* tp_name */
+	"dbgscript.Thread",     /* tp_name */
 	sizeof(ThreadObj)       /* tp_basicsize */
 };
 

@@ -9,7 +9,7 @@ struct ProcessObj
 static PyTypeObject ProcessType =
 {
 	PyVarObject_HEAD_INIT(0, 0)
-	"dbgscript.ProcessType",     /* tp_name */
+	"dbgscript.Process",     /* tp_name */
 	sizeof(ProcessObj)           /* tp_basicsize */
 };
 

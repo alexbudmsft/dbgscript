@@ -24,7 +24,7 @@ static PyMemberDef StackFrame_MemberDef[] =
 static PyTypeObject StackFrameType =
 {
 	PyVarObject_HEAD_INIT(0, 0)
-	"dbgscript.StackFrameType",     /* tp_name */
+	"dbgscript.StackFrame",     /* tp_name */
 	sizeof(StackFrameObj)       /* tp_basicsize */
 };
 

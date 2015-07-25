@@ -38,7 +38,7 @@ static PyMethodDef StackFrame_MethodDef[] =
 static PyTypeObject DbgScriptOutType =
 {
 	PyVarObject_HEAD_INIT(0, 0)
-	"dbgscript.DbgScriptOutType",     /* tp_name */
+	"dbgscript.DbgScriptOut",     /* tp_name */
 	sizeof(DbgScriptOutObj)			/* tp_basicsize */
 };
 
