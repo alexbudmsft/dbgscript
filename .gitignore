@@ -7,3 +7,4 @@
 *.exe
 *.dll
 x64/
+deploy/
