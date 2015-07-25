@@ -33,6 +33,12 @@
     <ClCompile Include="..\src\rubyprov\rubyscriptprovider.cpp">
       <Filter>Source Files\RubyProv</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pythonprov\thread.cpp">
+      <Filter>Source Files\PythonProv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pythonprov\process.cpp">
+      <Filter>Source Files\PythonProv</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\iscriptprovider.h">
@@ -42,6 +48,12 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\pythonprov\pythonscriptprovider.h">
+      <Filter>Source Files\PythonProv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\pythonprov\thread.h">
+      <Filter>Source Files\PythonProv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\pythonprov\process.h">
       <Filter>Source Files\PythonProv</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,7 +1,8 @@
 #include <python.h>
 #include "../../include/iscriptprovider.h"
 #include "pythonscriptprovider.h"
-#include "../common.h"
+#include "process.h"
+#include "thread.h"
 
 static const char* x_ModuleName = "dbgscript";
 
@@ -10,13 +11,7 @@ struct DbgScriptOut
 	PyObject_HEAD
 };
 
-struct ThreadObj
-{
-	PyObject_HEAD
-};
-
 PyObject* g_DbgScriptOut;
-PyObject* g_Thread;
 
 PyObject* 
 DbgScriptOut_write(PyObject* /* self */, PyObject* args)
@@ -32,50 +27,6 @@ DbgScriptOut_write(PyObject* /* self */, PyObject* args)
 	GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "%s", data);
 	return PyLong_FromSize_t(len);
 }
-
-static PyObject*
-Thread_get_teb(
-	_In_ PyObject* /* self */,
-	_In_opt_ void* /* closure */)
-{
-	PyObject* ret = nullptr;
-
-	// Get TEB from debug client.
-	//
-	UINT64 teb = 0;
-	HRESULT hr = GetDllGlobals()->DebugSysObj->GetCurrentThreadTeb(&teb);
-	if (FAILED(hr))
-	{
-		PyErr_Format(PyExc_OSError, "Failed to get TEB. Error 0x%08x.", hr);
-		goto exit;
-	}
-
-	ret = PyLong_FromUnsignedLongLong(teb);
-
-exit:
-	return ret;
-}
-
-// Attribute is read-only.
-//
-static int
-Thread_set_teb(PyObject* /* self */, PyObject* /* value */, void* /* closure */)
-{
-	PyErr_SetString(PyExc_AttributeError, "readonly attribute");
-	return -1;
-}
-
-static PyGetSetDef Thread_GetSetDef[] = 
-{
-	{
-		"teb",
-		Thread_get_teb,
-		Thread_set_teb,
-		"first name",
-		NULL
-	},
-	{ NULL }  /* Sentinel */
-};
 
 PyObject* DbgScriptOut_flush(PyObject* /*self*/, PyObject* /*args*/)
 {
@@ -98,13 +49,6 @@ static PyTypeObject DbgScriptOutType =
 	sizeof(DbgScriptOut)       /* tp_basicsize */
 };
 
-static PyTypeObject ThreadType =
-{
-	PyVarObject_HEAD_INIT(0, 0)
-	"dbgscript.ThreadType",     /* tp_name */
-	sizeof(ThreadObj)       /* tp_basicsize */
-};
-
 // DbgScript Module Definition.
 //
 PyModuleDef g_ModuleDef =
@@ -123,15 +67,6 @@ initDbgScriptOutType()
 	DbgScriptOutType.tp_doc = PyDoc_STR("dbgscript.DbgScriptOut objects");
 	DbgScriptOutType.tp_methods = g_DbgOutMethodsDef;
 	DbgScriptOutType.tp_new = PyType_GenericNew;
-}
-
-static void
-initThreadType()
-{
-	ThreadType.tp_flags = Py_TPFLAGS_DEFAULT;
-	ThreadType.tp_doc = PyDoc_STR("dbgscript.Thread objects");
-	ThreadType.tp_getset = Thread_GetSetDef;
-	ThreadType.tp_new = PyType_GenericNew;
 }
 
 
@@ -159,21 +94,12 @@ PyInit_dbgscript()
 		return nullptr;
 	}
 
-	initThreadType();
-
-	// Finalize the type definition.
-	//
-	if (PyType_Ready(&ThreadType) < 0)
+	if (!InitThreadType())
 	{
 		return nullptr;
 	}
 
-	// Alloc a single instance of the DbgScriptOutType object. (Calls __new__())
-	// If the allocation fails, the allocator will set the appropriate exception
-	// internally. (i.e. OOM)
-	//
-	g_Thread = ThreadType.tp_new(&ThreadType, nullptr, nullptr);
-	if (!g_Thread)
+	if (!InitProcessType())
 	{
 		return nullptr;
 	}
@@ -186,8 +112,14 @@ PyInit_dbgscript()
 		return nullptr;
 	}
 
-	Py_INCREF(g_Thread);
-	PyModule_AddObject(module, "Thread", g_Thread);
+	static PyObject* s_ProcessObj = AllocProcessObj();
+	if (!s_ProcessObj)
+	{
+		return nullptr;
+	}
+
+	Py_INCREF(s_ProcessObj);
+	PyModule_AddObject(module, "Process", s_ProcessObj);
 
 	return module;
 }

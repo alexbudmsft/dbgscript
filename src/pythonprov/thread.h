@@ -1,0 +1,12 @@
+#pragma once
+
+#include "../common.h"
+#include <python.h>
+
+_Check_return_ bool
+InitThreadType();
+
+_Check_return_ PyObject*
+AllocThreadObj(
+	_In_ ULONG engineId,
+	_In_ ULONG threadId);
