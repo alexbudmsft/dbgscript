@@ -121,11 +121,20 @@ CPythonScriptProvider::Init()
 {
 	HRESULT hr = S_OK;
 	PyImport_AppendInittab(x_ModuleName, PyInit_dbgscript);
+	WCHAR dllPath[MAX_PATH] = {};
+	GetModuleFileName(GetDllGlobals()->HModule, dllPath, _countof(dllPath));
+	WCHAR* lastBackSlash = wcsrchr(dllPath, L'\\');
+	assert(lastBackSlash);
 
-	// Can optionally use Py_SetPythonHome to point to a place where the python
-	// standard lib is deployed/installed. Use GetModuleFileName of the DLL
-	// as the path so that we can deploy the Lib\ beside our DLL, not windbg.exe.
+	// Null out the slash to get only the directory path of the DLL.
 	//
+	*lastBackSlash = 0;
+
+	// Set the PythonHome so that the standard libs are found beside the DLL.
+	// (Lib\)
+	//
+	Py_SetPythonHome(dllPath);
+
 	Py_Initialize();
 
 	// Import 'dbgscript' module.

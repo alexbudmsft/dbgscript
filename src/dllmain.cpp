@@ -10,13 +10,16 @@ GetDllGlobals()
 }
 
 BOOL WINAPI DllMain(
-	_In_ HINSTANCE /* hinstDLL */,
+	_In_ HINSTANCE hinstDLL,
 	_In_ DWORD     fdwReason,
 	_In_ LPVOID    /* lpvReserved */)
 {
 	switch (fdwReason)
 	{
 	case DLL_PROCESS_ATTACH:
+		g_DllGlobals.HModule = hinstDLL;
+		break;
+
 	case DLL_PROCESS_DETACH:
 	case DLL_THREAD_ATTACH:
 	case DLL_THREAD_DETACH:
@@ -135,7 +138,10 @@ runscript(
 {
 	HRESULT hr = S_OK;
 
-	hr = GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "Executing script '%s'\n", args);
+	hr = GetDllGlobals()->DebugControl->Output(
+		DEBUG_OUTPUT_NORMAL,
+		"Executing script '%s'\n"
+		"-----------------------------------------------\n", args);
 	if (FAILED(hr))
 	{
 		goto exit;
