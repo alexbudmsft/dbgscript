@@ -2,7 +2,6 @@
 *.sdf
 *.user
 *.suo
-*.filters
 *.obj
 *.exe
 *.dll

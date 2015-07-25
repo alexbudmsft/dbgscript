@@ -116,8 +116,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\dllmain.cpp" />
-    <ClCompile Include="..\src\pythonscriptprovider.cpp" />
-    <ClCompile Include="..\src\rubyscriptprovider.cpp">
+    <ClCompile Include="..\src\pythonprov\pythonscriptprovider.cpp" />
+    <ClCompile Include="..\src\rubyprov\rubyscriptprovider.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -128,7 +128,7 @@
   <ItemGroup>
     <ClInclude Include="..\include\iscriptprovider.h" />
     <ClInclude Include="..\src\common.h" />
-    <ClInclude Include="..\src\pythonscriptprovider.h" />
+    <ClInclude Include="..\src\pythonprov\pythonscriptprovider.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

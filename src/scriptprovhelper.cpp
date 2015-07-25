@@ -1,5 +1,5 @@
 #include "../include/iscriptprovider.h"
-#include "pythonscriptprovider.h"
+#include "pythonprov/pythonscriptprovider.h"
 // Later: #include "rubyscriptprovider.h"
 //
 

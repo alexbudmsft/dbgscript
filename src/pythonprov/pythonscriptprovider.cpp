@@ -1,7 +1,7 @@
 #include <python.h>
-#include "../include/iscriptprovider.h"
+#include "../../include/iscriptprovider.h"
 #include "pythonscriptprovider.h"
-#include "common.h"
+#include "../common.h"
 
 static const char* x_ModuleName = "dbgscript";
 
