@@ -75,6 +75,22 @@ DebugExtensionUninitialize()
 	}
 }
 
+WCHAR*
+ConvertAnsiToWide(_In_z_ const char* ansiStr)
+{
+	const int cchBuf = MultiByteToWideChar(CP_ACP, 0, ansiStr, -1, nullptr, 0);
+	WCHAR* wideBuf = new WCHAR[cchBuf];
+	int ret = MultiByteToWideChar(CP_ACP, 0, ansiStr, -1, wideBuf, cchBuf);
+	if (ret > 0)
+	{
+		return wideBuf;
+	}
+	else
+	{
+		return nullptr;
+	}
+}
+
 // TODO: Use script provider based on file extension.
 // Later, allow ini file for registration of script provider DLLs with mapping from extension to DLL.
 // Or maybe have a callback in each DLL that says which file extensions it supports.
@@ -87,30 +103,26 @@ DebugExtensionUninitialize()
 //
 // We have to do the tokenization ourselves.
 //
-DLLEXPORT HRESULT CALLBACK runscript(
+DLLEXPORT HRESULT CALLBACK
+runscript(
 	_In_     IDebugClient* /*client*/,
 	_In_opt_ PCSTR         args)
 {
-	//IDebugControl *dbgCtrl = nullptr;
-	//HRESULT hr = client->QueryInterface(__uuidof(IDebugControl), (void**)&dbgCtrl);
 	HRESULT hr = S_OK;
 	IScriptProvider* prov = nullptr;
 
-	hr = GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "%s\n", args);
+	hr = GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "Executing script '%s'\n", args);
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
-
 	const char* scriptName = args;
-
-	scriptName; // TODO convert to wide string.
 
 	// We should examine the extension of the script and walk the list
 	// of registered providers to find the first one that claims the extension.
 	//
 
-	prov = CreateScriptProvider(L"aaa");
+	prov = CreateScriptProvider(scriptName);
 	if (!prov)
 	{
 		// Handle error.
@@ -125,7 +137,14 @@ DLLEXPORT HRESULT CALLBACK runscript(
 		goto exit;
 	}
 
+	// TODO: Have a run method.
+	//
+
 exit:
+	if (FAILED(hr))
+	{
+		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
+	}
 	if (prov)
 	{
 		prov->Cleanup();

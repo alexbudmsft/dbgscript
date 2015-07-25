@@ -4,7 +4,7 @@
 class CPythonScriptProvider : public IScriptProvider
 {
 public:
-	CPythonScriptProvider(_In_z_ const WCHAR* scriptName);
+	CPythonScriptProvider(_In_z_ const char* scriptName);
 
 	_Check_return_ HRESULT
 	Init() override;
@@ -13,5 +13,5 @@ public:
 	Cleanup() override;
 
 private:
-	const WCHAR* m_ScriptName;
+	const char* m_ScriptName;
 };

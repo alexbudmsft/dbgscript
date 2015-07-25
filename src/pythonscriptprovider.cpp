@@ -24,8 +24,6 @@ PyObject* DbgScriptOut_write(PyObject* self, PyObject* args)
 
 	const size_t len = strlen(data);
 
-	// TODO: Write to debugger stream.
-	//
 	selfimpl->DbgCtrl->Output(DEBUG_OUTPUT_NORMAL, "%s", data);
 	return PyLong_FromSize_t(len);
 }
@@ -116,7 +114,7 @@ static void redirectStdOut()
 }
 
 CPythonScriptProvider::CPythonScriptProvider(
-	_In_z_ const WCHAR* scriptName) :
+	_In_z_ const char* scriptName) :
 	m_ScriptName(scriptName)
 {}
 
@@ -124,9 +122,8 @@ _Check_return_ HRESULT
 CPythonScriptProvider::Init()
 {
 	HRESULT hr = S_OK;
+	FILE* fp = nullptr;
 	PyImport_AppendInittab(x_ModuleName, PyInit_dbgscript);
-
-	Py_SetProgramName(const_cast<WCHAR*>(m_ScriptName));  /* optional but recommended */
 
 	// Can optionally use Py_SetPythonHome to point to a place where the python
 	// standard lib is deployed/installed. Use GetModuleFileName of the DLL
@@ -138,11 +135,25 @@ CPythonScriptProvider::Init()
 	//
 	PyImport_ImportModule(x_ModuleName);
 	redirectStdOut();
-	// TEMP!
-	//
-	PyRun_SimpleString("from time import time,ctime\n"
-		"print('Today is', ctime(time()))\n");
 
+	fp = fopen(m_ScriptName, "r");
+	if (!fp)
+	{
+		ULONG err = 0;
+		_get_doserrno(&err);
+		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Failed to open file '%s'. Error %d (%s).\n", m_ScriptName, err, strerror(errno));
+		hr = HRESULT_FROM_WIN32(err);
+		goto exit;
+	}
+
+	PyRun_SimpleFile(fp, m_ScriptName);
+
+exit:
+	if (fp)
+	{
+		fclose(fp);
+		fp = nullptr;
+	}
 	return hr;
 }
 

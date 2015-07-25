@@ -5,7 +5,7 @@
 
 IScriptProvider*
 CreateScriptProvider(
-	_In_z_ const WCHAR* scriptName)
+	_In_z_ const char* scriptName)
 {
 	// TODO: check file extension.
 	//
