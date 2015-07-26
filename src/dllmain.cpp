@@ -300,7 +300,7 @@ runscript(
 	hr = GetDllGlobals()->DebugControl->Output(
 		DEBUG_OUTPUT_NORMAL,
 		"Executing script '%s'\n"
-		"-----------------------------------------------\n", args);
+		"-----------------------------------------------\n", scriptName);
 	if (FAILED(hr))
 	{
 		goto exit;
