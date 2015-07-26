@@ -13,6 +13,10 @@ public:
 	Run(
 		_In_z_ const char* scriptName) override;
 
+	_Check_return_ HRESULT
+	RunString(
+		_In_z_ const char* scriptString) override;
+
 	_Check_return_ void
 	Cleanup() override;
 

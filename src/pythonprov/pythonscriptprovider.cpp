@@ -163,6 +163,22 @@ exit:
 	return hr;
 }
 
+_Check_return_ HRESULT
+CPythonScriptProvider::RunString(
+	_In_z_ const char* scriptString)
+{
+	HRESULT hr = S_OK;
+
+	if (PyRun_SimpleString(scriptString) < 0)
+	{
+		hr = E_FAIL;
+		goto exit;
+	}
+
+exit:
+	return hr;
+}
+
 _Check_return_ void
 CPythonScriptProvider::Cleanup()
 {

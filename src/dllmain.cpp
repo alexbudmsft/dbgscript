@@ -191,4 +191,32 @@ exit:
 	return hr;
 }
 
+// Runs a script in a string. Currently this is hardcoded to python, but we'll
+// extend with a "language" parameter once we have other providers.
+//
+DLLEXPORT HRESULT CALLBACK
+evalstring(
+	_In_     IDebugClient* /*client*/,
+	_In_opt_ PCSTR         args)
+{
+	HRESULT hr = S_OK;
+
+	// We should examine the extension of the script and walk the list
+	// of registered providers to find the first one that claims the extension.
+	// For now, we only have one provider.
+	//
+	hr = GetDllGlobals()->ScriptProvider->RunString(args);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+exit:
+	if (FAILED(hr))
+	{
+		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
+	}
+	return hr;
+}
+
+
 
