@@ -1,5 +1,7 @@
 #include "common.h"
 #include "../include/iscriptprovider.h"
+#include <strsafe.h>
+#include <assert.h>
 
 static DllGlobals g_DllGlobals;
 
@@ -143,6 +145,105 @@ ConvertAnsiToWide(_In_z_ const char* ansiStr)
 	{
 		return nullptr;
 	}
+}
+
+_Check_return_ bool
+FileExists(
+	_In_z_ LPCSTR szPath)
+{
+	const DWORD dwAttrib = GetFileAttributesA(szPath);
+
+	return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+		!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+// comma-separated list of paths.
+//
+DLLEXPORT HRESULT CALLBACK
+scriptpath(
+	_In_     IDebugClient* /*client*/,
+	_In_opt_ PCSTR         args)
+{
+	// Deallocate the existing list.
+	//
+	ScriptPathElem* elem = nullptr;
+	ScriptPathElem* prev = nullptr;
+	const char* comma = nullptr;
+	const char* str = args;
+	HRESULT hr = S_OK;
+
+	elem = g_DllGlobals.ScriptPath;
+	while (elem)
+	{
+		ScriptPathElem* next = elem->Next;
+		delete elem;
+		elem = next;
+	}
+
+	elem = g_DllGlobals.ScriptPath = nullptr;
+
+	// Can't use semi-colon since the debugger's command parser interprets that
+	// as a new command. Use comma instead.
+	//
+	comma = strchr(str, ',');
+	while (comma)
+	{
+		int len = (int)(comma - str);
+
+		elem = new ScriptPathElem;
+		hr = StringCchCopyNA(STRING_AND_CCH(elem->Path), str, len);
+		assert(SUCCEEDED(hr));
+
+		if (!g_DllGlobals.ScriptPath)
+		{
+			// Save the head.
+			//
+			g_DllGlobals.ScriptPath = elem;
+			assert(!prev);
+		}
+		else
+		{
+			prev->Next = elem;
+		}
+
+		prev = elem;
+
+		str += len + 1;
+		comma = strchr(str, ',');
+	}
+
+	// Copy trailer.
+	//
+	elem = new ScriptPathElem;
+	StringCchCopyA(STRING_AND_CCH(elem->Path), str);
+	assert(SUCCEEDED(hr));
+
+	if (!g_DllGlobals.ScriptPath)
+	{
+		// Save the head.
+		//
+		g_DllGlobals.ScriptPath = elem;
+		assert(!prev);
+	}
+	else
+	{
+		prev->Next = elem;
+	}
+
+	elem = g_DllGlobals.ScriptPath;
+	while (elem)
+	{
+		hr = GetDllGlobals()->DebugControl->Output(
+			DEBUG_OUTPUT_NORMAL,
+			"Script path: '%s'\n", elem->Path);
+		if (FAILED(hr))
+		{
+			goto exit;
+		}
+		elem = elem->Next;
+	}
+exit:
+	return hr;
 }
 
 // TODO: Use script provider based on file extension.

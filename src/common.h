@@ -8,9 +8,23 @@
 
 struct IScriptProvider;
 
+struct ScriptPathElem
+{
+	ScriptPathElem() :
+		Next(nullptr)
+	{}
+
+	ScriptPathElem* Next;
+
+	char Path[MAX_PATH];
+};
+
 struct DllGlobals
 {
 	HINSTANCE HModule;
+
+	// DbgEng Interfaces.
+	//
 	IDebugClient* DebugClient;
 	IDebugControl* DebugControl;
 	IDebugSystemObjects* DebugSysObj;
@@ -19,8 +33,9 @@ struct DllGlobals
 	// FUTURE: This will be a list of all script providers.
 	//
 	IScriptProvider* ScriptProvider;
-};
 
+	ScriptPathElem* ScriptPath;
+};
 
 _Check_return_ DllGlobals*
 GetDllGlobals();
