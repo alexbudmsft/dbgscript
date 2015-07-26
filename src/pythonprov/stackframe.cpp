@@ -120,9 +120,13 @@ getVariablesHelper(
 	//
 	for (ULONG i = 0; i < numSym; ++i)
 	{
-		ULONG symSize = 0;
+		// TODO: Define constants for these limits.
+		//
+		char symName[256];
+		char typeName[256];
+		DEBUG_SYMBOL_ENTRY entry = { 0 };
 
-		hr = symGrp->GetSymbolSize(i, &symSize);
+		hr = symGrp->GetSymbolEntryInformation(i, &entry);
 		if (hr == E_NOINTERFACE)
 		{
 			// Sometimes variables are optimized away, which can cause this error.
@@ -131,12 +135,10 @@ getVariablesHelper(
 		}
 		else if (FAILED(hr))
 		{
-			PyErr_Format(PyExc_OSError, "Failed to get symbol size. Error 0x%08x.", hr);
+			PyErr_Format(PyExc_OSError, "Failed to get symbol entry information. Error 0x%08x.", hr);
 			goto exit;
 		}
 
-		char symName[256];
-		char typeName[256];
 		hr = symGrp->GetSymbolName(i, symName, _countof(symName), nullptr);
 		if (FAILED(hr))
 		{
@@ -151,7 +153,13 @@ getVariablesHelper(
 			goto exit;
 		}
 
-		PyObject* symbol = AllocSymbolObj(symSize, symName, typeName);
+		PyObject* symbol = AllocSymbolObj(
+			entry.Size,
+			symName,
+			typeName,
+			entry.TypeId,
+			entry.ModuleBase,
+			entry.Offset);
 		if (!symbol)
 		{
 			// Exception has already been setup by callee.
