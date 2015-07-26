@@ -76,9 +76,9 @@ CAutoSwitchStackFrame::~CAutoSwitchStackFrame()
 }
 
 static PyObject*
-StackFrame_get_variables(
-	_In_ PyObject* self,
-	_In_ PyObject* /* args */)
+getVariablesHelper(
+	_In_ StackFrameObj* stackFrame,
+	_In_ ULONG flags)
 {
 	// TODO: The bulk of this code is not Python-specific. Factor it out when
 	// implementing Ruby provider.
@@ -86,7 +86,6 @@ StackFrame_get_variables(
 	PyObject* tuple = nullptr;
 	IDebugSymbols3* dbgSymbols = GetDllGlobals()->DebugSymbols;
 	IDebugSymbolGroup2* symGrp = nullptr;
-	StackFrameObj* stackFrame = (StackFrameObj*)self;
 	HRESULT hr = S_OK;
 	ULONG numSym = 0;
 
@@ -100,7 +99,7 @@ StackFrame_get_variables(
 
 		// Take a snapshot of the current symbols in this frame.
 		//
-		hr = dbgSymbols->GetScopeSymbolGroup2(DEBUG_SCOPE_GROUP_ALL, nullptr, &symGrp);
+		hr = dbgSymbols->GetScopeSymbolGroup2(flags, nullptr, &symGrp);
 		if (FAILED(hr))
 		{
 			PyErr_Format(PyExc_OSError, "Failed to create symbol group. Error 0x%08x.", hr);
@@ -182,6 +181,24 @@ exit:
 	return tuple;
 }
 
+static PyObject*
+StackFrame_get_locals(
+	_In_ PyObject* self,
+	_In_ PyObject* /* args */)
+{
+	StackFrameObj* stackFrame = (StackFrameObj*)self;
+	return getVariablesHelper(stackFrame, DEBUG_SCOPE_GROUP_LOCALS);
+}
+
+static PyObject*
+StackFrame_get_args(
+	_In_ PyObject* self,
+	_In_ PyObject* /* args */)
+{
+	StackFrameObj* stackFrame = (StackFrameObj*)self;
+	return getVariablesHelper(stackFrame, DEBUG_SCOPE_GROUP_ARGUMENTS);
+}
+
 static void
 StackFrame_dealloc(PyObject* self)
 {
@@ -203,10 +220,16 @@ static PyMemberDef StackFrame_MemberDef[] =
 static PyMethodDef StackFrame_MethodDef[] =
 {
 	{
-		"get_variables",
-		StackFrame_get_variables,
+		"get_locals",
+		StackFrame_get_locals,
 		METH_NOARGS,
 		PyDoc_STR("Return a tuple containing all the local variables and arguments in the stack frame.")
+	},
+	{
+		"get_args",
+		StackFrame_get_args,
+		METH_NOARGS,
+		PyDoc_STR("Return a tuple containing all the arguments (only) in the stack frame.")
 	},
 	{ NULL }  /* Sentinel */
 };
