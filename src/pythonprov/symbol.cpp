@@ -13,12 +13,17 @@ struct SymbolObj
 	// Name of the symbol. (T_STRING_INPLACE)
 	//
 	char Name[256];
+
+	// Type of the symbol.
+	//
+	char TypeName[256];
 };
 
 static PyMemberDef Symbol_MemberDef[] =
 {
 	{ "size", T_ULONG, offsetof(SymbolObj, Size), READONLY },
 	{ "name", T_STRING_INPLACE, offsetof(SymbolObj, Name), READONLY },
+	{ "type", T_STRING_INPLACE, offsetof(SymbolObj, TypeName), READONLY },
 	{ NULL }
 };
 
@@ -49,7 +54,8 @@ InitSymbolType()
 _Check_return_ PyObject*
 AllocSymbolObj(
 	_In_ ULONG size,
-	_In_z_ const char* name)
+	_In_z_ const char* name,
+	_In_z_ const char* type)
 {
 	PyObject* obj = nullptr;
 
@@ -67,7 +73,11 @@ AllocSymbolObj(
 	//
 	SymbolObj* sym = (SymbolObj*)obj;
 	sym->Size = size;
+
 	HRESULT hr = StringCchCopyA(STRING_AND_CCH(sym->Name), name);
+	assert(SUCCEEDED(hr));
+
+	hr = StringCchCopyA(STRING_AND_CCH(sym->TypeName), type);
 	assert(SUCCEEDED(hr));
 
 	return obj;

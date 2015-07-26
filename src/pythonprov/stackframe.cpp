@@ -136,6 +136,7 @@ getVariablesHelper(
 		}
 
 		char symName[256];
+		char typeName[256];
 		hr = symGrp->GetSymbolName(i, symName, _countof(symName), nullptr);
 		if (FAILED(hr))
 		{
@@ -143,7 +144,14 @@ getVariablesHelper(
 			goto exit;
 		}
 
-		PyObject* symbol = AllocSymbolObj(symSize, symName);
+		hr = symGrp->GetSymbolTypeName(i, typeName, _countof(typeName), nullptr);
+		if (FAILED(hr))
+		{
+			PyErr_Format(PyExc_OSError, "Failed to get symbol type name. Error 0x%08x.", hr);
+			goto exit;
+		}
+
+		PyObject* symbol = AllocSymbolObj(symSize, symName, typeName);
 		if (!symbol)
 		{
 			// Exception has already been setup by callee.

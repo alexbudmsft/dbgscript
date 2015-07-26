@@ -31,9 +31,9 @@ pprint (stack)
 print (len(stack))
 
 for i in range(len(stack)):
-	print(stack[i].frame_number, "Instruction Offset: ", hex(stack[i].instruction_offset))
+	print("Frame:", stack[i].frame_number, "Instruction Offset: ", hex(stack[i].instruction_offset))
 	locals = stack[i].get_locals()
 	for sym in locals:
-		print ("Name: ", sym.name, "Size: ", sym.size)
+		print ("Name: '{0}', Type: '{1}', Size: {2}".format(sym.name, sym.type, sym.size))
 
 # del threads[0].thread_id # Fails: readonly attribute
