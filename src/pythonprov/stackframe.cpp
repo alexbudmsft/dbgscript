@@ -181,6 +181,18 @@ exit:
 	}
 	return tuple;
 }
+
+static void
+StackFrame_dealloc(PyObject* self)
+{
+	StackFrameObj* stack = (StackFrameObj*)self;
+
+	// Release the ref we took on the parent Thread object.
+	//
+	Py_DECREF(stack->Parent);
+
+	Py_TYPE(self)->tp_free(self);
+}
 static PyMemberDef StackFrame_MemberDef[] =
 {
 	{ "frame_number", T_ULONG, offsetof(StackFrameObj, FrameNumber), READONLY },
@@ -214,6 +226,7 @@ InitStackFrameType()
 	StackFrameType.tp_members = StackFrame_MemberDef;
 	StackFrameType.tp_methods = StackFrame_MethodDef;
 	StackFrameType.tp_new = PyType_GenericNew;
+	StackFrameType.tp_dealloc = StackFrame_dealloc;
 
 	// Finalize the type definition.
 	//
@@ -247,6 +260,10 @@ AllocStackFrameObj(
 	StackFrameObj* stackFrame = (StackFrameObj*)obj;
 	stackFrame->FrameNumber = frameNum;
 	stackFrame->InstructionOffset = instructionOffset;
+
+	// Take a ref on the Thread object we're going to store.
+	//
+	Py_INCREF(parentThread);
 	stackFrame->Parent = parentThread;
 
 	return obj;
