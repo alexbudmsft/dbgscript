@@ -120,8 +120,8 @@
     <ClCompile Include="..\src\pythonprov\process.cpp" />
     <ClCompile Include="..\src\pythonprov\pythonscriptprovider.cpp" />
     <ClCompile Include="..\src\pythonprov\stackframe.cpp" />
-    <ClCompile Include="..\src\pythonprov\symbol.cpp" />
     <ClCompile Include="..\src\pythonprov\thread.cpp" />
+    <ClCompile Include="..\src\pythonprov\typedobject.cpp" />
     <ClCompile Include="..\src\rubyprov\rubyscriptprovider.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -137,8 +137,8 @@
     <ClInclude Include="..\src\pythonprov\process.h" />
     <ClInclude Include="..\src\pythonprov\pythonscriptprovider.h" />
     <ClInclude Include="..\src\pythonprov\stackframe.h" />
-    <ClInclude Include="..\src\pythonprov\symbol.h" />
     <ClInclude Include="..\src\pythonprov\thread.h" />
+    <ClInclude Include="..\src\pythonprov\typedobject.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

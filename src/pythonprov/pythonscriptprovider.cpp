@@ -5,7 +5,7 @@
 #include "process.h"
 #include "thread.h"
 #include "stackframe.h"
-#include "symbol.h"
+#include "typedobject.h"
 
 static const char* x_ModuleName = "dbgscript";
 
@@ -45,7 +45,7 @@ InitTypes()
 		return false;
 	}
 
-	if (!InitSymbolType())
+	if (!InitTypedObjectType())
 	{
 		return false;
 	}

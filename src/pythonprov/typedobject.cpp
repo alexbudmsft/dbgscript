@@ -1,8 +1,8 @@
-#include "symbol.h"
+#include "typedobject.h"
 #include <strsafe.h>
 #include <structmember.h>
 
-struct SymbolObj
+struct TypedObject
 {
 	PyObject_HEAD
 
@@ -23,33 +23,33 @@ struct SymbolObj
 	UINT64 VirtualAddress;
 };
 
-static PyMemberDef Symbol_MemberDef[] =
+static PyMemberDef TypedObject_MemberDef[] =
 {
-	{ "size", T_ULONG, offsetof(SymbolObj, Size), READONLY },
-	{ "name", T_STRING_INPLACE, offsetof(SymbolObj, Name), READONLY },
-	{ "type", T_STRING_INPLACE, offsetof(SymbolObj, TypeName), READONLY },
-	{ "address", T_ULONGLONG, offsetof(SymbolObj, VirtualAddress), READONLY },
+	{ "size", T_ULONG, offsetof(TypedObject, Size), READONLY },
+	{ "name", T_STRING_INPLACE, offsetof(TypedObject, Name), READONLY },
+	{ "type", T_STRING_INPLACE, offsetof(TypedObject, TypeName), READONLY },
+	{ "address", T_ULONGLONG, offsetof(TypedObject, VirtualAddress), READONLY },
 	{ NULL }
 };
 
-static PyTypeObject SymbolType =
+static PyTypeObject TypedObjectType =
 {
 	PyVarObject_HEAD_INIT(0, 0)
-	"dbgscript.Symbol",     /* tp_name */
-	sizeof(SymbolObj)       /* tp_basicsize */
+	"dbgscript.TypedObject",     /* tp_name */
+	sizeof(TypedObject)       /* tp_basicsize */
 };
 
 _Check_return_ bool
-InitSymbolType()
+InitTypedObjectType()
 {
-	SymbolType.tp_flags = Py_TPFLAGS_DEFAULT;
-	SymbolType.tp_doc = PyDoc_STR("dbgscript.Symbol objects");
-	SymbolType.tp_members = Symbol_MemberDef;
-	SymbolType.tp_new = PyType_GenericNew;
+	TypedObjectType.tp_flags = Py_TPFLAGS_DEFAULT;
+	TypedObjectType.tp_doc = PyDoc_STR("dbgscript.Symbol objects");
+	TypedObjectType.tp_members = TypedObject_MemberDef;
+	TypedObjectType.tp_new = PyType_GenericNew;
 
 	// Finalize the type definition.
 	//
-	if (PyType_Ready(&SymbolType) < 0)
+	if (PyType_Ready(&TypedObjectType) < 0)
 	{
 		return false;
 	}
@@ -57,7 +57,7 @@ InitSymbolType()
 }
 
 _Check_return_ PyObject*
-AllocSymbolObj(
+AllocTypedObject(
 	_In_ ULONG size,
 	_In_z_ const char* name,
 	_In_z_ const char* type,
@@ -67,11 +67,11 @@ AllocSymbolObj(
 {
 	PyObject* obj = nullptr;
 
-	// Alloc a single instance of the SymbolType class. (Calls __new__())
+	// Alloc a single instance of the TypedObjectType class. (Calls __new__())
 	// If the allocation fails, the allocator will set the appropriate exception
 	// internally. (i.e. OOM)
 	//
-	obj = SymbolType.tp_new(&SymbolType, nullptr, nullptr);
+	obj = TypedObjectType.tp_new(&TypedObjectType, nullptr, nullptr);
 	if (!obj)
 	{
 		return nullptr;
@@ -79,7 +79,7 @@ AllocSymbolObj(
 
 	// Set up fields.
 	//
-	SymbolObj* sym = (SymbolObj*)obj;
+	TypedObject* sym = (TypedObject*)obj;
 	sym->Size = size;
 	sym->ModuleBase = moduleBase;
 	sym->TypeId = typeId;

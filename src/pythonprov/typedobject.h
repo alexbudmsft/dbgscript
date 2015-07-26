@@ -4,10 +4,10 @@
 #include <python.h>
 
 _Check_return_ bool
-InitSymbolType();
+InitTypedObjectType();
 
 _Check_return_ PyObject*
-AllocSymbolObj(
+AllocTypedObject(
 	_In_ ULONG size,
 	_In_z_ const char* name,
 	_In_z_ const char* type,

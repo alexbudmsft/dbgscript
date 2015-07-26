@@ -1,6 +1,6 @@
 #include "stackframe.h"
 #include "thread.h"
-#include "symbol.h"
+#include "typedobject.h"
 #include <structmember.h>
 
 struct StackFrameObj
@@ -153,7 +153,7 @@ getVariablesHelper(
 			goto exit;
 		}
 
-		PyObject* symbol = AllocSymbolObj(
+		PyObject* symbol = AllocTypedObject(
 			entry.Size,
 			symName,
 			typeName,
