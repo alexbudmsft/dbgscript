@@ -18,7 +18,7 @@ struct ThreadObj
 static PyMemberDef Thread_MemberDef [] = 
 {
 	{ "engine_id", T_ULONG, offsetof(ThreadObj, EngineId), READONLY },
-	{ "thread_id", T_ULONG, offsetof(ThreadObj, EngineId), READONLY },
+	{ "thread_id", T_ULONG, offsetof(ThreadObj, ThreadId), READONLY },
 	{ NULL }
 };
 
