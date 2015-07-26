@@ -52,13 +52,44 @@ exit:
 	return ret;
 }
 
-// Attribute is read-only.
+// Attribute is read-only. TODO: Share this out to other modules.
 //
 static int
-Thread_set_teb(PyObject* /* self */, PyObject* /* value */, void* /* closure */)
+setReadOnlyProperty(PyObject* /* self */, PyObject* /* value */, void* /* closure */)
 {
 	PyErr_SetString(PyExc_AttributeError, "readonly attribute");
 	return -1;
+}
+
+static PyObject*
+Thread_get_current_frame(
+	_In_ PyObject* self,
+	_In_opt_ void* /* closure */)
+{
+	PyObject* ret = nullptr;
+	IDebugSymbols3* dbgSym = GetDllGlobals()->DebugSymbols;
+	ULONG curFrameIdx = 0;
+	UINT64 instructionOffset = 0;
+	DEBUG_STACK_FRAME frame;
+
+	HRESULT hr = dbgSym->GetCurrentScopeFrameIndex(&curFrameIdx);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_OSError, "Failed to get current frame index. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	hr = dbgSym->GetScope(&instructionOffset, &frame, nullptr, 0);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_OSError, "Failed to get current scope. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	ret = AllocStackFrameObj(curFrameIdx, instructionOffset, reinterpret_cast<ThreadObj*>(self));
+
+exit:
+	return ret;
 }
 
 CAutoSwitchThread::CAutoSwitchThread(
@@ -166,8 +197,15 @@ static PyGetSetDef Thread_GetSetDef[] =
 	{
 		"teb",
 		Thread_get_teb,
-		Thread_set_teb,
+		setReadOnlyProperty,
 		PyDoc_STR("Address of TEB"),
+		NULL
+	},
+	{
+		"current_frame",
+		Thread_get_current_frame,
+		setReadOnlyProperty,
+		PyDoc_STR("Current StackFrame object."),
 		NULL
 	},
 	{ NULL }  /* Sentinel */
