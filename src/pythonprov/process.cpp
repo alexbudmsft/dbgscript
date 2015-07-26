@@ -100,6 +100,58 @@ static PyMethodDef Process_MethodDef[] =
 	{ NULL }  /* Sentinel */
 };
 
+static PyObject*
+Process_get_current_thread(
+	_In_ PyObject* /* self */,
+	_In_opt_ void* /* closure */)
+{
+	PyObject* ret = nullptr;
+
+	// Get TEB from debug client.
+	//
+	ULONG engineThreadId = 0;
+	ULONG systemThreadId = 0;
+	HRESULT hr = GetDllGlobals()->DebugSysObj->GetCurrentThreadId(&engineThreadId);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_OSError, "Failed to get engine thread id. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	hr = GetDllGlobals()->DebugSysObj->GetCurrentThreadSystemId(&systemThreadId);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_OSError, "Failed to get system thread id. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	ret = AllocThreadObj(engineThreadId, systemThreadId);
+
+exit:
+	return ret;
+}
+
+// Attribute is read-only.
+//
+static int
+Process_set_current_thread(PyObject* /* self */, PyObject* /* value */, void* /* closure */)
+{
+	PyErr_SetString(PyExc_AttributeError, "readonly attribute");
+	return -1;
+}
+
+static PyGetSetDef Process_GetSetDef[] =
+{
+	{
+		"current_thread",
+		Process_get_current_thread,
+		Process_set_current_thread,
+		PyDoc_STR("Current Thread object."),
+		NULL
+	},
+	{ NULL }  /* Sentinel */
+};
+
 _Check_return_ bool
 InitProcessType()
 {
@@ -107,6 +159,7 @@ InitProcessType()
 	ProcessType.tp_doc = PyDoc_STR("dbgscript.Process objects");
 	ProcessType.tp_new = PyType_GenericNew;
 	ProcessType.tp_methods = Process_MethodDef;
+	ProcessType.tp_getset = Process_GetSetDef;
 
 	// Finalize the type definition.
 	//

@@ -9,6 +9,11 @@ from pprint import pprint
 #pprint (dir(Process))
 
 threads = Process.get_threads()
+cur_thd = Process.current_thread;
+
+print ("Cur thread:", cur_thd, "Id:", cur_thd.thread_id)
+
+pprint (cur_thd.get_stack())
 
 #pprint (threads)
 #print (dir(threads[0]))
