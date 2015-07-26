@@ -45,6 +45,9 @@
     <ClCompile Include="..\src\pythonprov\dbgscriptout.cpp">
       <Filter>Source Files\PythonProv</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pythonprov\symbol.cpp">
+      <Filter>Source Files\PythonProv</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\iscriptprovider.h">
@@ -66,6 +69,9 @@
       <Filter>Source Files\PythonProv</Filter>
     </ClInclude>
     <ClInclude Include="..\src\pythonprov\dbgscriptout.h">
+      <Filter>Source Files\PythonProv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\pythonprov\symbol.h">
       <Filter>Source Files\PythonProv</Filter>
     </ClInclude>
   </ItemGroup>

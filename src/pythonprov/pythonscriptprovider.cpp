@@ -5,6 +5,7 @@
 #include "process.h"
 #include "thread.h"
 #include "stackframe.h"
+#include "symbol.h"
 
 static const char* x_ModuleName = "dbgscript";
 
@@ -22,6 +23,8 @@ PyModuleDef g_ModuleDef =
 _Check_return_ bool
 InitTypes()
 {
+	// TODO: Make this a table of callbacks.
+	//
 	if (!InitDbgScriptOutType())
 	{
 		return false;
@@ -38,6 +41,11 @@ InitTypes()
 	}
 
 	if (!InitStackFrameType())
+	{
+		return false;
+	}
+
+	if (!InitSymbolType())
 	{
 		return false;
 	}

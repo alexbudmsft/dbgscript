@@ -61,6 +61,13 @@ DLLEXPORT HRESULT DebugExtensionInitialize(
 		goto exit;
 	}
 
+	hr = g_DllGlobals.DebugClient->QueryInterface(
+		__uuidof(IDebugSymbols3), (void **)&g_DllGlobals.DebugSymbols);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
 	// TODO: Initialize all registered script providers.
 	//
 
@@ -95,6 +102,12 @@ DebugExtensionUninitialize()
 	{
 		g_DllGlobals.ScriptProvider->Cleanup();
 		g_DllGlobals.ScriptProvider = nullptr;
+	}
+
+	if (g_DllGlobals.DebugSymbols)
+	{
+		g_DllGlobals.DebugSymbols->Release();
+		g_DllGlobals.DebugSymbols = nullptr;
 	}
 
 	if (g_DllGlobals.DebugSysObj)

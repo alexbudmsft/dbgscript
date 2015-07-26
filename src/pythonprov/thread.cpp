@@ -61,18 +61,10 @@ Thread_set_teb(PyObject* /* self */, PyObject* /* value */, void* /* closure */)
 	return -1;
 }
 
-class CAutoSwitchThread
-{
-public:
-	CAutoSwitchThread(
-		_In_ ULONG newEngineThreadId);
-	~CAutoSwitchThread();
-private:
-	ULONG m_PrevThreadId;
-};
-
 CAutoSwitchThread::CAutoSwitchThread(
-	_In_ ULONG newEngineThreadId)
+	_In_ const ThreadObj* thd)
+	:
+	m_DidSwitch(false)
 {
 	// Get current thread id.
 	//
@@ -80,16 +72,25 @@ CAutoSwitchThread::CAutoSwitchThread(
 	HRESULT hr = sysObj->GetCurrentThreadId(&m_PrevThreadId);
 	assert(SUCCEEDED(hr));
 
-	hr = sysObj->SetCurrentThreadId(newEngineThreadId);
-	assert(SUCCEEDED(hr));
+	// Don't bother switching if we're already on the desired thread.
+	//
+	if (m_PrevThreadId != thd->EngineId)
+	{
+		hr = sysObj->SetCurrentThreadId(thd->EngineId);
+		assert(SUCCEEDED(hr));
+		m_DidSwitch = true;
+	}
 }
 
 CAutoSwitchThread::~CAutoSwitchThread()
 {
 	// Revert to previous thread.
 	//
-	HRESULT hr = GetDllGlobals()->DebugSysObj->SetCurrentThreadId(m_PrevThreadId);
-	assert(SUCCEEDED(hr));
+	if (m_DidSwitch)
+	{
+		HRESULT hr = GetDllGlobals()->DebugSysObj->SetCurrentThreadId(m_PrevThreadId);
+		assert(SUCCEEDED(hr));
+	}
 }
 
 static PyObject*
@@ -112,7 +113,7 @@ Thread_get_stack(
 		// Need to switch thread context to 'this' thread, capture stack, then
 		// switch back.
 		//
-		CAutoSwitchThread autoSwitchThd(thd->EngineId);
+		CAutoSwitchThread autoSwitchThd(thd);
 
 		hr = GetDllGlobals()->DebugControl->GetStackTrace(
 			0, 0, 0, frames, _countof(frames), &framesFilled);
@@ -131,7 +132,7 @@ Thread_get_stack(
 	//
 	for (ULONG i = 0; i < framesFilled; ++i)
 	{
-		PyObject* frame = AllocStackFrameObj(i, frames[i].InstructionOffset);
+		PyObject* frame = AllocStackFrameObj(i, frames[i].InstructionOffset, thd);
 		if (!frame)
 		{
 			// Exception has already been setup by callee.
@@ -154,7 +155,7 @@ exit:
 	{
 		// Release the tuple. This will release any held object inside the tuple.
 		//
-		Py_DECREF(tuple);
+		Py_XDECREF(tuple);
 		tuple = nullptr;
 	}
 	return tuple;

@@ -83,7 +83,7 @@ exit:
 	{
 		// Release the tuple. This will release any held object inside the tuple.
 		//
-		Py_DECREF(tuple);
+		Py_XDECREF(tuple);
 		tuple = nullptr;
 	}
 	return tuple;
