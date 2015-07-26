@@ -158,6 +158,7 @@ FileExists(
 }
 
 // comma-separated list of paths.
+// If run with no parameters, print the current path.
 //
 DLLEXPORT HRESULT CALLBACK
 scriptpath(
@@ -172,26 +173,52 @@ scriptpath(
 	const char* str = args;
 	HRESULT hr = S_OK;
 
-	elem = g_DllGlobals.ScriptPath;
-	while (elem)
+	if (strlen(str) > 0)
 	{
-		ScriptPathElem* next = elem->Next;
-		delete elem;
-		elem = next;
-	}
+		elem = g_DllGlobals.ScriptPath;
+		while (elem)
+		{
+			ScriptPathElem* next = elem->Next;
+			delete elem;
+			elem = next;
+		}
 
-	elem = g_DllGlobals.ScriptPath = nullptr;
+		elem = g_DllGlobals.ScriptPath = nullptr;
 
-	// Can't use semi-colon since the debugger's command parser interprets that
-	// as a new command. Use comma instead.
-	//
-	comma = strchr(str, ',');
-	while (comma)
-	{
-		int len = (int)(comma - str);
+		// Can't use semi-colon since the debugger's command parser interprets that
+		// as a new command. Use comma instead.
+		//
+		comma = strchr(str, ',');
+		while (comma)
+		{
+			int len = (int)(comma - str);
 
+			elem = new ScriptPathElem;
+			hr = StringCchCopyNA(STRING_AND_CCH(elem->Path), str, len);
+			assert(SUCCEEDED(hr));
+
+			if (!g_DllGlobals.ScriptPath)
+			{
+				// Save the head.
+				//
+				g_DllGlobals.ScriptPath = elem;
+				assert(!prev);
+			}
+			else
+			{
+				prev->Next = elem;
+			}
+
+			prev = elem;
+
+			str += len + 1;
+			comma = strchr(str, ',');
+		}
+
+		// Copy trailer.
+		//
 		elem = new ScriptPathElem;
-		hr = StringCchCopyNA(STRING_AND_CCH(elem->Path), str, len);
+		StringCchCopyA(STRING_AND_CCH(elem->Path), str);
 		assert(SUCCEEDED(hr));
 
 		if (!g_DllGlobals.ScriptPath)
@@ -205,31 +232,10 @@ scriptpath(
 		{
 			prev->Next = elem;
 		}
-
-		prev = elem;
-
-		str += len + 1;
-		comma = strchr(str, ',');
 	}
 
-	// Copy trailer.
+	// Print current path.
 	//
-	elem = new ScriptPathElem;
-	StringCchCopyA(STRING_AND_CCH(elem->Path), str);
-	assert(SUCCEEDED(hr));
-
-	if (!g_DllGlobals.ScriptPath)
-	{
-		// Save the head.
-		//
-		g_DllGlobals.ScriptPath = elem;
-		assert(!prev);
-	}
-	else
-	{
-		prev->Next = elem;
-	}
-
 	elem = g_DllGlobals.ScriptPath;
 	while (elem)
 	{
@@ -264,6 +270,32 @@ runscript(
 	_In_opt_ PCSTR         args)
 {
 	HRESULT hr = S_OK;
+	const char* scriptName = args;
+	char fullScriptName[MAX_PATH];
+	if (!FileExists(scriptName))
+	{
+		// Try to search for the file in the script path list.
+		//
+		ScriptPathElem* elem = GetDllGlobals()->ScriptPath;
+		while (elem)
+		{
+			StringCchPrintfA(STRING_AND_CCH(fullScriptName), "%hs\\%hs",
+				elem->Path, scriptName);
+			if (FileExists(fullScriptName))
+			{
+				scriptName = fullScriptName;
+				break;
+			}
+			elem = elem->Next;
+		}
+	}
+
+	if (!FileExists(scriptName))
+	{
+		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script file not found in any of the search paths.\n");
+		hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+		goto exit;
+	}
 
 	hr = GetDllGlobals()->DebugControl->Output(
 		DEBUG_OUTPUT_NORMAL,
@@ -273,7 +305,6 @@ runscript(
 	{
 		goto exit;
 	}
-	const char* scriptName = args;
 
 	// We should examine the extension of the script and walk the list
 	// of registered providers to find the first one that claims the extension.
