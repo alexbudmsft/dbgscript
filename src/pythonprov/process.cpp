@@ -1,13 +1,9 @@
 #include "process.h"
 #include "thread.h"
-#include <map>
-
-typedef std::map<UINT64, const char*> ModuleMapT;
 
 struct ProcessObj
 {
 	PyObject_HEAD
-	ModuleMapT ModuleMap;
 };
 
 static PyTypeObject ProcessType =
@@ -106,27 +102,9 @@ static PyMethodDef Process_MethodDef[] =
 };
 
 static void
-freeModuleMap(
-	_In_ ModuleMapT* map)
-{
-	for (ModuleMapT::const_iterator it = map->begin();
-	it != map->end();
-		++it)
-	{
-		delete[] it->second;
-	}
-	map->~ModuleMapT();
-}
-
-static void
 Process_dealloc(
 	_In_ PyObject* self)
 {
-	ProcessObj* proc = (ProcessObj*)self;
-
-	// Free the module map.
-	//
-	freeModuleMap(&proc->ModuleMap);
 	Py_TYPE(self)->tp_free(self);
 }
 
@@ -205,11 +183,8 @@ InitProcessType()
 _Check_return_ PyObject*
 AllocProcessObj()
 {
-	HRESULT hr = S_OK;
 	PyObject* obj = nullptr;
 	PyObject* ret = nullptr;
-	DEBUG_MODULE_PARAMETERS* modParams = nullptr;
-	IDebugSymbols3* dbgSym = GetDllGlobals()->DebugSymbols;
 
 	// Alloc a single instance of the DbgScriptOutType object. (Calls __new__())
 	// If the allocation fails, the allocator will set the appropriate exception
@@ -221,55 +196,15 @@ AllocProcessObj()
 		return nullptr;
 	}
 
-	ProcessObj* proc = (ProcessObj*)obj;
-	new (&proc->ModuleMap) ModuleMapT;
-
-	ULONG cLoadedModules = 0;
-	ULONG cUnloadedModules = 0;
-	hr = dbgSym->GetNumberModules(&cLoadedModules, &cUnloadedModules);
-	if (FAILED(hr))
-	{
-		PyErr_Format(PyExc_OSError, "Failed to get number of modules. Error 0x%08x.", hr);
-		goto exit;
-	}
-
-	modParams = new DEBUG_MODULE_PARAMETERS[cLoadedModules];
-	for (ULONG i = 0; i < cLoadedModules; ++i)
-	{
-		ULONG nameSize = 0;
-		UINT64 modBase = 0;
-		hr = dbgSym->GetModuleNameString(DEBUG_MODNAME_MODULE, i, 0, nullptr, 0, &nameSize);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "Failed to get size of module name. Error 0x%08x.", hr);
-			goto exit;
-		}
-
-		char* name = new char[nameSize];
-		hr = dbgSym->GetModuleNameString(DEBUG_MODNAME_MODULE, i, 0, name, nameSize, nullptr);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "Failed to get module name. Error 0x%08x.", hr);
-			goto exit;
-		}
-		hr = dbgSym->GetModuleByIndex(i, &modBase);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "Failed to get module base. Error 0x%08x.", hr);
-			goto exit;
-		}
-
-		// Insert into map.
-		//
-		proc->ModuleMap[modBase] = name;
-	}
+	// Do anything that can fail here.
+	//
 
 	// Transfer ownership.
 	//
 	ret = obj;
 	obj = nullptr;
 
-exit:
+//exit:
 
 	if (obj)
 	{
@@ -279,19 +214,5 @@ exit:
 		obj = nullptr;
 	}
 
-	if (modParams)
-	{
-		delete[] modParams;
-		modParams = nullptr;
-	}
-
 	return ret;
-}
-
-_Check_return_ const char*
-ProcessObjGetModuleName(
-	_In_ ProcessObj* proc,
-	_In_ UINT64 modBase)
-{
-	return proc->ModuleMap[modBase];
 }

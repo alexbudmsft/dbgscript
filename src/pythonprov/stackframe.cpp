@@ -153,7 +153,7 @@ getVariablesHelper(
 			goto exit;
 		}
 
-		PyObject* symbol = AllocTypedObject(
+		PyObject* typedObj = AllocTypedObject(
 			entry.Size,
 			symName,
 			typeName,
@@ -161,7 +161,7 @@ getVariablesHelper(
 			entry.ModuleBase,
 			entry.Offset,
 			ThreadObjGetProcess(stackFrame->Thread));
-		if (!symbol)
+		if (!typedObj)
 		{
 			// Exception has already been setup by callee.
 			//
@@ -169,7 +169,7 @@ getVariablesHelper(
 			goto exit;
 		}
 
-		if (PyTuple_SetItem(tuple, i, symbol) != 0)
+		if (PyTuple_SetItem(tuple, i, typedObj) != 0)
 		{
 			// Failed to set the item. Do not decref it. PyTuple_SetItem does
 			// it internally.
