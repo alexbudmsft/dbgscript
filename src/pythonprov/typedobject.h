@@ -3,6 +3,8 @@
 #include "../common.h"
 #include <python.h>
 
+struct ProcessObj;
+
 _Check_return_ bool
 InitTypedObjectType();
 
@@ -13,4 +15,5 @@ AllocTypedObject(
 	_In_z_ const char* type,
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
-	_In_ UINT64 virtualAddress);
+	_In_ UINT64 virtualAddress,
+	_In_ ProcessObj* proc);

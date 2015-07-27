@@ -1,9 +1,13 @@
 #include "process.h"
 #include "thread.h"
+#include <map>
+
+typedef std::map<UINT64, const char*> ModuleMapT;
 
 struct ProcessObj
 {
 	PyObject_HEAD
+	ModuleMapT ModuleMap;
 };
 
 static PyTypeObject ProcessType =
@@ -17,7 +21,7 @@ static PyObject* g_Process;  // Single process for now.
 
 static PyObject*
 Process_get_threads(
-	_In_ PyObject* /* self */,
+	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
 	// TODO: The bulk of this code is not Python-specific. Factor it out when
@@ -27,6 +31,7 @@ Process_get_threads(
 	ULONG* sysThreadIds = nullptr;
 	PyObject* tuple = nullptr;
 	IDebugSystemObjects* sysObj = GetDllGlobals()->DebugSysObj;
+	ProcessObj* proc = (ProcessObj*)self;
 
 	ULONG cThreads = 0;
 	HRESULT hr = sysObj->GetNumberThreads(&cThreads);
@@ -54,7 +59,7 @@ Process_get_threads(
 	//
 	for (ULONG i = 0; i < cThreads; ++i)
 	{
-		PyObject* thd = AllocThreadObj(engineThreadIds[i], sysThreadIds[i]);
+		PyObject* thd = AllocThreadObj(engineThreadIds[i], sysThreadIds[i], proc);
 		if (!thd)
 		{
 			// Exception has already been setup by callee.
@@ -100,12 +105,38 @@ static PyMethodDef Process_MethodDef[] =
 	{ NULL }  /* Sentinel */
 };
 
+static void
+freeModuleMap(
+	_In_ ModuleMapT* map)
+{
+	for (ModuleMapT::const_iterator it = map->begin();
+	it != map->end();
+		++it)
+	{
+		delete[] it->second;
+	}
+	map->~ModuleMapT();
+}
+
+static void
+Process_dealloc(
+	_In_ PyObject* self)
+{
+	ProcessObj* proc = (ProcessObj*)self;
+
+	// Free the module map.
+	//
+	freeModuleMap(&proc->ModuleMap);
+	Py_TYPE(self)->tp_free(self);
+}
+
 static PyObject*
 Process_get_current_thread(
-	_In_ PyObject* /* self */,
+	_In_ PyObject* self,
 	_In_opt_ void* /* closure */)
 {
 	PyObject* ret = nullptr;
+	ProcessObj* proc = (ProcessObj*)self;
 
 	// Get TEB from debug client.
 	//
@@ -125,7 +156,7 @@ Process_get_current_thread(
 		goto exit;
 	}
 
-	ret = AllocThreadObj(engineThreadId, systemThreadId);
+	ret = AllocThreadObj(engineThreadId, systemThreadId, proc);
 
 exit:
 	return ret;
@@ -158,6 +189,7 @@ InitProcessType()
 	ProcessType.tp_flags = Py_TPFLAGS_DEFAULT;
 	ProcessType.tp_doc = PyDoc_STR("dbgscript.Process objects");
 	ProcessType.tp_new = PyType_GenericNew;
+	ProcessType.tp_dealloc = Process_dealloc;
 	ProcessType.tp_methods = Process_MethodDef;
 	ProcessType.tp_getset = Process_GetSetDef;
 
@@ -173,7 +205,11 @@ InitProcessType()
 _Check_return_ PyObject*
 AllocProcessObj()
 {
+	HRESULT hr = S_OK;
 	PyObject* obj = nullptr;
+	PyObject* ret = nullptr;
+	DEBUG_MODULE_PARAMETERS* modParams = nullptr;
+	IDebugSymbols3* dbgSym = GetDllGlobals()->DebugSymbols;
 
 	// Alloc a single instance of the DbgScriptOutType object. (Calls __new__())
 	// If the allocation fails, the allocator will set the appropriate exception
@@ -185,5 +221,77 @@ AllocProcessObj()
 		return nullptr;
 	}
 
-	return obj;
+	ProcessObj* proc = (ProcessObj*)obj;
+	new (&proc->ModuleMap) ModuleMapT;
+
+	ULONG cLoadedModules = 0;
+	ULONG cUnloadedModules = 0;
+	hr = dbgSym->GetNumberModules(&cLoadedModules, &cUnloadedModules);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_OSError, "Failed to get number of modules. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	modParams = new DEBUG_MODULE_PARAMETERS[cLoadedModules];
+	for (ULONG i = 0; i < cLoadedModules; ++i)
+	{
+		ULONG nameSize = 0;
+		UINT64 modBase = 0;
+		hr = dbgSym->GetModuleNameString(DEBUG_MODNAME_MODULE, i, 0, nullptr, 0, &nameSize);
+		if (FAILED(hr))
+		{
+			PyErr_Format(PyExc_OSError, "Failed to get size of module name. Error 0x%08x.", hr);
+			goto exit;
+		}
+
+		char* name = new char[nameSize];
+		hr = dbgSym->GetModuleNameString(DEBUG_MODNAME_MODULE, i, 0, name, nameSize, nullptr);
+		if (FAILED(hr))
+		{
+			PyErr_Format(PyExc_OSError, "Failed to get module name. Error 0x%08x.", hr);
+			goto exit;
+		}
+		hr = dbgSym->GetModuleByIndex(i, &modBase);
+		if (FAILED(hr))
+		{
+			PyErr_Format(PyExc_OSError, "Failed to get module base. Error 0x%08x.", hr);
+			goto exit;
+		}
+
+		// Insert into map.
+		//
+		proc->ModuleMap[modBase] = name;
+	}
+
+	// Transfer ownership.
+	//
+	ret = obj;
+	obj = nullptr;
+
+exit:
+
+	if (obj)
+	{
+		// Destructor for ProcessObj automatically frees the module map.
+		//
+		Py_DECREF(obj);
+		obj = nullptr;
+	}
+
+	if (modParams)
+	{
+		delete[] modParams;
+		modParams = nullptr;
+	}
+
+	return ret;
+}
+
+_Check_return_ const char*
+ProcessObjGetModuleName(
+	_In_ ProcessObj* proc,
+	_In_ UINT64 modBase)
+{
+	return proc->ModuleMap[modBase];
 }

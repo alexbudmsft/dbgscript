@@ -17,7 +17,7 @@ struct StackFrameObj
 
 	// Backpointer to the owning thread. Opaque.
 	//
-	const ThreadObj* Parent;
+	const ThreadObj* Thread;
 };
 
 class CAutoSwitchStackFrame
@@ -90,7 +90,7 @@ getVariablesHelper(
 	ULONG numSym = 0;
 
 	{
-		CAutoSwitchThread autoSwitchThd(stackFrame->Parent);
+		CAutoSwitchThread autoSwitchThd(stackFrame->Thread);
 		CAutoSwitchStackFrame autoSwitchFrame(stackFrame->FrameNumber);
 		if (PyErr_Occurred())
 		{
@@ -159,7 +159,8 @@ getVariablesHelper(
 			typeName,
 			entry.TypeId,
 			entry.ModuleBase,
-			entry.Offset);
+			entry.Offset,
+			ThreadObjGetProcess(stackFrame->Thread));
 		if (!symbol)
 		{
 			// Exception has already been setup by callee.
@@ -220,9 +221,9 @@ StackFrame_dealloc(PyObject* self)
 {
 	StackFrameObj* stack = (StackFrameObj*)self;
 
-	// Release the ref we took on the parent Thread object.
+	// Release the ref we took on the Thread Thread object.
 	//
-	Py_DECREF(stack->Parent);
+	Py_DECREF(stack->Thread);
 
 	Py_TYPE(self)->tp_free(self);
 }
@@ -280,7 +281,7 @@ _Check_return_ PyObject*
 AllocStackFrameObj(
 	_In_ ULONG frameNum,
 	_In_ UINT64 instructionOffset,
-	_In_ const ThreadObj* parentThread)
+	_In_ const ThreadObj* ThreadThread)
 {
 	PyObject* obj = nullptr;
 
@@ -302,8 +303,8 @@ AllocStackFrameObj(
 
 	// Take a ref on the Thread object we're going to store.
 	//
-	Py_INCREF(parentThread);
-	stackFrame->Parent = parentThread;
+	Py_INCREF(ThreadThread);
+	stackFrame->Thread = ThreadThread;
 
 	return obj;
 }
