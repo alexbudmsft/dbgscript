@@ -191,7 +191,14 @@ TypedObject_subscript(
 		responseBuf,
 		reqSize,
 		nullptr);
-	if (FAILED(hr))
+	if (hr == E_NOINTERFACE)
+	{
+		// This means there was no such member.
+		//
+		PyErr_SetString(PyExc_AttributeError, "No such field.");
+		goto exit;
+	}
+	else if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_OSError, "EXT_TDOP_GET_FIELD operation failed. Error 0x%08x.", hr);
 		goto exit;
