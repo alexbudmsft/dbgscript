@@ -1,10 +1,110 @@
+#include <windows.h>
+
+#pragma warning(push)
+#pragma warning(disable: 4091)
+#define _NO_CVCONST_H
+#include <dbghelp.h>
+#pragma warning(pop)
+
 #include "typedobject.h"
 #include <strsafe.h>
 #include <structmember.h>
 #include "process.h"
 #include <wdbgexts.h>
+#include "util.h"
 
 struct ProcessObj;
+
+// From typedata.hpp.
+//
+#define DBG_NATIVE_TYPE_BASE    0x80000000
+#define DBG_GENERATED_TYPE_BASE 0x80001000
+
+enum BuiltinType
+{
+	DNTYPE_VOID = DBG_NATIVE_TYPE_BASE,
+	DNTYPE_CHAR,
+	DNTYPE_WCHAR_T,
+	DNTYPE_INT8,
+	DNTYPE_INT16,
+	DNTYPE_INT32,
+	DNTYPE_INT64,
+	DNTYPE_UINT8,
+	DNTYPE_UINT16,
+	DNTYPE_UINT32,
+	DNTYPE_UINT64,
+	DNTYPE_FLOAT32,
+	DNTYPE_FLOAT64,
+	DNTYPE_FLOAT80,
+	DNTYPE_BOOL,
+	DNTYPE_LONG32,
+	DNTYPE_ULONG32,
+	DNTYPE_HRESULT,
+
+	//
+	// The following types aren't true native types but
+	// are very basic aliases for native types that
+	// need special identification.  For example, WCHAR
+	// is here so that the debugger knows it's characters
+	// and not just an unsigned short.
+	//
+
+	DNTYPE_WCHAR,
+
+	//
+	// Artificial type to mark cases where type information
+	// is coming from the contained CLR value.
+	//
+
+	DNTYPE_CLR_TYPE,
+
+	//
+	// Artificial function type for CLR methods.
+	//
+
+	DNTYPE_MSIL_METHOD,
+	DNTYPE_CLR_METHOD,
+	DNTYPE_CLR_INTERNAL,
+
+	//
+	// Artificial pointer types for special-case handling
+	// of things like vtables.
+	//
+
+	DNTYPE_PTR_FUNCTION32,
+	DNTYPE_PTR_FUNCTION64,
+
+	//
+	// Placeholder for objects that don't have valid
+	// type information but still need to be represented
+	// for other reasons, such as enumeration.
+	//
+
+	DNTYPE_NO_TYPE,
+	DNTYPE_ERROR,
+
+	//  Types used by the Data Model for displaying children data
+	DNTYPE_RAW_VIEW,
+	DNTYPE_CONTINUATION,
+
+	DNTYPE_END_MARKER
+};
+
+struct TypedObjectValue
+{
+	BuiltinType Type;
+
+	union
+	{
+		BYTE ByteVal;
+		WORD WordVal;
+		DWORD DwVal;
+		INT64 QwVal;
+		BOOL BoolVal;
+		float FloatVal;
+		double DoubleVal;
+	} Value;
+};
 
 struct TypedObject
 {
@@ -29,6 +129,11 @@ struct TypedObject
 	// Is 'TypedData' valid?
 	//
 	bool TypedDataValid;
+
+	// Value if this object represents a primitive type.
+	// I.e. TypedData.Tag == SymTagBaseType.
+	//
+	TypedObjectValue Value;
 };
 
 static PyMemberDef TypedObject_MemberDef[] =
@@ -123,7 +228,7 @@ TypedObject_subscript(
 	HRESULT hr = S_OK;
 	if (!PyUnicode_Check(key))
 	{
-		PyErr_SetString(PyExc_TypeError, "key must be a unicode object");
+		PyErr_SetString(PyExc_KeyError, "key must be a unicode object");
 		return nullptr;
 	}
 
@@ -195,7 +300,7 @@ TypedObject_subscript(
 	{
 		// This means there was no such member.
 		//
-		PyErr_SetString(PyExc_AttributeError, "No such field.");
+		PyErr_SetString(PyExc_KeyError, "No such field.");
 		goto exit;
 	}
 	else if (FAILED(hr))
@@ -247,12 +352,125 @@ static PyMappingMethods TypedObject_MappingDef =
 	nullptr   // mp_ass_subscript
 };
 
+static PyObject*
+TypedObject_get_value(
+	_In_ PyObject* self,
+	_In_opt_ void* /* closure */)
+{
+	TypedObject* typObj = (TypedObject*)self;
+	PyObject* ret = nullptr;
+
+	if (!typObj->TypedDataValid)
+	{
+		PyErr_SetString(PyExc_AttributeError, "No typed data available.");
+		return nullptr;
+	}
+
+	if (typObj->TypedData.Tag != SymTagBaseType)
+	{
+		PyErr_SetString(PyExc_AttributeError, "Not a primitive type.");
+		return nullptr;
+	}
+
+	// Read the appropriate size from memory.
+	//
+	// What primitive type is bigger than 8 bytes?
+	//
+	ULONG cbRead = 0;
+	assert(typObj->TypedData.Size <= 8);
+	HRESULT hr = GetDllGlobals()->DebugSymbols->ReadTypedDataVirtual(
+		typObj->TypedData.Offset,
+		typObj->TypedData.ModBase,
+		typObj->TypedData.TypeId,
+		&typObj->Value.Value,
+		sizeof(typObj->Value.Value),
+		&cbRead);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_OSError, "Failed to read typed data. Error 0x%08x.", hr);
+		goto exit;
+	}
+	assert(cbRead == typObj->TypedData.Size);
+	switch (typObj->TypedData.BaseTypeId)
+	{
+	case DNTYPE_CHAR:
+		assert(cbRead == 1);
+		ret = PyUnicode_FromOrdinal(typObj->Value.Value.ByteVal);
+		break;
+	case DNTYPE_INT8:
+	case DNTYPE_UINT8:
+		assert(cbRead == 1);
+		ret = PyLong_FromLong(typObj->Value.Value.ByteVal);
+		break;
+	case DNTYPE_INT16:
+	case DNTYPE_UINT16:
+		assert(cbRead == sizeof(WORD));
+		ret = PyLong_FromLong(typObj->Value.Value.WordVal);
+		break;
+	case DNTYPE_WCHAR:
+		static_assert(sizeof(WCHAR) == sizeof(WORD), "Assume WCHAR is 2 bytes");
+		assert(cbRead == sizeof(WORD));
+		ret = PyUnicode_FromOrdinal(typObj->Value.Value.WordVal);
+		break;
+	case DNTYPE_INT32:
+	case DNTYPE_LONG32:
+		assert(cbRead == sizeof(DWORD));
+		ret = PyLong_FromLong((long)typObj->Value.Value.DwVal);
+		break;
+	case DNTYPE_UINT32:
+	case DNTYPE_ULONG32:
+		assert(cbRead == sizeof(DWORD));
+		ret = PyLong_FromUnsignedLong(typObj->Value.Value.DwVal);
+		break;
+	case DNTYPE_INT64:
+		assert(cbRead == sizeof(INT64));
+		ret = PyLong_FromLongLong((INT64)typObj->Value.Value.QwVal);
+		break;
+	case DNTYPE_UINT64:
+		assert(cbRead == sizeof(UINT64));
+		ret = PyLong_FromUnsignedLongLong(typObj->Value.Value.QwVal);
+		break;
+	case DNTYPE_BOOL:
+		assert(cbRead == sizeof(BOOL));
+		ret = PyBool_FromLong(!!typObj->Value.Value.BoolVal);
+		break;
+	case DNTYPE_FLOAT32:
+		assert(cbRead == sizeof(float));
+		ret = PyFloat_FromDouble(typObj->Value.Value.FloatVal);
+		break;
+	case DNTYPE_FLOAT64:
+		assert(cbRead == sizeof(double));
+		ret = PyFloat_FromDouble(typObj->Value.Value.DoubleVal);
+		break;
+	default:
+		PyErr_Format(PyExc_AttributeError, "Unsupported type id: %d (%s)",
+			typObj->TypedData.BaseTypeId,
+			typObj->TypeName);
+		break;
+	}
+exit:
+	return ret;
+}
+
+static PyGetSetDef TypedObject_GetSetDef[] =
+{
+	{
+		"value",
+		TypedObject_get_value,
+		SetReadOnlyProperty,
+		PyDoc_STR("Value of field if primitive type."),
+		NULL
+	},
+	{ NULL }  /* Sentinel */
+};
+
 _Check_return_ bool
 InitTypedObjectType()
 {
 	TypedObjectType.tp_flags = Py_TPFLAGS_DEFAULT;
 	TypedObjectType.tp_doc = PyDoc_STR("dbgscript.typObjbol objects");
 	TypedObjectType.tp_members = TypedObject_MemberDef;
+	TypedObjectType.tp_getset = TypedObject_GetSetDef;
 	TypedObjectType.tp_new = PyType_GenericNew;
 	TypedObjectType.tp_dealloc = TypedObject_dealloc;
 	TypedObjectType.tp_as_mapping = &TypedObject_MappingDef;

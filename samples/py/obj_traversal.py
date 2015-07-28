@@ -16,5 +16,5 @@ foo_c = car1_f['c']
 print(foo_c)
 print(foo_c.name)
 print(foo_c.name, foo_c.type)
-print(foo_c.name, foo_c.type, foo_c.size)
+print(foo_c.name, foo_c.type, foo_c.size, hex(foo_c.address))
 car1_f['xyz']

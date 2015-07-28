@@ -48,6 +48,9 @@
     <ClCompile Include="..\src\pythonprov\typedobject.cpp">
       <Filter>Source Files\PythonProv</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pythonprov\util.cpp">
+      <Filter>Source Files\PythonProv</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\iscriptprovider.h">
@@ -72,6 +75,9 @@
       <Filter>Source Files\PythonProv</Filter>
     </ClInclude>
     <ClInclude Include="..\src\pythonprov\typedobject.h">
+      <Filter>Source Files\PythonProv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\pythonprov\util.h">
       <Filter>Source Files\PythonProv</Filter>
     </ClInclude>
   </ItemGroup>

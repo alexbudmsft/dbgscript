@@ -1,6 +1,7 @@
 #include "thread.h"
 #include "stackframe.h"
 #include <structmember.h>
+#include "util.h"
 
 struct ProcessObj;
 
@@ -56,15 +57,6 @@ Thread_get_teb(
 
 exit:
 	return ret;
-}
-
-// Attribute is read-only. TODO: Share this out to other modules.
-//
-static int
-setReadOnlyProperty(PyObject* /* self */, PyObject* /* value */, void* /* closure */)
-{
-	PyErr_SetString(PyExc_AttributeError, "readonly attribute");
-	return -1;
 }
 
 static PyObject*
@@ -203,14 +195,14 @@ static PyGetSetDef Thread_GetSetDef[] =
 	{
 		"teb",
 		Thread_get_teb,
-		setReadOnlyProperty,
+		SetReadOnlyProperty,
 		PyDoc_STR("Address of TEB"),
 		NULL
 	},
 	{
 		"current_frame",
 		Thread_get_current_frame,
-		setReadOnlyProperty,
+		SetReadOnlyProperty,
 		PyDoc_STR("Current StackFrame object."),
 		NULL
 	},
