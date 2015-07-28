@@ -120,10 +120,8 @@ getVariablesHelper(
 	//
 	for (ULONG i = 0; i < numSym; ++i)
 	{
-		// TODO: Define constants for these limits.
-		//
-		char symName[256];
-		char typeName[256];
+		char symName[MAX_SYMBOL_NAME_LEN];
+		char typeName[MAX_SYMBOL_NAME_LEN];
 		DEBUG_SYMBOL_ENTRY entry = { 0 };
 
 		hr = symGrp->GetSymbolEntryInformation(i, &entry);

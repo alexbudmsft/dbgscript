@@ -1,5 +1,6 @@
 #include "process.h"
 #include "thread.h"
+#include "typedobject.h"
 
 struct ProcessObj
 {
@@ -10,10 +11,37 @@ static PyTypeObject ProcessType =
 {
 	PyVarObject_HEAD_INIT(0, 0)
 	"dbgscript.Process",     /* tp_name */
-	sizeof(ProcessObj)           /* tp_basicsize */
+	sizeof(ProcessObj)       /* tp_basicsize */
 };
 
-static PyObject* g_Process;  // Single process for now.
+static PyObject*
+Process_create_typed_object(
+	_In_ PyObject* self,
+	_In_ PyObject* args)
+{
+	PyObject *ret = nullptr;
+	const char *typeName = nullptr;
+	UINT64 addr = 0;
+	ULONG typeId = 0;
+	UINT64 modBase = 0;
+
+	if (!PyArg_ParseTuple(args, "sK:create_typed_object", &typeName, &addr)) {
+		return nullptr;
+	}
+
+	// Lookup typeid/moduleBase from type name.
+	//
+	HRESULT hr = GetDllGlobals()->DebugSymbols->GetSymbolTypeId(typeName, &typeId, &modBase);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_ValueError, "Failed to get type id for type '%s'. Error 0x%08x.", typeName, hr);
+		goto exit;
+	}
+
+	ret = AllocTypedObject(0, nullptr, typeName, typeId, modBase, addr, (ProcessObj*)self);
+exit:
+	return ret;
+}
 
 static PyObject*
 Process_get_threads(
@@ -97,6 +125,12 @@ static PyMethodDef Process_MethodDef[] =
 		Process_get_threads,
 		METH_NOARGS,
 		PyDoc_STR("Return a tuple of threads in the process")
+	},
+	{
+		"create_typed_object",
+		Process_create_typed_object,
+		METH_VARARGS,
+		PyDoc_STR("Return a TypedObject with a given type and address.")
 	},
 	{ NULL }  /* Sentinel */
 };

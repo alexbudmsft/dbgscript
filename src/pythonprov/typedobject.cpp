@@ -113,11 +113,11 @@ struct TypedObject
 
 	// Name of the typObjbol. (T_STRING_INPLACE)
 	//
-	char Name[256];
+	char Name[MAX_SYMBOL_NAME_LEN];
 
 	// Type of the typObjbol.
 	//
-	char TypeName[256];
+	char TypeName[MAX_SYMBOL_NAME_LEN];
 
 	// Backpointer to process object.
 	//
@@ -539,7 +539,7 @@ InitTypedObjectType()
 _Check_return_ PyObject*
 AllocTypedObject(
 	_In_ ULONG size,
-	_In_z_ const char* name,
+	_In_opt_z_ const char* name,
 	_In_z_ const char* type,
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
@@ -548,6 +548,7 @@ AllocTypedObject(
 {
 	PyObject* obj = nullptr;
 	PyObject* ret = nullptr;
+	HRESULT hr = S_OK;
 
 	// Alloc a single instance of the TypedObjectType class. (Calls __new__())
 	// If the allocation fails, the allocator will set the appropriate exception
@@ -566,8 +567,16 @@ AllocTypedObject(
 	Py_INCREF(proc);
 	typObj->Process = proc;
 
-	HRESULT hr = StringCchCopyA(STRING_AND_CCH(typObj->Name), name);
-	assert(SUCCEEDED(hr));
+	if (name)
+	{
+		hr = StringCchCopyA(STRING_AND_CCH(typObj->Name), name);
+		assert(SUCCEEDED(hr));
+	}
+	else
+	{
+		hr = StringCchCopyA(STRING_AND_CCH(typObj->Name), "<unnamed>");
+		assert(SUCCEEDED(hr));
+	}
 
 	hr = StringCchCopyA(STRING_AND_CCH(typObj->TypeName), type);
 	assert(SUCCEEDED(hr));
