@@ -16,5 +16,8 @@ foo_c = car1_f['c']
 print(foo_c)
 print(foo_c.name)
 print(foo_c.name, foo_c.type)
-print(foo_c.name, foo_c.type, foo_c.size, hex(foo_c.address))
-car1_f['xyz']
+print(foo_c.name, foo_c.type, foo_c.size, hex(foo_c.address), foo_c.value)
+# car1_f['xyz'] # no such field
+print(car1_f['arr'])
+print(car1_f['arr'][0].value)
+print(len(car1_f['arr']))

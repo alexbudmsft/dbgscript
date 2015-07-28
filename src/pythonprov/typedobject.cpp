@@ -111,7 +111,7 @@ struct TypedObject
 {
 	PyObject_HEAD
 
-	// Name of the typObjbol. (T_STRING_INPLACE)
+	// Name of the typObjbol. (T_STRING_INPLACE).
 	//
 	char Name[MAX_SYMBOL_NAME_LEN];
 
@@ -157,9 +157,11 @@ static PyTypeObject TypedObjectType =
 	sizeof(TypedObject)       /* tp_basicsize */
 };
 
+// Call when you already have a DEBUG_TYPED_DATA you want wrapped in a TypedObject.
+//
 static _Check_return_ PyObject*
 allocSubTypedObject(
-	_In_z_ const char* fieldName,
+	_In_z_ const char* name,
 	_In_ const DEBUG_TYPED_DATA* typedData,
 	_In_ ProcessObj* proc)
 {
@@ -183,9 +185,7 @@ allocSubTypedObject(
 	Py_INCREF(proc);
 	typObj->Process = proc;
 
-	// TODO: Get name and type name.
-	//
-	HRESULT hr = StringCchCopyA(STRING_AND_CCH(typObj->Name), fieldName);
+	HRESULT hr = StringCchCopyA(STRING_AND_CCH(typObj->Name), name);
 	assert(SUCCEEDED(hr));
 
 	typObj->TypedData = *typedData;
@@ -217,10 +217,78 @@ exit:
 	return ret;
 }
 
+static bool checkTypedData(
+	_In_ TypedObject* typedObj)
+{
+	if (!typedObj->TypedDataValid)
+	{
+		// This object has no typed data. It must have been a null ptr.
+		//
+		PyErr_SetString(PyExc_AttributeError, "Object has no typed data. Can't get fields.");
+		return false;
+	}
+	return true;
+}
+
+// Get an array element. I.e. object[i], where i is int in Python.
+//
+static PyObject*
+TypedObject_sequence_get_item(
+	_In_ PyObject* self,
+	_In_ Py_ssize_t index)
+{
+	TypedObject* typObj = (TypedObject*)self;
+	PyObject* ret = nullptr;
+
+	if (!checkTypedData(typObj))
+	{
+		return nullptr;
+	}
+
+	if (typObj->TypedData.Tag != SymTagPointerType &&
+		typObj->TypedData.Tag != SymTagArrayType)
+	{
+		// Not a pointer or array.
+		//
+		// This object has no typed data. It must have been a null ptr.
+		//
+		PyErr_SetString(PyExc_AttributeError, "Object not a pointer or array.");
+		return nullptr;
+	}
+
+	EXT_TYPED_DATA request = {};
+	EXT_TYPED_DATA response = {};
+	request.Operation = EXT_TDOP_GET_ARRAY_ELEMENT;
+	request.InData = typObj->TypedData;
+	request.In64 = index;
+
+	static_assert(sizeof(request) == sizeof(response),
+		"Request and response must be equi-sized");
+
+	HRESULT hr = GetDllGlobals()->DebugAdvanced->Request(
+		DEBUG_REQUEST_EXT_TYPED_DATA_ANSI,
+		&request,
+		sizeof(request),
+		&response,
+		sizeof(response),
+		nullptr);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_OSError, "EXT_TDOP_GET_ARRAY_ELEMENT operation failed. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	// Array elements have no name.
+	//
+	ret = allocSubTypedObject("<unnamed>", &response.OutData, typObj->Process);
+exit:
+	return ret;
+}
+
 // Get a field from a typed object, constructing a new TypedObject in the process.
 //
 static PyObject*
-TypedObject_subscript(
+TypedObject_mapping_subscript(
 	_In_ PyObject* self,
 	_In_ PyObject* key)
 {
@@ -230,6 +298,26 @@ TypedObject_subscript(
 	EXT_TYPED_DATA* responseBuf = nullptr;
 	BYTE* requestBuf = nullptr;
 
+	// A type can only be a mapping or a sequence. If the [] syntax is used,
+	// python will first check for mapping support and call that API, ignoring
+	// sequence APIs.
+	//
+	// Since we want to support both, we will check if the key is an int, and
+	// if so, call our own array-style lookup routine.
+	//
+	if (PyLong_Check(key))
+	{
+		// Call int-flavoured API.
+		//
+		Py_ssize_t index = PyLong_AsSsize_t(key);
+		if (index == -1)
+		{
+			return nullptr;
+		}
+
+		return TypedObject_sequence_get_item(self, index);
+	}
+
 	HRESULT hr = S_OK;
 	if (!PyUnicode_Check(key))
 	{
@@ -237,11 +325,8 @@ TypedObject_subscript(
 		return nullptr;
 	}
 
-	if (!typedObj->TypedDataValid)
+	if (!checkTypedData(typedObj))
 	{
-		// This object has no typed data. It must have been a null ptr.
-		//
-		PyErr_SetString(PyExc_AttributeError, "Object has no typed data. Can't get fields.");
 		return nullptr;
 	}
 
@@ -353,7 +438,7 @@ TypedObject_dealloc(
 static PyMappingMethods TypedObject_MappingDef =
 {
 	nullptr,  // mp_length
-	TypedObject_subscript,  // mp_subscript
+	TypedObject_mapping_subscript,  // mp_subscript
 	nullptr   // mp_ass_subscript
 };
 
@@ -503,6 +588,48 @@ exit:
 	return ret;
 }
 
+// len(obj)
+//
+static Py_ssize_t
+TypedObject_sequence_length(
+	_In_ PyObject* self)
+{
+	TypedObject* typObj = (TypedObject*)self;
+
+	if (!checkTypedData(typObj))
+	{
+		return -1;
+	}
+
+	if (typObj->TypedData.Tag != SymTagPointerType &&
+		typObj->TypedData.Tag != SymTagArrayType)
+	{
+		// Not a pointer or array.
+		//
+		// This object has no typed data. It must have been a null ptr.
+		//
+		PyErr_SetString(PyExc_AttributeError, "Object not a pointer or array.");
+		return -1;
+	}
+
+	// Get the zero'th item in order to get its size.
+	//
+	TypedObject* tmp = (TypedObject*)TypedObject_sequence_get_item(self, 0);
+	if (!tmp)
+	{
+		return -1;
+	}
+
+	assert(tmp->TypedDataValid);
+	const ULONG elemSize = tmp->TypedData.Size;
+
+	// Release the temporary object.
+	//
+	Py_DECREF(tmp);
+
+	return typObj->TypedData.Size / elemSize;
+}
+
 static PyGetSetDef TypedObject_GetSetDef[] =
 {
 	{
@@ -518,6 +645,10 @@ static PyGetSetDef TypedObject_GetSetDef[] =
 _Check_return_ bool
 InitTypedObjectType()
 {
+	static PySequenceMethods s_SequenceMethodsDef;
+	s_SequenceMethodsDef.sq_item = TypedObject_sequence_get_item;
+	s_SequenceMethodsDef.sq_length = TypedObject_sequence_length;
+
 	TypedObjectType.tp_flags = Py_TPFLAGS_DEFAULT;
 	TypedObjectType.tp_doc = PyDoc_STR("dbgscript.typObjbol objects");
 	TypedObjectType.tp_members = TypedObject_MemberDef;
@@ -526,6 +657,7 @@ InitTypedObjectType()
 	TypedObjectType.tp_str = TypedObject_str;
 	TypedObjectType.tp_dealloc = TypedObject_dealloc;
 	TypedObjectType.tp_as_mapping = &TypedObject_MappingDef;
+	TypedObjectType.tp_as_sequence = &s_SequenceMethodsDef;
 
 	// Finalize the type definition.
 	//
@@ -536,6 +668,11 @@ InitTypedObjectType()
 	return true;
 }
 
+// Call when you want to create a brand-new TypedObject from scratch. I.e.
+// you don't have a DEBUG_TYPED_DATA to begin with.
+//
+// E.g. synthesizing a TypedObject from an address and type.
+//
 _Check_return_ PyObject*
 AllocTypedObject(
 	_In_ ULONG size,
