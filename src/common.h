@@ -35,6 +35,7 @@ struct DllGlobals
 	IDebugSystemObjects* DebugSysObj;
 	IDebugSymbols3* DebugSymbols;
 	IDebugAdvanced2* DebugAdvanced;
+	IDebugDataSpaces4* DebugDataSpaces;
 
 	// FUTURE: This will be a list of all script providers.
 	//

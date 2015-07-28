@@ -25,7 +25,8 @@ Process_create_typed_object(
 	ULONG typeId = 0;
 	UINT64 modBase = 0;
 
-	if (!PyArg_ParseTuple(args, "sK:create_typed_object", &typeName, &addr)) {
+	if (!PyArg_ParseTuple(args, "sK:create_typed_object", &typeName, &addr))
+	{
 		return nullptr;
 	}
 
@@ -39,6 +40,32 @@ Process_create_typed_object(
 	}
 
 	ret = AllocTypedObject(0, nullptr, typeName, typeId, modBase, addr, (ProcessObj*)self);
+exit:
+	return ret;
+}
+
+static PyObject*
+Process_read_ptr(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	PyObject *ret = nullptr;
+	UINT64 addr = 0;
+	UINT64 ptrVal = 0;
+	if (!PyArg_ParseTuple(args, "K:read_ptr", &addr))
+	{
+		return nullptr;
+	}
+
+	HRESULT hr = GetDllGlobals()->DebugDataSpaces->ReadPointersVirtual(1, addr, &ptrVal);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_ValueError, "Failed to read pointer value from address '%p'. Error 0x%08x.", addr, hr);
+		goto exit;
+	}
+
+	ret = PyLong_FromUnsignedLongLong(ptrVal);
+
 exit:
 	return ret;
 }
@@ -129,6 +156,12 @@ static PyMethodDef Process_MethodDef[] =
 	{
 		"create_typed_object",
 		Process_create_typed_object,
+		METH_VARARGS,
+		PyDoc_STR("Return a TypedObject with a given type and address.")
+	},
+	{
+		"read_ptr",
+		Process_read_ptr,
 		METH_VARARGS,
 		PyDoc_STR("Return a TypedObject with a given type and address.")
 	},
