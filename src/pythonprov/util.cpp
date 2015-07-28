@@ -10,4 +10,3 @@ SetReadOnlyProperty(
 	PyErr_SetString(PyExc_AttributeError, "readonly attribute");
 	return -1;
 }
-

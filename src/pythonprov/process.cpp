@@ -1,6 +1,7 @@
 #include "process.h"
 #include "thread.h"
 #include "typedobject.h"
+#include "../util.h"
 
 struct ProcessObj
 {
@@ -57,7 +58,7 @@ Process_read_ptr(
 		return nullptr;
 	}
 
-	HRESULT hr = GetDllGlobals()->DebugDataSpaces->ReadPointersVirtual(1, addr, &ptrVal);
+	HRESULT hr = UtilReadPointer(addr, &ptrVal);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_ValueError, "Failed to read pointer value from address '%p'. Error 0x%08x.", addr, hr);

@@ -12,6 +12,7 @@
 #include "process.h"
 #include <wdbgexts.h>
 #include "util.h"
+#include "../util.h"
 
 struct ProcessObj;
 
@@ -100,7 +101,8 @@ struct TypedObjectValue
 		BYTE ByteVal;
 		WORD WordVal;
 		DWORD DwVal;
-		INT64 QwVal;
+		INT64 I64Val;
+		UINT64 UI64Val;
 		BOOL BoolVal;
 		float FloatVal;
 		double DoubleVal;
@@ -452,62 +454,71 @@ pyValueFromCValue(
 	DEBUG_TYPED_DATA* typedData = &typObj->TypedData;
 	PyObject* ret = nullptr;
 
-	switch (typedData->BaseTypeId)
+	if (typedData->Tag == SymTagPointerType)
 	{
-	case DNTYPE_CHAR:
-		assert(typedData->Size == 1);
-		ret = PyUnicode_FromOrdinal(cValue->Value.ByteVal);
-		break;
-	case DNTYPE_INT8:
-	case DNTYPE_UINT8:
-		assert(typedData->Size == 1);
-		ret = PyLong_FromLong(cValue->Value.ByteVal);
-		break;
-	case DNTYPE_INT16:
-	case DNTYPE_UINT16:
-		assert(typedData->Size == sizeof(WORD));
-		ret = PyLong_FromLong(cValue->Value.WordVal);
-		break;
-	case DNTYPE_WCHAR:
-		static_assert(sizeof(WCHAR) == sizeof(WORD), "Assume WCHAR is 2 bytes");
-		assert(typedData->Size == sizeof(WORD));
-		ret = PyUnicode_FromOrdinal(cValue->Value.WordVal);
-		break;
-	case DNTYPE_INT32:
-	case DNTYPE_LONG32:
-		assert(typedData->Size == sizeof(DWORD));
-		ret = PyLong_FromLong((long)cValue->Value.DwVal);
-		break;
-	case DNTYPE_UINT32:
-	case DNTYPE_ULONG32:
-		assert(typedData->Size == sizeof(DWORD));
-		ret = PyLong_FromUnsignedLong(cValue->Value.DwVal);
-		break;
-	case DNTYPE_INT64:
-		assert(typedData->Size == sizeof(INT64));
-		ret = PyLong_FromLongLong((INT64)cValue->Value.QwVal);
-		break;
-	case DNTYPE_UINT64:
-		assert(typedData->Size == sizeof(UINT64));
-		ret = PyLong_FromUnsignedLongLong(cValue->Value.QwVal);
-		break;
-	case DNTYPE_BOOL:
-		assert(typedData->Size == sizeof(BOOL));
-		ret = PyBool_FromLong(!!cValue->Value.BoolVal);
-		break;
-	case DNTYPE_FLOAT32:
-		assert(typedData->Size == sizeof(float));
-		ret = PyFloat_FromDouble(cValue->Value.FloatVal);
-		break;
-	case DNTYPE_FLOAT64:
-		assert(typedData->Size == sizeof(double));
-		ret = PyFloat_FromDouble(cValue->Value.DoubleVal);
-		break;
-	default:
-		PyErr_Format(PyExc_AttributeError, "Unsupported type id: %d (%s)",
-			typedData->BaseTypeId,
-			typObj->TypeName);
-		break;
+		ret = PyLong_FromUnsignedLongLong(cValue->Value.UI64Val);
+	}
+	else
+	{
+		assert(typedData->Tag == SymTagBaseType);
+
+		switch (typedData->BaseTypeId)
+		{
+		case DNTYPE_CHAR:
+			assert(typedData->Size == 1);
+			ret = PyUnicode_FromOrdinal(cValue->Value.ByteVal);
+			break;
+		case DNTYPE_INT8:
+		case DNTYPE_UINT8:
+			assert(typedData->Size == 1);
+			ret = PyLong_FromLong(cValue->Value.ByteVal);
+			break;
+		case DNTYPE_INT16:
+		case DNTYPE_UINT16:
+			assert(typedData->Size == sizeof(WORD));
+			ret = PyLong_FromLong(cValue->Value.WordVal);
+			break;
+		case DNTYPE_WCHAR:
+			static_assert(sizeof(WCHAR) == sizeof(WORD), "Assume WCHAR is 2 bytes");
+			assert(typedData->Size == sizeof(WORD));
+			ret = PyUnicode_FromOrdinal(cValue->Value.WordVal);
+			break;
+		case DNTYPE_INT32:
+		case DNTYPE_LONG32:
+			assert(typedData->Size == sizeof(DWORD));
+			ret = PyLong_FromLong((long)cValue->Value.DwVal);
+			break;
+		case DNTYPE_UINT32:
+		case DNTYPE_ULONG32:
+			assert(typedData->Size == sizeof(DWORD));
+			ret = PyLong_FromUnsignedLong(cValue->Value.DwVal);
+			break;
+		case DNTYPE_INT64:
+			assert(typedData->Size == sizeof(INT64));
+			ret = PyLong_FromLongLong(cValue->Value.I64Val);
+			break;
+		case DNTYPE_UINT64:
+			assert(typedData->Size == sizeof(UINT64));
+			ret = PyLong_FromUnsignedLongLong(cValue->Value.UI64Val);
+			break;
+		case DNTYPE_BOOL:
+			assert(typedData->Size == sizeof(BOOL));
+			ret = PyBool_FromLong(!!cValue->Value.BoolVal);
+			break;
+		case DNTYPE_FLOAT32:
+			assert(typedData->Size == sizeof(float));
+			ret = PyFloat_FromDouble(cValue->Value.FloatVal);
+			break;
+		case DNTYPE_FLOAT64:
+			assert(typedData->Size == sizeof(double));
+			ret = PyFloat_FromDouble(cValue->Value.DoubleVal);
+			break;
+		default:
+			PyErr_Format(PyExc_AttributeError, "Unsupported type id: %d (%s)",
+				typedData->BaseTypeId,
+				typObj->TypeName);
+			break;
+		}
 	}
 	return ret;
 }
@@ -537,31 +548,43 @@ TypedObject_get_value(
 		return nullptr;
 	}
 
-	if (typObj->TypedData.Tag != SymTagBaseType)
+	if (typObj->TypedData.Tag != SymTagBaseType &&
+		typObj->TypedData.Tag != SymTagPointerType)
 	{
 		PyErr_SetString(PyExc_AttributeError, "Not a primitive type.");
 		return nullptr;
 	}
 
-	// Read the appropriate size from memory.
-	//
-	// What primitive type is bigger than 8 bytes?
-	//
-	ULONG cbRead = 0;
-	assert(typObj->TypedData.Size <= 8);
-	HRESULT hr = GetDllGlobals()->DebugSymbols->ReadTypedDataVirtual(
-		typObj->TypedData.Offset,
-		typObj->TypedData.ModBase,
-		typObj->TypedData.TypeId,
-		&typObj->Value.Value,
-		sizeof(typObj->Value.Value),
-		&cbRead);
-	if (FAILED(hr))
+	if (typObj->TypedData.Tag == SymTagBaseType)
 	{
-		PyErr_Format(PyExc_OSError, "Failed to read typed data. Error 0x%08x.", hr);
-		goto exit;
+		// Read the appropriate size from memory.
+		//
+		// What primitive type is bigger than 8 bytes?
+		//
+		ULONG cbRead = 0;
+		assert(typObj->TypedData.Size <= 8);
+		HRESULT hr = GetDllGlobals()->DebugSymbols->ReadTypedDataVirtual(
+			typObj->TypedData.Offset,
+			typObj->TypedData.ModBase,
+			typObj->TypedData.TypeId,
+			&typObj->Value.Value,
+			sizeof(typObj->Value.Value),
+			&cbRead);
+		if (FAILED(hr))
+		{
+			PyErr_Format(PyExc_OSError, "Failed to read typed data. Error 0x%08x.", hr);
+			goto exit;
+		}
+		assert(cbRead == typObj->TypedData.Size);
 	}
-	assert(cbRead == typObj->TypedData.Size);
+	else
+	{
+		assert(typObj->TypedData.Tag == SymTagPointerType);
+
+		// Read a pointer from the target's memory.
+		//
+		UtilReadPointer(typObj->TypedData.Offset, &typObj->Value.Value.UI64Val);
+	}
 	
 	// Value has been populated.
 	//
