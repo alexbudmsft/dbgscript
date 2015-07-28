@@ -516,25 +516,11 @@ pyValueFromCValue(
 //
 static PyObject*
 TypedObject_str(
-	_In_ PyObject* self)
+	_In_ PyObject* /*self*/)
 {
-	TypedObject* typObj = (TypedObject*)self;
-	PyObject* val = nullptr;
-	if (typObj->ValueValid && typObj->TypedDataValid)
-	{
-		val = pyValueFromCValue(typObj);
-	}
-	else
-	{
-		val = PyUnicode_FromString("<deferred>");
-	}
-
-	return PyUnicode_FromFormat(
-		"dbgscript.TypedObject: {Name: %s, Type: %s, Size: %d, Value: %S}",
-		typObj->Name,
-		typObj->TypeName,
-		typObj->TypedData.Size,
-		val);
+	// String formatting is really slow.
+	//
+	return PyUnicode_FromString("dbgscript.TypedObject");
 }
 
 static PyObject*
