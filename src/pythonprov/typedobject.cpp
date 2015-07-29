@@ -458,6 +458,10 @@ pyValueFromCValue(
 	{
 		ret = PyLong_FromUnsignedLongLong(cValue->Value.UI64Val);
 	}
+	else if (typedData->Tag == SymTagEnum)
+	{
+		ret = PyLong_FromUnsignedLong(cValue->Value.DwVal);
+	}
 	else
 	{
 		assert(typedData->Tag == SymTagBaseType);
@@ -548,43 +552,42 @@ TypedObject_get_value(
 		return nullptr;
 	}
 
-	if (typObj->TypedData.Tag != SymTagBaseType &&
-		typObj->TypedData.Tag != SymTagPointerType)
+	bool primitiveType = false;
+
+	switch (typObj->TypedData.Tag)
+	{
+	case SymTagBaseType:
+	case SymTagPointerType:
+	case SymTagEnum:
+		primitiveType = true;
+		break;
+	}
+
+	if (!primitiveType)
 	{
 		PyErr_SetString(PyExc_AttributeError, "Not a primitive type.");
 		return nullptr;
 	}
 
-	if (typObj->TypedData.Tag == SymTagBaseType)
+	// Read the appropriate size from memory.
+	//
+	// What primitive type is bigger than 8 bytes?
+	//
+	ULONG cbRead = 0;
+	assert(typObj->TypedData.Size <= 8);
+	HRESULT hr = GetDllGlobals()->DebugSymbols->ReadTypedDataVirtual(
+		typObj->TypedData.Offset,
+		typObj->TypedData.ModBase,
+		typObj->TypedData.TypeId,
+		&typObj->Value.Value,
+		sizeof(typObj->Value.Value),
+		&cbRead);
+	if (FAILED(hr))
 	{
-		// Read the appropriate size from memory.
-		//
-		// What primitive type is bigger than 8 bytes?
-		//
-		ULONG cbRead = 0;
-		assert(typObj->TypedData.Size <= 8);
-		HRESULT hr = GetDllGlobals()->DebugSymbols->ReadTypedDataVirtual(
-			typObj->TypedData.Offset,
-			typObj->TypedData.ModBase,
-			typObj->TypedData.TypeId,
-			&typObj->Value.Value,
-			sizeof(typObj->Value.Value),
-			&cbRead);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "Failed to read typed data. Error 0x%08x.", hr);
-			goto exit;
-		}
-		assert(cbRead == typObj->TypedData.Size);
+		PyErr_Format(PyExc_OSError, "Failed to read typed data. Error 0x%08x.", hr);
+		goto exit;
 	}
-	else
-	{
-		assert(typObj->TypedData.Tag == SymTagPointerType);
-
-		// Read a pointer from the target's memory.
-		//
-		UtilReadPointer(typObj->TypedData.Offset, &typObj->Value.Value.UI64Val);
-	}
+	assert(cbRead == typObj->TypedData.Size);
 	
 	// Value has been populated.
 	//
