@@ -9,15 +9,56 @@
 
 static const char* x_ModuleName = "dbgscript";
 
+// Global function in the dbgscript module.
+//
+static PyObject*
+DbgScript_execute_command(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	const char* command = nullptr;
+	if (!PyArg_ParseTuple(args, "s:execute_command", &command))
+	{
+		return nullptr;
+	}
+
+	// CONSIDER: adding an option letting user control whether we echo the
+	// command or not.
+	//
+	HRESULT hr = GetDllGlobals()->DebugControl->Execute(
+		DEBUG_OUTCTL_ALL_CLIENTS,
+		command,
+		DEBUG_EXECUTE_ECHO | DEBUG_EXECUTE_NO_REPEAT);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_ValueError, "Failed to execute command '%s'. Error 0x%08x.", command, hr);
+		goto exit;
+	}
+
+exit:
+	Py_RETURN_NONE;
+}
+
+static PyMethodDef dbgscript_MethodsDef[] = 
+{
+	{
+		"execute_command",
+		DbgScript_execute_command,
+		METH_VARARGS,
+		PyDoc_STR("Execute a debugger command.")
+	},
+	{NULL, NULL, 0, NULL}        /* Sentinel */
+};
+
 // DbgScript Module Definition.
 //
-PyModuleDef g_ModuleDef =
+PyModuleDef dbgscript_ModuleDef =
 {
 	PyModuleDef_HEAD_INIT,
 	x_ModuleName,  // Name
 	PyDoc_STR("dbgscript Module"),       // Doc
 	-1,  // size
-	nullptr,  // Methods
+	dbgscript_MethodsDef,  // Methods
 };
 
 _Check_return_ bool
@@ -72,7 +113,7 @@ PyInit_dbgscript()
 
 	// Create a module object.
 	//
-	PyObject* module = PyModule_Create(&g_ModuleDef);
+	PyObject* module = PyModule_Create(&dbgscript_ModuleDef);
 	if (!module)
 	{
 		return nullptr;
@@ -86,7 +127,7 @@ PyInit_dbgscript()
 
 	Py_INCREF(s_ProcessObj);
 	PyModule_AddObject(module, "Process", s_ProcessObj);
-
+	
 	return module;
 }
 
