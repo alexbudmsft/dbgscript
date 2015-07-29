@@ -157,7 +157,7 @@ DebugExtensionUninitialize()
 	}
 }
 
-WCHAR*
+_Check_return_ WCHAR*
 ConvertAnsiToWide(_In_z_ const char* ansiStr)
 {
 	const int cchBuf = MultiByteToWideChar(CP_ACP, 0, ansiStr, -1, nullptr, 0);
@@ -175,9 +175,9 @@ ConvertAnsiToWide(_In_z_ const char* ansiStr)
 
 _Check_return_ bool
 FileExists(
-	_In_z_ LPCSTR szPath)
+	_In_z_ const WCHAR* wszPath)
 {
-	const DWORD dwAttrib = GetFileAttributesA(szPath);
+	const DWORD dwAttrib = GetFileAttributes(wszPath);
 
 	return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
 		!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
@@ -296,8 +296,33 @@ runscript(
 	_In_opt_ PCSTR         args)
 {
 	HRESULT hr = S_OK;
-	const char* scriptName = args;
-	char fullScriptName[MAX_PATH];
+	WCHAR* scriptName = nullptr;
+	int cArgs = 0;
+	WCHAR** argList = nullptr;
+	char ansiScriptName[MAX_PATH];
+
+	const WCHAR* wszArgs = ConvertAnsiToWide(args);
+	if (!wszArgs)
+	{
+		GetDllGlobals()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Failed to convert args to wide string.\n");
+		hr = E_FAIL;
+		goto exit;
+	}
+
+	argList = CommandLineToArgvW(wszArgs, &cArgs);
+	if (!argList)
+	{
+		hr = HRESULT_FROM_WIN32(GetLastError());
+		GetDllGlobals()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Failed to parse arguments: 0x%08x\n", hr);
+		goto exit;
+	}
+
+	WCHAR fullScriptName[MAX_PATH];
+	scriptName = argList[0];
 	if (!FileExists(scriptName))
 	{
 		// Try to search for the file in the script path list.
@@ -305,7 +330,7 @@ runscript(
 		ScriptPathElem* elem = GetDllGlobals()->ScriptPath;
 		while (elem)
 		{
-			StringCchPrintfA(STRING_AND_CCH(fullScriptName), "%hs\\%hs",
+			StringCchPrintf(STRING_AND_CCH(fullScriptName), L"%ls\\%ls",
 				elem->Path, scriptName);
 			if (FileExists(fullScriptName))
 			{
@@ -318,17 +343,35 @@ runscript(
 
 	if (!FileExists(scriptName))
 	{
-		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script file not found in any of the search paths.\n");
+		GetDllGlobals()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Script file not found in any of the search paths.\n");
 		hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
 		goto exit;
 	}
 
 	hr = GetDllGlobals()->DebugControl->Output(
 		DEBUG_OUTPUT_NORMAL,
-		"Executing script '%s'\n"
+		"Executing script '%ls'\n"
 		"-----------------------------------------------\n", scriptName);
 	if (FAILED(hr))
 	{
+		goto exit;
+	}
+
+	// Replace first pointer with our final script name.
+	//
+	argList[0] = scriptName;
+
+	size_t cConverted = 0;
+	
+	errno_t err = wcstombs_s(&cConverted, ansiScriptName, scriptName, _countof(ansiScriptName));
+	if (err)
+	{
+		GetDllGlobals()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Failed to convert wide string to ANSI: %d.\n", err);
+		hr = E_FAIL;
 		goto exit;
 	}
 
@@ -336,7 +379,7 @@ runscript(
 	// of registered providers to find the first one that claims the extension.
 	// For now, we only have one provider.
 	//
-	hr = GetDllGlobals()->ScriptProvider->Run(scriptName);
+	hr = GetDllGlobals()->ScriptProvider->Run(ansiScriptName, cArgs, argList);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -345,6 +388,16 @@ exit:
 	if (FAILED(hr))
 	{
 		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
+	}
+	if (wszArgs)
+	{
+		delete[] wszArgs;
+		wszArgs = nullptr;
+	}
+	if (argList)
+	{
+		LocalFree(argList);
+		argList = nullptr;
 	}
 	return hr;
 }

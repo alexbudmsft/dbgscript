@@ -170,13 +170,18 @@ CPythonScriptProvider::Init()
 	return hr;
 }
 
+// Python is odd in that PySys_SetArgv takes a wide string, but PyRun_SimpleFile
+// takes a narrow one.
+//
 _Check_return_ HRESULT
 CPythonScriptProvider::Run(
-	_In_z_ const char* scriptName)
+	_In_z_ const char* szScriptName,
+	_In_ int argc,
+	_In_z_ WCHAR** argv)
 {
 	HRESULT hr = S_OK;
 	FILE* fp = nullptr;
-	fp = fopen(scriptName, "r");
+	fp = fopen(szScriptName, "r");
 	if (!fp)
 	{
 		ULONG err = 0;
@@ -185,7 +190,7 @@ CPythonScriptProvider::Run(
 		GetDllGlobals()->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
 			"Failed to open file '%s'. Error %d (%s).\n",
-			scriptName,
+			szScriptName,
 			err,
 			strerror(errno));
 
@@ -193,7 +198,8 @@ CPythonScriptProvider::Run(
 		goto exit;
 	}
 
-	PyRun_SimpleFile(fp, scriptName);
+	PySys_SetArgv(argc, argv);
+	PyRun_SimpleFile(fp, szScriptName);
 
 exit:
 	if (fp)

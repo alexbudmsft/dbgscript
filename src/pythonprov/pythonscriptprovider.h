@@ -11,7 +11,9 @@ public:
 
 	_Check_return_ HRESULT
 	Run(
-		_In_z_ const char* scriptName) override;
+		_In_z_ const char* szScriptName,
+		_In_ int argc,
+		_In_z_ WCHAR** argv) override;
 
 	_Check_return_ HRESULT
 	RunString(
