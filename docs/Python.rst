@@ -1,6 +1,8 @@
 Python API
 =====================================
 
+.. module:: dbgscript
+
 .. toctree::
    :maxdepth: 2
    

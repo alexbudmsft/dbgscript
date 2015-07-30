@@ -1,5 +1,7 @@
 .. default-domain:: py
 
+.. currentmodule:: dbgscript
+
 TypedObject class
 =================
 
