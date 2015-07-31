@@ -273,8 +273,20 @@ runscript(
 	HRESULT hr = S_OK;
 	int cArgs = 0;
 	WCHAR** argList = nullptr;
+	const WCHAR* wszArgs = nullptr;
 
-	const WCHAR* wszArgs = UtilConvertAnsiToWide(args);
+	if (!args[0])
+	{
+		// If it's an empty string, fail now.
+		//
+		GetDllGlobals()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: !runscript requires at least one argument.\n");
+		hr = E_INVALIDARG;
+		goto exit;
+	}
+
+	wszArgs = UtilConvertAnsiToWide(args);
 	if (!wszArgs)
 	{
 		GetDllGlobals()->DebugControl->Output(

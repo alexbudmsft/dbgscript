@@ -1,3 +1,3 @@
-Ruby API
+Ruby Script Provider
 =====================================
 
