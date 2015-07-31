@@ -46,6 +46,47 @@ exit:
 }
 
 static PyObject*
+Process_get_global(
+	_In_ PyObject* self,
+	_In_ PyObject* args)
+{
+	PyObject *ret = nullptr;
+	const char* symbol = nullptr;
+	UINT64 addr = 0;
+	ULONG typeId = 0;
+	UINT64 modBase = 0;
+	char typeName[MAX_SYMBOL_NAME_LEN] = {};
+	if (!PyArg_ParseTuple(args, "s:get_global", &symbol))
+	{
+		return nullptr;
+	}
+	HRESULT hr = GetDllGlobals()->DebugSymbols->GetOffsetByName(symbol, &addr);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_ValueError, "Failed to get virtual address for symbol '%s'. Error 0x%08x.", symbol, hr);
+		goto exit;
+	}
+
+	hr = GetDllGlobals()->DebugSymbols->GetSymbolTypeId(symbol, &typeId, &modBase);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_ValueError, "Failed to get type id for symbol '%s'. Error 0x%08x.", symbol, hr);
+		goto exit;
+	}
+
+	hr = GetDllGlobals()->DebugSymbols->GetTypeName(modBase, typeId, STRING_AND_CCH(typeName), nullptr);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_ValueError, "Failed to get type name for symbol '%s'. Error 0x%08x.", symbol, hr);
+		goto exit;
+	}
+
+	ret = AllocTypedObject(0, symbol, typeName, typeId, modBase, addr, (ProcessObj*)self);
+exit:
+	return ret;
+}
+
+static PyObject*
 Process_read_ptr(
 	_In_ PyObject* /*self*/,
 	_In_ PyObject* args)
@@ -164,7 +205,13 @@ static PyMethodDef Process_MethodDef[] =
 		"read_ptr",
 		Process_read_ptr,
 		METH_VARARGS,
-		PyDoc_STR("Return a TypedObject with a given type and address.")
+		PyDoc_STR("Read a pointer at given address.")
+	},
+	{
+		"get_global",
+		Process_get_global,
+		METH_VARARGS,
+		PyDoc_STR("Get a global variable as a TypedObject.")
 	},
 	{ NULL }  /* Sentinel */
 };
