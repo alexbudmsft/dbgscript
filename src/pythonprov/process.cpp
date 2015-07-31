@@ -46,6 +46,41 @@ exit:
 }
 
 static PyObject*
+Process_resolve_enum(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	PyObject *ret = nullptr;
+	const char* enumTypeName = nullptr;
+	UINT64 value = 0;
+	UINT64 modBase = 0;
+	ULONG typeId = 0;
+	char enumElementName[MAX_SYMBOL_NAME_LEN] = {};
+	if (!PyArg_ParseTuple(args, "sK:resolve_enum", &enumTypeName, &value))
+	{
+		return nullptr;
+	}
+
+	HRESULT hr = GetDllGlobals()->DebugSymbols->GetSymbolTypeId(enumTypeName, &typeId, &modBase);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_ValueError, "Failed to get type id for symbol '%s'. Error 0x%08x.", enumTypeName, hr);
+		goto exit;
+	}
+
+	hr = GetDllGlobals()->DebugSymbols->GetConstantName(modBase, typeId, value, STRING_AND_CCH(enumElementName), nullptr);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_ValueError, "Failed to get element name for enum '%s' with value '%llu'. Error 0x%08x.", enumTypeName, value, hr);
+		goto exit;
+	}
+
+	ret = PyUnicode_FromString(enumElementName);
+exit:
+	return ret;
+}
+
+static PyObject*
 Process_get_global(
 	_In_ PyObject* self,
 	_In_ PyObject* args)
@@ -212,6 +247,12 @@ static PyMethodDef Process_MethodDef[] =
 		Process_get_global,
 		METH_VARARGS,
 		PyDoc_STR("Get a global variable as a TypedObject.")
+	},
+	{
+		"resolve_enum",
+		Process_resolve_enum,
+		METH_VARARGS,
+		PyDoc_STR("Get an enum element's name based on its type and value.")
 	},
 	{ NULL }  /* Sentinel */
 };
