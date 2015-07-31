@@ -32,3 +32,23 @@ TypedObject attributes
    Get the size of the object in bytes as an :class:`int`.
 
 .. TODO: Describe subscript operator (both int and str keys)
+
+Sequence support
+----------------
+
+If the TypedObject represents an array or pointer, the object implements the
+sequence protocol.
+
+If the object represents an array, its length can be determined with the
+builtin :func:`len` function.
+
+If the object represents an array or pointer, its elements can be obtained via
+the subscript operator with an :class:`int` key::
+
+    obj[0]  # obtains first element
+    obj[5]  # obtains sixth element
+
+Mapping support
+---------------
+
+.. TODO
