@@ -27,7 +27,7 @@ DbgScriptIO_readline(PyObject* /* self */, PyObject* args)
 {
 	CHECK_ABORT;
 
-	char buf[1024] = { 0 };
+	char buf[4096] = { 0 };
 	ULONG actualLen = 0;
 
 	// Set a default. Callers will typically call us with no parameters, expecting
