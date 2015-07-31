@@ -118,7 +118,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dbgscriptout.cpp" />
+    <ClCompile Include="dbgscriptio.cpp" />
     <ClCompile Include="process.cpp" />
     <ClCompile Include="pythonscriptprovider.cpp" />
     <ClCompile Include="stackframe.cpp" />
@@ -127,7 +127,7 @@
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="dbgscriptout.h" />
+    <ClInclude Include="dbgscriptio.h" />
     <ClInclude Include="process.h" />
     <ClInclude Include="pythonscriptprovider.h" />
     <ClInclude Include="stackframe.h" />

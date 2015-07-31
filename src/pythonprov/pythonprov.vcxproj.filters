@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dbgscriptout.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="process.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -36,12 +33,12 @@
     <ClCompile Include="util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dbgscriptio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="process.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dbgscriptout.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stackframe.h">
@@ -57,6 +54,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="pythonscriptprovider.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dbgscriptio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,7 +1,7 @@
 #include <python.h>
 #include "../../include/iscriptprovider.h"
 #include "pythonscriptprovider.h"
-#include "dbgscriptout.h"
+#include "dbgscriptio.h"
 #include "process.h"
 #include "thread.h"
 #include "stackframe.h"
@@ -66,7 +66,7 @@ InitTypes()
 {
 	// TODO: Make this a table of callbacks.
 	//
-	if (!InitDbgScriptOutType())
+	if (!InitDbgScriptIOType())
 	{
 		return false;
 	}
@@ -93,7 +93,7 @@ InitTypes()
 	return true;
 }
 
-static PyObject* g_DbgScriptOut;
+static PyObject* g_DbgScriptIO;
 
 // Module initialization function for 'dbgscript'.
 //
@@ -105,8 +105,8 @@ PyInit_dbgscript()
 		return nullptr;
 	}
 
-	g_DbgScriptOut = AllocDbgScriptOutObj();
-	if (!g_DbgScriptOut)
+	g_DbgScriptIO = AllocDbgScriptIOObj();
+	if (!g_DbgScriptIO)
 	{
 		return nullptr;
 	}
@@ -131,12 +131,14 @@ PyInit_dbgscript()
 	return module;
 }
 
-static void redirectStdOut()
+static void 
+redirectStreams()
 {
 	// Replace sys.stdout and sys.stderr with our new object.
 	//
-	PySys_SetObject("stdout", g_DbgScriptOut);
-	PySys_SetObject("stderr", g_DbgScriptOut);
+	PySys_SetObject("stdout", g_DbgScriptIO);
+	PySys_SetObject("stderr", g_DbgScriptIO);
+	PySys_SetObject("stdin", g_DbgScriptIO);
 }
 
 CPythonScriptProvider::CPythonScriptProvider()
@@ -166,7 +168,7 @@ CPythonScriptProvider::Init()
 	// Import 'dbgscript' module.
 	//
 	PyImport_ImportModule(x_ModuleName);
-	redirectStdOut();
+	redirectStreams();
 	return hr;
 }
 

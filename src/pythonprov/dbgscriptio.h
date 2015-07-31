@@ -4,7 +4,7 @@
 #include <python.h>
 
 _Check_return_ bool
-InitDbgScriptOutType();
+InitDbgScriptIOType();
 
 _Check_return_ PyObject*
-AllocDbgScriptOutObj();
+AllocDbgScriptIOObj();
