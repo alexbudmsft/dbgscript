@@ -2,6 +2,7 @@
 #include "../include/iscriptprovider.h"
 #include <strsafe.h>
 #include <assert.h>
+#include "util.h"
 
 static DllGlobals g_DllGlobals;
 
@@ -157,32 +158,6 @@ DebugExtensionUninitialize()
 	}
 }
 
-_Check_return_ WCHAR*
-ConvertAnsiToWide(_In_z_ const char* ansiStr)
-{
-	const int cchBuf = MultiByteToWideChar(CP_ACP, 0, ansiStr, -1, nullptr, 0);
-	WCHAR* wideBuf = new WCHAR[cchBuf];
-	int ret = MultiByteToWideChar(CP_ACP, 0, ansiStr, -1, wideBuf, cchBuf);
-	if (ret > 0)
-	{
-		return wideBuf;
-	}
-	else
-	{
-		return nullptr;
-	}
-}
-
-_Check_return_ bool
-FileExists(
-	_In_z_ const WCHAR* wszPath)
-{
-	const DWORD dwAttrib = GetFileAttributes(wszPath);
-
-	return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
-		!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
-}
-
 // comma-separated list of paths.
 // If run with no parameters, print the current path.
 //
@@ -296,12 +271,10 @@ runscript(
 	_In_opt_ PCSTR         args)
 {
 	HRESULT hr = S_OK;
-	WCHAR* scriptName = nullptr;
 	int cArgs = 0;
 	WCHAR** argList = nullptr;
-	char ansiScriptName[MAX_PATH];
 
-	const WCHAR* wszArgs = ConvertAnsiToWide(args);
+	const WCHAR* wszArgs = UtilConvertAnsiToWide(args);
 	if (!wszArgs)
 	{
 		GetDllGlobals()->DebugControl->Output(
@@ -321,65 +294,24 @@ runscript(
 		goto exit;
 	}
 
-	WCHAR fullScriptName[MAX_PATH];
-	scriptName = argList[0];
-	if (!FileExists(scriptName))
-	{
-		// Try to search for the file in the script path list.
-		//
-		ScriptPathElem* elem = GetDllGlobals()->ScriptPath;
-		while (elem)
-		{
-			StringCchPrintf(STRING_AND_CCH(fullScriptName), L"%ls\\%ls",
-				elem->Path, scriptName);
-			if (FileExists(fullScriptName))
-			{
-				scriptName = fullScriptName;
-				break;
-			}
-			elem = elem->Next;
-		}
-	}
 
-	if (!FileExists(scriptName))
-	{
-		GetDllGlobals()->DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			"Error: Script file not found in any of the search paths.\n");
-		hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-		goto exit;
-	}
-
-	hr = GetDllGlobals()->DebugControl->Output(
-		DEBUG_OUTPUT_NORMAL,
-		"Executing script '%ls'\n"
-		"-----------------------------------------------\n", scriptName);
-	if (FAILED(hr))
-	{
-		goto exit;
-	}
-
-	// Replace first pointer with our final script name.
+	// In the future, !runscript will keep the first several args for itself,
+	// and pass the rest on to the script provider.
 	//
-	argList[0] = scriptName;
-
-	size_t cConverted = 0;
-	
-	errno_t err = wcstombs_s(&cConverted, ansiScriptName, scriptName, _countof(ansiScriptName));
-	if (err)
-	{
-		GetDllGlobals()->DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			"Error: Failed to convert wide string to ANSI: %d.\n", err);
-		hr = E_FAIL;
-		goto exit;
-	}
+	// Currently, it doesn't so we just pass everything.
+	//
+	// Rebase the arguments from the script to after what we consumed for the
+	// host.
+	//
+	WCHAR** argsForScriptProv = &argList[0];
+	int cArgsForScriptProv = cArgs;
+	assert(cArgsForScriptProv >= 0);
 
 	// We should examine the extension of the script and walk the list
 	// of registered providers to find the first one that claims the extension.
 	// For now, we only have one provider.
 	//
-	hr = GetDllGlobals()->ScriptProvider->Run(ansiScriptName, cArgs, argList);
+	hr = GetDllGlobals()->ScriptProvider->Run(cArgsForScriptProv, argsForScriptProv);
 	if (FAILED(hr))
 	{
 		goto exit;

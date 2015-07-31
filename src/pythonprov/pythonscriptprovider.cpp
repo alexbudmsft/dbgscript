@@ -6,6 +6,8 @@
 #include "thread.h"
 #include "stackframe.h"
 #include "typedobject.h"
+#include "util.h"
+#include <strsafe.h>
 
 static const char* x_ModuleName = "dbgscript";
 
@@ -177,31 +179,131 @@ CPythonScriptProvider::Init()
 //
 _Check_return_ HRESULT
 CPythonScriptProvider::Run(
-	_In_z_ const char* szScriptName,
 	_In_ int argc,
 	_In_z_ WCHAR** argv)
 {
+	char ansiScriptName[MAX_PATH];
+	const WCHAR* moduleToRun = nullptr;
 	HRESULT hr = S_OK;
 	FILE* fp = nullptr;
-	fp = fopen(szScriptName, "r");
+
+	int i = 0;
+
+	// TODO: Generalize arg processing.
+	//
+	for (i = 0; i < argc; ++i)
+	{
+		// Terminate at first non-switch.
+		//
+		if (argv[i][0] != L'-')
+		{
+			break;
+		}
+
+		// We have a switch.
+		//
+		if (!wcscmp(argv[i], L"-m"))
+		{
+			if (i + 1 < argc)
+			{
+				// Advance to next token.
+				//
+				++i;
+
+				moduleToRun = argv[i];
+			}
+			else
+			{
+				hr = E_INVALIDARG;
+				GetDllGlobals()->DebugControl->Output(
+					DEBUG_OUTPUT_ERROR,
+					"Error: -m expects a module name.\n");
+				goto exit;
+			}
+		}
+	}
+
+	// The left over args go to the script itself.
+	//
+	WCHAR** argsForScript = &argv[i];
+	int cArgsForScript = argc - i;
+	assert(cArgsForScript >= 0);
+	WCHAR* scriptName = nullptr;
+
+	size_t cConverted = 0;
+
+	// Convert to ANSI.
+	//
+	errno_t err = wcstombs_s(
+		&cConverted, ansiScriptName, argsForScript[0], _countof(ansiScriptName));
+	if (err)
+	{
+		GetDllGlobals()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Failed to convert wide string to ANSI: %d.\n", err);
+		hr = E_FAIL;
+		goto exit;
+	}
+
+	// Try to find the script in the search locations provided by the extension.
+	//
+	WCHAR fullScriptName[MAX_PATH];
+	scriptName = argsForScript[0];
+	if (!UtilFileExists(scriptName))
+	{
+		// Try to search for the file in the script path list.
+		//
+		ScriptPathElem* elem = GetDllGlobals()->ScriptPath;
+		while (elem)
+		{
+			StringCchPrintf(STRING_AND_CCH(fullScriptName), L"%ls\\%ls",
+				elem->Path, scriptName);
+			if (UtilFileExists(fullScriptName))
+			{
+				scriptName = fullScriptName;
+				break;
+			}
+			elem = elem->Next;
+		}
+	}
+
+	if (!UtilFileExists(scriptName))
+	{
+		GetDllGlobals()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Script file not found in any of the search paths.\n");
+		hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+		goto exit;
+	}
+
+	// Replace first pointer with our final script name.
+	//
+	argsForScript[0] = scriptName;
+
+	fp = _wfopen(scriptName, L"r");
 	if (!fp)
 	{
-		ULONG err = 0;
-		_get_doserrno(&err);
+		ULONG doserr = 0;
+		_get_doserrno(&doserr);
 
 		GetDllGlobals()->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Failed to open file '%s'. Error %d (%s).\n",
-			szScriptName,
-			err,
+			"Failed to open file '%ls'. Error %d (%s).\n",
+			scriptName,
+			doserr,
 			strerror(errno));
 
 		hr = HRESULT_FROM_WIN32(err);
 		goto exit;
 	}
 
-	PySys_SetArgv(argc, argv);
-	PyRun_SimpleFile(fp, szScriptName);
+	// Set up sys.argv.
+	//
+	PySys_SetArgv(cArgsForScript, argsForScript);
+
+	// Run the file.
+	//
+	PyRun_SimpleFile(fp, ansiScriptName);
 
 exit:
 	if (fp)

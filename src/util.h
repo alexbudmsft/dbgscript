@@ -9,3 +9,11 @@ UtilReadPointer(
 
 _Check_return_ bool
 UtilCheckAbort();
+
+_Check_return_ WCHAR*
+UtilConvertAnsiToWide(
+	_In_z_ const char* ansiStr);
+
+_Check_return_ bool
+UtilFileExists(
+	_In_z_ const WCHAR* wszPath);
