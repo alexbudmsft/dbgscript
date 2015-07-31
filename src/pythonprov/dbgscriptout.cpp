@@ -1,4 +1,5 @@
 #include "dbgscriptout.h"
+#include "util.h"
 
 struct DbgScriptOutObj
 {
@@ -8,6 +9,8 @@ struct DbgScriptOutObj
 static PyObject*
 DbgScriptOut_write(PyObject* /* self */, PyObject* args)
 {
+	CHECK_ABORT;
+
 	const char* data = nullptr;
 	if (!PyArg_ParseTuple(args, "s", &data))
 	{
@@ -15,7 +18,6 @@ DbgScriptOut_write(PyObject* /* self */, PyObject* args)
 	}
 
 	const size_t len = strlen(data);
-
 	GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "%s", data);
 	return PyLong_FromSize_t(len);
 }
@@ -23,8 +25,10 @@ DbgScriptOut_write(PyObject* /* self */, PyObject* args)
 static PyObject* 
 DbgScriptOut_flush(PyObject* /*self*/, PyObject* /*args*/)
 {
-	// TODO: Is there a flush for IDebugControl?
-	//
+	CHECK_ABORT;
+
+	GetDllGlobals()->DebugClient->FlushCallbacks();
+
 	Py_RETURN_NONE;
 }
 

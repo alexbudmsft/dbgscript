@@ -41,6 +41,7 @@ Thread_get_teb(
 	_In_ PyObject* /* self */,
 	_In_opt_ void* /* closure */)
 {
+	CHECK_ABORT;
 	PyObject* ret = nullptr;
 
 	// Get TEB from debug client.
@@ -64,6 +65,7 @@ Thread_get_current_frame(
 	_In_ PyObject* self,
 	_In_opt_ void* /* closure */)
 {
+	CHECK_ABORT;
 	PyObject* ret = nullptr;
 	IDebugSymbols3* dbgSym = GetDllGlobals()->DebugSymbols;
 	ULONG curFrameIdx = 0;
@@ -127,6 +129,7 @@ Thread_get_stack(
 	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
+	CHECK_ABORT;
 	// TODO: The bulk of this code is not Python-specific. Factor it out when
 	// implementing Ruby provider.
 

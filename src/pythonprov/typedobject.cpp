@@ -239,6 +239,7 @@ TypedObject_sequence_get_item(
 	_In_ PyObject* self,
 	_In_ Py_ssize_t index)
 {
+	CHECK_ABORT;
 	TypedObject* typObj = (TypedObject*)self;
 	PyObject* ret = nullptr;
 
@@ -294,6 +295,7 @@ TypedObject_mapping_subscript(
 	_In_ PyObject* self,
 	_In_ PyObject* key)
 {
+	CHECK_ABORT;
 	TypedObject* typedObj = (TypedObject*)self;
 	PyObject* newTypedObj = nullptr;
 	EXT_TYPED_DATA* request = nullptr;
@@ -533,6 +535,8 @@ static PyObject*
 TypedObject_str(
 	_In_ PyObject* /*self*/)
 {
+	CHECK_ABORT;
+
 	// String formatting is really slow.
 	//
 	return PyUnicode_FromString("dbgscript.TypedObject");
@@ -543,6 +547,7 @@ TypedObject_get_value(
 	_In_ PyObject* self,
 	_In_opt_ void* /* closure */)
 {
+	CHECK_ABORT;
 	TypedObject* typObj = (TypedObject*)self;
 	PyObject* ret = nullptr;
 

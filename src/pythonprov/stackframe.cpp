@@ -2,6 +2,7 @@
 #include "thread.h"
 #include "typedobject.h"
 #include <structmember.h>
+#include "util.h"
 
 struct StackFrameObj
 {
@@ -201,6 +202,7 @@ StackFrame_get_locals(
 	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
+	CHECK_ABORT;
 	StackFrameObj* stackFrame = (StackFrameObj*)self;
 	return getVariablesHelper(stackFrame, DEBUG_SCOPE_GROUP_LOCALS);
 }
@@ -210,6 +212,7 @@ StackFrame_get_args(
 	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
+	CHECK_ABORT;
 	StackFrameObj* stackFrame = (StackFrameObj*)self;
 	return getVariablesHelper(stackFrame, DEBUG_SCOPE_GROUP_ARGUMENTS);
 }

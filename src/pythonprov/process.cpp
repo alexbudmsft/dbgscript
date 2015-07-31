@@ -1,7 +1,7 @@
 #include "process.h"
 #include "thread.h"
 #include "typedobject.h"
-#include "../util.h"
+#include "util.h"
 
 struct ProcessObj
 {
@@ -20,6 +20,8 @@ Process_create_typed_object(
 	_In_ PyObject* self,
 	_In_ PyObject* args)
 {
+	CHECK_ABORT;
+
 	PyObject *ret = nullptr;
 	const char *typeName = nullptr;
 	UINT64 addr = 0;
@@ -50,6 +52,8 @@ Process_resolve_enum(
 	_In_ PyObject* /*self*/,
 	_In_ PyObject* args)
 {
+	CHECK_ABORT;
+
 	PyObject *ret = nullptr;
 	const char* enumTypeName = nullptr;
 	UINT64 value = 0;
@@ -85,6 +89,8 @@ Process_get_global(
 	_In_ PyObject* self,
 	_In_ PyObject* args)
 {
+	CHECK_ABORT;
+
 	PyObject *ret = nullptr;
 	const char* symbol = nullptr;
 	UINT64 addr = 0;
@@ -126,6 +132,8 @@ Process_read_ptr(
 	_In_ PyObject* /*self*/,
 	_In_ PyObject* args)
 {
+	CHECK_ABORT;
+
 	PyObject *ret = nullptr;
 	UINT64 addr = 0;
 	UINT64 ptrVal = 0;
@@ -152,6 +160,8 @@ Process_get_threads(
 	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
+	CHECK_ABORT;
+
 	// TODO: The bulk of this code is not Python-specific. Factor it out when
 	// implementing Ruby provider.
 	//
@@ -269,6 +279,8 @@ Process_get_current_thread(
 	_In_ PyObject* self,
 	_In_opt_ void* /* closure */)
 {
+	CHECK_ABORT;
+
 	PyObject* ret = nullptr;
 	ProcessObj* proc = (ProcessObj*)self;
 
@@ -296,21 +308,12 @@ exit:
 	return ret;
 }
 
-// Attribute is read-only.
-//
-static int
-Process_set_current_thread(PyObject* /* self */, PyObject* /* value */, void* /* closure */)
-{
-	PyErr_SetString(PyExc_AttributeError, "readonly attribute");
-	return -1;
-}
-
 static PyGetSetDef Process_GetSetDef[] =
 {
 	{
 		"current_thread",
 		Process_get_current_thread,
-		Process_set_current_thread,
+		SetReadOnlyProperty,  // Attribute is read-only.
 		PyDoc_STR("Current Thread object."),
 		NULL
 	},
