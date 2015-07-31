@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo Deploying...
+echo Deploying dbgscript...
 
 if not exist deploy (
 	md deploy
@@ -13,9 +13,14 @@ for %%f in (%FLAVORS%) do (
     echo Deploying %%f
     echo ---------------------
     set OUTDIR=deploy\%%f
+    set PYTHON_DLL=python36
     
     if not exist !OUTDIR! (
          md !OUTDIR!
+    )
+    
+    if "%%f" == "debug" (
+        set PYTHON_DLL=!PYTHON_DLL!_d
     )
     
     REM Copy over the Python standard library.
@@ -24,8 +29,8 @@ for %%f in (%FLAVORS%) do (
     
     REM Copy the Python DLLs
     REM
-    copy deps\python\lib\*.dll deploy\%%f\
-    copy deps\python\lib\*.pdb deploy\%%f\
+    copy deps\python\lib\!PYTHON_DLL!.dll deploy\%%f\
+    copy deps\python\lib\!PYTHON_DLL!.pdb deploy\%%f\
     
     copy build\x64\%%f\dbgscript.dll deploy\%%f\
     copy build\x64\%%f\dbgscript.pdb deploy\%%f\
