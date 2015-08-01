@@ -139,8 +139,11 @@ redirectStreams()
 	// Replace sys.stdout and sys.stderr with our new object.
 	//
 	PySys_SetObject("stdout", g_DbgScriptIO);
+	PySys_SetObject("__stdout__", g_DbgScriptIO);
 	PySys_SetObject("stderr", g_DbgScriptIO);
+	PySys_SetObject("__stderr__", g_DbgScriptIO);
 	PySys_SetObject("stdin", g_DbgScriptIO);
+	PySys_SetObject("__stdin__", g_DbgScriptIO);
 	PySys_SetObject("exit", nullptr);
 }
 
