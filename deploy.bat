@@ -3,9 +3,8 @@ setlocal enabledelayedexpansion
 
 echo Deploying dbgscript...
 
-if not exist deploy (
-	md deploy
-)
+rd /q/s deploy
+md deploy
 
 set FLAVORS=debug release
 
@@ -29,8 +28,16 @@ for %%f in (%FLAVORS%) do (
     
     REM Copy the Python DLLs
     REM
-    copy deps\python\lib\!PYTHON_DLL!.dll deploy\%%f\
-    copy deps\python\lib\!PYTHON_DLL!.pdb deploy\%%f\
+    copy deps\python\DLLs\!PYTHON_DLL!.dll deploy\%%f\
+    
+    REM Copy all standard native modules
+    REM
+    copy deps\python\DLLs\*.pyd deploy\%%f\
+    
+    REM Copy all PDBs. Actually, maybe not, for now. They're big, and do we
+    REM really need them?
+    REM
+    REM copy deps\python\DLLs\*.pdb deploy\%%f\
     
     copy build\x64\%%f\dbgscript.dll deploy\%%f\
     copy build\x64\%%f\dbgscript.pdb deploy\%%f\
