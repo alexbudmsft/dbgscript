@@ -8,6 +8,9 @@ md deploy
 
 set FLAVORS=debug release
 
+dir /s/b deps\python\DLLs\*.pyd | findstr _d > debug_pyd.txt
+dir /s/b deps\python\DLLs\*.pyd | findstr /v _d > release_pyd.txt
+
 for %%f in (%FLAVORS%) do (
     echo Deploying %%f
     echo ---------------------
@@ -22,6 +25,7 @@ for %%f in (%FLAVORS%) do (
         set PYTHON_DLL=!PYTHON_DLL!_d
     )
     
+    
     REM Copy over the Python standard library.
     REM
     xcopy /EYQ deps\python\runtime\lib deploy\%%f\Lib\
@@ -32,7 +36,11 @@ for %%f in (%FLAVORS%) do (
     
     REM Copy all standard native modules
     REM
-    copy deps\python\DLLs\*.pyd deploy\%%f\
+    for /F %%a in (%%f_pyd.txt) do copy %%a deploy\%%f\
+    
+    REM Delete the temp file.
+    REM
+    del %%f_pyd.txt
     
     REM Copy all PDBs. Actually, maybe not, for now. They're big, and do we
     REM really need them?
