@@ -3,6 +3,7 @@
 #include "typedobject.h"
 #include <structmember.h>
 #include "util.h"
+#include "common.h"
 
 struct StackFrameObj
 {
@@ -37,7 +38,7 @@ CAutoSwitchStackFrame::CAutoSwitchStackFrame(
 	m_PrevIdx((ULONG)-1),
 	m_DidSwitch(false)
 {
-	IDebugSymbols3* dbgSymbols = GetDllGlobals()->DebugSymbols;
+	IDebugSymbols3* dbgSymbols = GetPythonProvGlobals()->HostCtxt->DebugSymbols;
 	
 	HRESULT hr = dbgSymbols->GetCurrentScopeFrameIndex(&m_PrevIdx);
 	if (FAILED(hr))
@@ -64,7 +65,7 @@ CAutoSwitchStackFrame::~CAutoSwitchStackFrame()
 {
 	if (m_DidSwitch)
 	{
-		IDebugSymbols3* dbgSymbols = GetDllGlobals()->DebugSymbols;
+		IDebugSymbols3* dbgSymbols = GetPythonProvGlobals()->HostCtxt->DebugSymbols;
 		if (m_PrevIdx != (ULONG)-1)
 		{
 			HRESULT hr = dbgSymbols->SetScopeFrameByIndex(m_PrevIdx);
@@ -85,7 +86,7 @@ getVariablesHelper(
 	// implementing Ruby provider.
 	//
 	PyObject* tuple = nullptr;
-	IDebugSymbols3* dbgSymbols = GetDllGlobals()->DebugSymbols;
+	IDebugSymbols3* dbgSymbols = GetPythonProvGlobals()->HostCtxt->DebugSymbols;
 	IDebugSymbolGroup2* symGrp = nullptr;
 	HRESULT hr = S_OK;
 	ULONG numSym = 0;
@@ -202,7 +203,9 @@ StackFrame_get_locals(
 	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 	StackFrameObj* stackFrame = (StackFrameObj*)self;
 	return getVariablesHelper(stackFrame, DEBUG_SCOPE_GROUP_LOCALS);
 }
@@ -212,7 +215,9 @@ StackFrame_get_args(
 	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 	StackFrameObj* stackFrame = (StackFrameObj*)self;
 	return getVariablesHelper(stackFrame, DEBUG_SCOPE_GROUP_ARGUMENTS);
 }

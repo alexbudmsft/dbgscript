@@ -1,17 +1,57 @@
 #include "common.h"
-#include "../include/iscriptprovider.h"
 #include <strsafe.h>
 #include <assert.h>
-#include "util.h"
-#include "outputcallback.h"
+#include "support/util.h"
 
-static DllGlobals g_DllGlobals;
+static DbgScriptHostContext g_HostCtxt;
 
-_Check_return_ DllGlobals*
-GetDllGlobals()
+_Check_return_ DbgScriptOutputCallbacks*
+GetDbgScriptOutputCb();
+
+_Check_return_ DbgScriptHostContext*
+GetHostContext()
 {
-	return &g_DllGlobals;
+	return &g_HostCtxt;
 }
+
+struct ScriptProviderCallbacks
+{
+	// Module handle.
+	//
+	HMODULE Module;
+
+	// DLL initialization.
+	//
+	SCRIPT_PROV_INIT_FUNC InitFunc;
+
+	// DLL cleanup.
+	//
+	SCRIPT_PROV_CLEANUP_FUNC CleanupFunc;
+
+	// Factory function.
+	//
+	SCRIPT_PROV_CREATE_FUNC CreateFunc;
+};
+
+struct ScriptProvCallbackBinding
+{
+	const char* ExportName;
+
+	int CallbackOffset;
+};
+
+// Functions to be bound with their offsets in the structure.
+//
+static const ScriptProvCallbackBinding x_CallbackBindings[] =
+{
+	{ SCRIPT_PROV_INIT, offsetof(ScriptProviderCallbacks, InitFunc) },
+	{ SCRIPT_PROV_CLEANUP, offsetof(ScriptProviderCallbacks, CleanupFunc) },
+	{ SCRIPT_PROV_CREATE, offsetof(ScriptProviderCallbacks, CreateFunc) },
+};
+
+// TODO: For now, hardcode a single provider. Later this will be a list.
+//
+static ScriptProviderCallbacks s_PyProvCb;
 
 BOOL WINAPI DllMain(
 	_In_ HINSTANCE hinstDLL,
@@ -21,7 +61,7 @@ BOOL WINAPI DllMain(
 	switch (fdwReason)
 	{
 	case DLL_PROCESS_ATTACH:
-		g_DllGlobals.HModule = hinstDLL;
+		g_HostCtxt.HModule = hinstDLL;
 		break;
 
 	case DLL_PROCESS_DETACH:
@@ -45,54 +85,95 @@ DLLEXPORT HRESULT DebugExtensionInitialize(
 	*Version = DEBUG_EXTENSION_VERSION(1, 0);
 	*Flags = 0;
 
-	hr = DebugCreate(__uuidof(IDebugClient), (void **)&g_DllGlobals.DebugClient);
+	hr = DebugCreate(__uuidof(IDebugClient), (void **)&g_HostCtxt.DebugClient);
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
 
-	hr = g_DllGlobals.DebugClient->QueryInterface(
-		__uuidof(IDebugControl), (void **)&g_DllGlobals.DebugControl);
+	hr = g_HostCtxt.DebugClient->QueryInterface(
+		__uuidof(IDebugControl), (void **)&g_HostCtxt.DebugControl);
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
 
-	hr = g_DllGlobals.DebugClient->QueryInterface(
-		__uuidof(IDebugSystemObjects), (void **)&g_DllGlobals.DebugSysObj);
+	hr = g_HostCtxt.DebugClient->QueryInterface(
+		__uuidof(IDebugSystemObjects), (void **)&g_HostCtxt.DebugSysObj);
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
 
-	hr = g_DllGlobals.DebugClient->QueryInterface(
-		__uuidof(IDebugSymbols3), (void **)&g_DllGlobals.DebugSymbols);
+	hr = g_HostCtxt.DebugClient->QueryInterface(
+		__uuidof(IDebugSymbols3), (void **)&g_HostCtxt.DebugSymbols);
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
 
-	hr = g_DllGlobals.DebugClient->QueryInterface(
-		__uuidof(IDebugAdvanced2), (void **)&g_DllGlobals.DebugAdvanced);
+	hr = g_HostCtxt.DebugClient->QueryInterface(
+		__uuidof(IDebugAdvanced2), (void **)&g_HostCtxt.DebugAdvanced);
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
 
-	hr = g_DllGlobals.DebugClient->QueryInterface(
-		__uuidof(IDebugDataSpaces4), (void **)&g_DllGlobals.DebugDataSpaces);
+	hr = g_HostCtxt.DebugClient->QueryInterface(
+		__uuidof(IDebugDataSpaces4), (void **)&g_HostCtxt.DebugDataSpaces);
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
+
+	g_HostCtxt.BufferedOutputCallbacks = GetDbgScriptOutputCb();
 
 	// TODO: Initialize all registered script providers.
 	//
 
+	// TODO: Expose an ini file with pointers to various providers for registration.
+	//
+	WCHAR dllPath[MAX_PATH] = {};
+	WCHAR pythonProv[MAX_PATH] = {};
+	WCHAR pythonProvDll[MAX_PATH] = {};
+	GetModuleFileName(g_HostCtxt.HModule, dllPath, _countof(dllPath));
+	WCHAR* lastBackSlash = wcsrchr(dllPath, L'\\');
+	assert(lastBackSlash);
+	// Null out the slash to get only the directory path of the DLL.
+	//
+	*lastBackSlash = 0;
+	StringCchPrintf(STRING_AND_CCH(pythonProv), L"%s\\pythonprov", dllPath);
+	StringCchPrintf(STRING_AND_CCH(pythonProvDll), L"%s\\pythonprov.dll", pythonProv);
+
+	BOOL fOk = SetDllDirectory(pythonProv);
+	assert(fOk);
+
+	s_PyProvCb.Module = LoadLibrary(pythonProvDll);
+
+	// TODO: Real error handling.
+	//
+	assert(s_PyProvCb.Module);
+
+	// Bind all the callbacks.
+	//
+	for (int i = 0; i < _countof(x_CallbackBindings); ++i)
+	{
+		DWORD_PTR* storeLoc = (DWORD_PTR*)((BYTE*)&s_PyProvCb + x_CallbackBindings[i].CallbackOffset);
+		*storeLoc = (DWORD_PTR)GetProcAddress(s_PyProvCb.Module, x_CallbackBindings[i].ExportName);
+
+		// TODO: Real error handling.
+		//
+		assert(*storeLoc);
+	}
+
+	// Initialize the provider DLL.
+	//
+	s_PyProvCb.InitFunc(&g_HostCtxt);
+
 	// For now we only have one.
 	//
-	g_DllGlobals.ScriptProvider = CreateScriptProvider();
-	if (!g_DllGlobals.ScriptProvider)
+	g_HostCtxt.ScriptProvider = s_PyProvCb.CreateFunc();
+	if (!g_HostCtxt.ScriptProvider)
 	{
 		// Handle error.
 		//
@@ -100,7 +181,7 @@ DLLEXPORT HRESULT DebugExtensionInitialize(
 		goto exit;
 	}
 
-	hr = g_DllGlobals.ScriptProvider->Init();
+	hr = g_HostCtxt.ScriptProvider->Init();
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -116,46 +197,57 @@ exit:
 DLLEXPORT void CALLBACK 
 DebugExtensionUninitialize()
 {
-	if (g_DllGlobals.ScriptProvider)
+	// Call the provider instance's cleanup routine.
+	//
+	if (g_HostCtxt.ScriptProvider)
 	{
-		g_DllGlobals.ScriptProvider->Cleanup();
-		g_DllGlobals.ScriptProvider = nullptr;
+		g_HostCtxt.ScriptProvider->Cleanup();
+		g_HostCtxt.ScriptProvider = nullptr;
 	}
 
-	if (g_DllGlobals.DebugDataSpaces)
+	// Call the provider's DLL cleanup routine.
+	//
+	s_PyProvCb.CleanupFunc();
+
+	// Unload the provider DLL.
+	//
+	BOOL fOk = FreeLibrary(s_PyProvCb.Module);
+	assert(fOk);
+
+	if (g_HostCtxt.DebugDataSpaces)
 	{
-		g_DllGlobals.DebugDataSpaces->Release();
-		g_DllGlobals.DebugDataSpaces = nullptr;
+		g_HostCtxt.DebugDataSpaces->Release();
+		g_HostCtxt.DebugDataSpaces = nullptr;
 	}
 
-	if (g_DllGlobals.DebugAdvanced)
+	if (g_HostCtxt.DebugAdvanced)
 	{
-		g_DllGlobals.DebugAdvanced->Release();
-		g_DllGlobals.DebugAdvanced = nullptr;
+		g_HostCtxt.DebugAdvanced->Release();
+		g_HostCtxt.DebugAdvanced = nullptr;
 	}
 
-	if (g_DllGlobals.DebugSymbols)
+	if (g_HostCtxt.DebugSymbols)
 	{
-		g_DllGlobals.DebugSymbols->Release();
-		g_DllGlobals.DebugSymbols = nullptr;
+		g_HostCtxt.DebugSymbols->Release();
+		g_HostCtxt.DebugSymbols = nullptr;
 	}
 
-	if (g_DllGlobals.DebugSysObj)
+	if (g_HostCtxt.DebugSysObj)
 	{
-		g_DllGlobals.DebugSysObj->Release();
-		g_DllGlobals.DebugSysObj = nullptr;
+		g_HostCtxt.DebugSysObj->Release();
+		g_HostCtxt.DebugSysObj = nullptr;
 	}
 
-	if (g_DllGlobals.DebugControl)
+	if (g_HostCtxt.DebugControl)
 	{
-		g_DllGlobals.DebugControl->Release();
-		g_DllGlobals.DebugControl = nullptr;
+		g_HostCtxt.DebugControl->Release();
+		g_HostCtxt.DebugControl = nullptr;
 	}
 
-	if (g_DllGlobals.DebugClient)
+	if (g_HostCtxt.DebugClient)
 	{
-		g_DllGlobals.DebugClient->Release();
-		g_DllGlobals.DebugClient = nullptr;
+		g_HostCtxt.DebugClient->Release();
+		g_HostCtxt.DebugClient = nullptr;
 	}
 }
 
@@ -177,7 +269,7 @@ scriptpath(
 
 	if (strlen(str) > 0)
 	{
-		elem = g_DllGlobals.ScriptPath;
+		elem = g_HostCtxt.ScriptPath;
 		while (elem)
 		{
 			ScriptPathElem* next = elem->Next;
@@ -185,7 +277,7 @@ scriptpath(
 			elem = next;
 		}
 
-		elem = g_DllGlobals.ScriptPath = nullptr;
+		elem = g_HostCtxt.ScriptPath = nullptr;
 
 		// Can't use semi-colon since the debugger's command parser interprets that
 		// as a new command. Use comma instead.
@@ -199,11 +291,11 @@ scriptpath(
 			hr = StringCchCopyNA(STRING_AND_CCH(elem->Path), str, len);
 			assert(SUCCEEDED(hr));
 
-			if (!g_DllGlobals.ScriptPath)
+			if (!g_HostCtxt.ScriptPath)
 			{
 				// Save the head.
 				//
-				g_DllGlobals.ScriptPath = elem;
+				g_HostCtxt.ScriptPath = elem;
 				assert(!prev);
 			}
 			else
@@ -223,11 +315,11 @@ scriptpath(
 		StringCchCopyA(STRING_AND_CCH(elem->Path), str);
 		assert(SUCCEEDED(hr));
 
-		if (!g_DllGlobals.ScriptPath)
+		if (!g_HostCtxt.ScriptPath)
 		{
 			// Save the head.
 			//
-			g_DllGlobals.ScriptPath = elem;
+			g_HostCtxt.ScriptPath = elem;
 			assert(!prev);
 		}
 		else
@@ -238,10 +330,10 @@ scriptpath(
 
 	// Print current path.
 	//
-	elem = g_DllGlobals.ScriptPath;
+	elem = g_HostCtxt.ScriptPath;
 	while (elem)
 	{
-		hr = GetDllGlobals()->DebugControl->Output(
+		hr = GetHostContext()->DebugControl->Output(
 			DEBUG_OUTPUT_NORMAL,
 			"Script path: '%s'\n", elem->Path);
 		if (FAILED(hr))
@@ -282,7 +374,7 @@ runscript(
 	{
 		// If it's an empty string, fail now.
 		//
-		GetDllGlobals()->DebugControl->Output(
+		GetHostContext()->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
 			"Error: !runscript requires at least one argument.\n");
 		hr = E_INVALIDARG;
@@ -292,7 +384,7 @@ runscript(
 	wszArgs = UtilConvertAnsiToWide(args);
 	if (!wszArgs)
 	{
-		GetDllGlobals()->DebugControl->Output(
+		GetHostContext()->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
 			"Error: Failed to convert args to wide string.\n");
 		hr = E_FAIL;
@@ -303,7 +395,7 @@ runscript(
 	if (!argList)
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
-		GetDllGlobals()->DebugControl->Output(
+		GetHostContext()->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
 			"Error: Failed to parse arguments: 0x%08x\n", hr);
 		goto exit;
@@ -349,7 +441,7 @@ runscript(
 	// of registered providers to find the first one that claims the extension.
 	// For now, we only have one provider.
 	//
-	hr = GetDllGlobals()->ScriptProvider->Run(cArgsForScriptProv, argsForScriptProv);
+	hr = GetHostContext()->ScriptProvider->Run(cArgsForScriptProv, argsForScriptProv);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -360,7 +452,7 @@ runscript(
 	if (timeRun)
 	{
 		DWORD elapsedMs = endTime - startTime;
-		GetDllGlobals()->DebugControl->Output(
+		GetHostContext()->DebugControl->Output(
 			DEBUG_OUTPUT_NORMAL, "\nExecution time: %.2f s\n", elapsedMs / 1000.0);
 	}
 
@@ -368,16 +460,16 @@ exit:
 
 	// Reset buffering flag, in case script forgets (or has an exception.)
 	//
-	GetDllGlobals()->IsBuffering = 0;
+	GetHostContext()->IsBuffering = 0;
 
 	// Flush any remaining buffer (in case an exception was raised in the script,
 	// or they failed to stop buffering.
 	//
-	UtilFlushMessageBuffer();
+	UtilFlushMessageBuffer(GetHostContext());
 
 	if (FAILED(hr))
 	{
-		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
+		GetHostContext()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
 	}
 	if (wszArgs)
 	{
@@ -406,7 +498,7 @@ evalstring(
 	// of registered providers to find the first one that claims the extension.
 	// For now, we only have one provider.
 	//
-	hr = GetDllGlobals()->ScriptProvider->RunString(args);
+	hr = GetHostContext()->ScriptProvider->RunString(args);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -414,7 +506,7 @@ evalstring(
 exit:
 	if (FAILED(hr))
 	{
-		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
+		GetHostContext()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
 	}
 	return hr;
 }

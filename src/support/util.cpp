@@ -5,18 +5,20 @@
 //
 _Check_return_ HRESULT
 UtilReadPointer(
+	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ UINT64 addr,
 	_Out_ UINT64* ptrVal)
 {
-	return GetDllGlobals()->DebugDataSpaces->ReadPointersVirtual(1, addr, ptrVal);
+	return hostCtxt->DebugDataSpaces->ReadPointersVirtual(1, addr, ptrVal);
 }
 
 // Checks debugger's abort bit.
 //
 _Check_return_ bool
-UtilCheckAbort()
+UtilCheckAbort(
+	_In_ DbgScriptHostContext* hostCtxt)
 {
-	HRESULT hr = GetDllGlobals()->DebugControl->GetInterrupt();
+	HRESULT hr = hostCtxt->DebugControl->GetInterrupt();
 
 	// S_OK means user has issued an Ctrl-C or Ctrl-Break.
 	//
@@ -53,10 +55,10 @@ UtilFileExists(
 // Flush any content in the message buffer.
 //
 void
-UtilFlushMessageBuffer()
+UtilFlushMessageBuffer(
+	_In_ DbgScriptHostContext* hostCtxt)
 {
-	DllGlobals* globals = GetDllGlobals();
-	if (globals->BufPosition > 0)
+	if (hostCtxt->BufPosition > 0)
 	{
 		// Because dbgeng expects null-terminated strings, terminate the buffer
 		// at our current position marker.
@@ -64,17 +66,17 @@ UtilFlushMessageBuffer()
 		// Last character is always reserved for the NULL terminator.
 		// Position must be before that.
 		//
-		assert(globals->BufPosition <= _countof(globals->MessageBuf) - 1);
-		globals->MessageBuf[globals->BufPosition] = 0;
+		assert(hostCtxt->BufPosition <= _countof(hostCtxt->MessageBuf) - 1);
+		hostCtxt->MessageBuf[hostCtxt->BufPosition] = 0;
 
-		globals->DebugControl->Output(
+		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_NORMAL,
 			"%s",
-			globals->MessageBuf);
+			hostCtxt->MessageBuf);
 
 		// Reset position marker.
 		//
-		globals->BufPosition = 0;
+		hostCtxt->BufPosition = 0;
 	}
 }
 
@@ -82,11 +84,11 @@ UtilFlushMessageBuffer()
 //
 void
 UtilBufferOutput(
+	_In_ DbgScriptHostContext* hostCtxt,
 	_In_z_ const char* text,
 	_In_ size_t len)
 {
-	DllGlobals* globals = GetDllGlobals();
-	assert(globals->IsBuffering > 0);
+	assert(hostCtxt->IsBuffering > 0);
 
 	// Last byte is reserved for null because windbg only accepts null-terminated
 	// strings.
@@ -94,28 +96,28 @@ UtilBufferOutput(
 	// If the write would end up trampling our NULL byte, we can't have that.
 	// => Flush the current buffer and start anew.
 	//
-	if (globals->BufPosition + len > _countof(globals->MessageBuf) - 1)
+	if (hostCtxt->BufPosition + len > _countof(hostCtxt->MessageBuf) - 1)
 	{
-		UtilFlushMessageBuffer();
+		UtilFlushMessageBuffer(hostCtxt);
 
-		assert(globals->BufPosition == 0);
+		assert(hostCtxt->BufPosition == 0);
 
 		// If the string would never fit into the buffer even if it's empty,
 		// truncate it.
 		//
 		// Assert in debug builds.
 		//
-		assert(len <= _countof(globals->MessageBuf) - 1);
+		assert(len <= _countof(hostCtxt->MessageBuf) - 1);
 
-		if (len > _countof(globals->MessageBuf) - 1)
+		if (len > _countof(hostCtxt->MessageBuf) - 1)
 		{
-			len = _countof(globals->MessageBuf) - 1;
+			len = _countof(hostCtxt->MessageBuf) - 1;
 		}
 	}
 
 	// Append the string to our buffer.
 	//
-	memcpy(globals->MessageBuf + globals->BufPosition, text, len);
-	globals->BufPosition += len;
-	assert(globals->BufPosition <= _countof(globals->MessageBuf) - 1);
+	memcpy(hostCtxt->MessageBuf + hostCtxt->BufPosition, text, len);
+	hostCtxt->BufPosition += len;
+	assert(hostCtxt->BufPosition <= _countof(hostCtxt->MessageBuf) - 1);
 }

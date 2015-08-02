@@ -1,6 +1,7 @@
 #pragma once
 
-#include "common.h"
+#include "windows.h"
+#include <hostcontext.h>
 
 struct ModuleAndTypeId
 {
@@ -11,4 +12,5 @@ struct ModuleAndTypeId
 
 _Check_return_ ModuleAndTypeId*
 GetCachedSymbolType(
+	_In_ DbgScriptHostContext* hostCtxt,
 	_In_z_ const char* sym);

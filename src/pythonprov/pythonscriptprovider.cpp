@@ -8,7 +8,7 @@
 #include "typedobject.h"
 #include "util.h"
 #include <strsafe.h>
-#include "../outputcallback.h"
+#include "common.h"
 
 static const char* x_ModuleName = "dbgscript";
 
@@ -20,7 +20,7 @@ DbgScript_start_buffering(
 	// Currently this is single-threaded access, but will make it simpler in
 	// case we ever have more than one concurrent client.
 	//
-	InterlockedIncrement(&GetDllGlobals()->IsBuffering);
+	InterlockedIncrement(&GetPythonProvGlobals()->HostCtxt->IsBuffering);
 
 	Py_RETURN_NONE;
 }
@@ -33,11 +33,11 @@ DbgScript_stop_buffering(
 	// Currently this is single-threaded access, but will make it simpler in
 	// case we ever have more than one concurrent client.
 	//
-	DllGlobals* globals = GetDllGlobals();
-	const LONG newVal = InterlockedDecrement(&globals->IsBuffering);
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	const LONG newVal = InterlockedDecrement(&hostCtxt->IsBuffering);
 	if (newVal < 0)
 	{
-		GetDllGlobals()->IsBuffering = 0;
+		GetPythonProvGlobals()->HostCtxt->IsBuffering = 0;
 		PyErr_SetString(PyExc_RuntimeError, "Can't stop buffering if it isn't started.");
 		return nullptr;
 	}
@@ -46,7 +46,7 @@ DbgScript_stop_buffering(
 	//
 	if (newVal == 0)
 	{
-		UtilFlushMessageBuffer();
+		UtilFlushMessageBuffer(hostCtxt);
 	}
 
 	Py_RETURN_NONE;
@@ -67,19 +67,21 @@ DbgScript_execute_command(
 		return nullptr;
 	}
 
-	DllGlobals* globals = GetDllGlobals();
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 
 	// CONSIDER: adding an option letting user control whether we echo the
 	// command or not.
 	//
-	if (globals->IsBuffering > 0)
+	if (hostCtxt->IsBuffering > 0)
 	{
 		// Capture the output for this scope.
 		//
 		{
-			CAutoSetOutputCallback autoSetCb(GetDbgScriptOutputCb());
+			CAutoSetOutputCallback autoSetCb(
+				hostCtxt,
+				(IDebugOutputCallbacks*)hostCtxt->BufferedOutputCallbacks);
 
-			hr = GetDllGlobals()->DebugControl->Execute(
+			hr = hostCtxt->DebugControl->Execute(
 				DEBUG_OUTCTL_THIS_CLIENT,
 				command,
 				DEBUG_EXECUTE_NO_REPEAT | DEBUG_OUTCTL_NOT_LOGGED);
@@ -95,12 +97,12 @@ DbgScript_execute_command(
 
 		// Extract the buffered output.
 		//
-		const char* buf = GetDbgScriptOutputCb()->GetBuffer();
-		UtilBufferOutput(buf, strlen(buf));
+		const char* buf = DbgScriptOutCallbacksGetBuffer(hostCtxt->BufferedOutputCallbacks);
+		UtilBufferOutput(hostCtxt, buf, strlen(buf));
 	}
 	else
 	{
-		hr = GetDllGlobals()->DebugControl->Execute(
+		hr = hostCtxt->DebugControl->Execute(
 			DEBUG_OUTCTL_ALL_CLIENTS,
 			command,
 			DEBUG_EXECUTE_ECHO | DEBUG_EXECUTE_NO_REPEAT);
@@ -242,7 +244,7 @@ CPythonScriptProvider::Init()
 	HRESULT hr = S_OK;
 	PyImport_AppendInittab(x_ModuleName, PyInit_dbgscript);
 	WCHAR dllPath[MAX_PATH] = {};
-	GetModuleFileName(GetDllGlobals()->HModule, dllPath, _countof(dllPath));
+	GetModuleFileName(GetPythonProvGlobals()->HModule, dllPath, _countof(dllPath));
 	WCHAR* lastBackSlash = wcsrchr(dllPath, L'\\');
 	assert(lastBackSlash);
 
@@ -356,7 +358,7 @@ CPythonScriptProvider::Run(
 			else
 			{
 				hr = E_INVALIDARG;
-				GetDllGlobals()->DebugControl->Output(
+				GetPythonProvGlobals()->HostCtxt->DebugControl->Output(
 					DEBUG_OUTPUT_ERROR,
 					"Error: -m expects a module name.\n");
 				goto exit;
@@ -381,7 +383,7 @@ CPythonScriptProvider::Run(
 			&cConverted, ansiScriptName, argsForScript[0], _countof(ansiScriptName));
 		if (err)
 		{
-			GetDllGlobals()->DebugControl->Output(
+			GetPythonProvGlobals()->HostCtxt->DebugControl->Output(
 				DEBUG_OUTPUT_ERROR,
 				"Error: Failed to convert wide string to ANSI: %d.\n", err);
 			hr = E_FAIL;
@@ -396,7 +398,7 @@ CPythonScriptProvider::Run(
 		{
 			// Try to search for the file in the script path list.
 			//
-			ScriptPathElem* elem = GetDllGlobals()->ScriptPath;
+			ScriptPathElem* elem = GetPythonProvGlobals()->HostCtxt->ScriptPath;
 			while (elem)
 			{
 				StringCchPrintf(STRING_AND_CCH(fullScriptName), L"%ls\\%ls",
@@ -412,7 +414,7 @@ CPythonScriptProvider::Run(
 
 		if (!UtilFileExists(scriptName))
 		{
-			GetDllGlobals()->DebugControl->Output(
+			GetPythonProvGlobals()->HostCtxt->DebugControl->Output(
 				DEBUG_OUTPUT_ERROR,
 				"Error: Script file not found in any of the search paths.\n");
 			hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
@@ -465,7 +467,7 @@ CPythonScriptProvider::Run(
 			ULONG doserr = 0;
 			_get_doserrno(&doserr);
 
-			GetDllGlobals()->DebugControl->Output(
+			GetPythonProvGlobals()->HostCtxt->DebugControl->Output(
 				DEBUG_OUTPUT_ERROR,
 				"Failed to open file '%ls'. Error %d (%s).\n",
 				scriptName,
@@ -513,3 +515,25 @@ CPythonScriptProvider::Cleanup()
 }
 
 
+_Check_return_ DLLEXPORT HRESULT
+ScriptProviderInit(
+	_In_ DbgScriptHostContext* hostCtxt)
+{
+	GetPythonProvGlobals()->HostCtxt = hostCtxt;
+	return S_OK;
+}
+
+_Check_return_ DLLEXPORT void
+ScriptProviderCleanup()
+{
+}
+
+// TODO: Every provider will expose a factory method to create itself.
+// All installed providers will be created on DLL load. Appropriate one is then
+// invoked based on file extension claims.
+//
+DLLEXPORT IScriptProvider*
+ScriptProviderCreate()
+{
+	return new CPythonScriptProvider;
+}

@@ -2,6 +2,18 @@
 
 #include <windows.h>
 
+#define DLLEXPORT extern "C" __declspec(dllexport)
+
+// Export names for all providers.
+//
+#define SCRIPT_PROV_INIT	"ScriptProviderInit"
+#define SCRIPT_PROV_CLEANUP "ScriptProviderCleanup"
+#define SCRIPT_PROV_CREATE "ScriptProviderCreate"
+
+struct DbgScriptHostContext;
+
+// IScriptProvider - This interface must be implemented by all script providers.
+//
 struct IScriptProvider
 {
 	virtual _Check_return_ HRESULT 
@@ -20,5 +32,14 @@ struct IScriptProvider
 	Cleanup() = 0;
 };
 
-IScriptProvider*
-CreateScriptProvider();
+typedef HRESULT
+(*SCRIPT_PROV_INIT_FUNC)(
+	_In_ DbgScriptHostContext*);
+
+typedef void
+(*SCRIPT_PROV_CLEANUP_FUNC) ();
+
+// Factory for IScriptProviders.
+//
+typedef IScriptProvider*
+(*SCRIPT_PROV_CREATE_FUNC) ();

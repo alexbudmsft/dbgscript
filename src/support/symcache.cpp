@@ -7,6 +7,7 @@ static SymCacheMapT s_SymCache;
 
 _Check_return_ ModuleAndTypeId*
 GetCachedSymbolType(
+	_In_ DbgScriptHostContext* hostCtxt,
 	_In_z_ const char* sym)
 {
 	SymCacheMapT::iterator it = s_SymCache.find(sym);
@@ -17,7 +18,7 @@ GetCachedSymbolType(
 
 	ModuleAndTypeId& info = s_SymCache[sym];
 
-	HRESULT hr = GetDllGlobals()->DebugSymbols->GetSymbolTypeId(
+	HRESULT hr = hostCtxt->DebugSymbols->GetSymbolTypeId(
 		sym,
 		&info.TypeId,
 		&info.ModuleBase);

@@ -78,7 +78,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>pythonprov.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pythonprov.lib;dbgscriptsupp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -90,7 +90,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>pythonprov.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pythonprov.lib;dbgscriptsupp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -106,7 +106,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>pythonprov.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pythonprov.lib;dbgscriptsupp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -122,23 +122,17 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>pythonprov.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pythonprov.lib;dbgscriptsupp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\dllmain.cpp" />
-    <ClCompile Include="..\src\outputcallback.cpp" />
-    <ClCompile Include="..\src\scriptprovhelper.cpp" />
-    <ClCompile Include="..\src\symcache.cpp" />
-    <ClCompile Include="..\src\util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\hostcontext.h" />
     <ClInclude Include="..\include\iscriptprovider.h" />
     <ClInclude Include="..\src\common.h" />
-    <ClInclude Include="..\src\outputcallback.h" />
-    <ClInclude Include="..\src\symcache.h" />
-    <ClInclude Include="..\src\util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

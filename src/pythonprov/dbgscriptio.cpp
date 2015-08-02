@@ -1,5 +1,6 @@
 #include "DbgScriptIO.h"
 #include "util.h"
+#include "common.h"
 
 struct DbgScriptIOObj
 {
@@ -9,7 +10,9 @@ struct DbgScriptIOObj
 static PyObject*
 DbgScriptIO_write(PyObject* /* self */, PyObject* args)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 
 	const char* data = nullptr;
 	if (!PyArg_ParseTuple(args, "s", &data))
@@ -17,16 +20,15 @@ DbgScriptIO_write(PyObject* /* self */, PyObject* args)
 		return nullptr;
 	}
 	const size_t len = strlen(data);
-	DllGlobals* globals = GetDllGlobals();
-	if (globals->IsBuffering > 0)
+	if (hostCtxt->IsBuffering > 0)
 	{
-		UtilBufferOutput(data, len);
+		UtilBufferOutput(hostCtxt, data, len);
 	}
 	else
 	{
 		// Unbuffered case.
 		//
-		globals->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "%s", data);
+		hostCtxt->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "%s", data);
 	}
 	return PyLong_FromSize_t(len);
 }
@@ -34,7 +36,9 @@ DbgScriptIO_write(PyObject* /* self */, PyObject* args)
 static PyObject*
 DbgScriptIO_readline(PyObject* /* self */, PyObject* args)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 
 	char buf[4096] = { 0 };
 	ULONG actualLen = 0;
@@ -49,7 +53,7 @@ DbgScriptIO_readline(PyObject* /* self */, PyObject* args)
 		return nullptr;
 	}
 
-	GetDllGlobals()->DebugControl->Input(
+	hostCtxt->DebugControl->Input(
 		buf,
 		min(maxToRead, _countof(buf)),
 		&actualLen);
@@ -60,9 +64,11 @@ DbgScriptIO_readline(PyObject* /* self */, PyObject* args)
 static PyObject* 
 DbgScriptIO_flush(PyObject* /*self*/, PyObject* /*args*/)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 
-	GetDllGlobals()->DebugClient->FlushCallbacks();
+	CHECK_ABORT(hostCtxt);
+
+	hostCtxt->DebugClient->FlushCallbacks();
 
 	Py_RETURN_NONE;
 }

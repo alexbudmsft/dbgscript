@@ -1,7 +1,7 @@
 #pragma once
 
 #include <python.h>
-#include "../util.h"
+#include "../support/util.h"
 
 // Attribute is read-only.
 //
@@ -12,9 +12,9 @@ SetReadOnlyProperty(
 // Helper macro to call in every Python entry point that checks for abort
 // and raises a KeyboardInterrupt exception.
 //
-#define CHECK_ABORT \
+#define CHECK_ABORT(ctxt) \
 	do { \
-		if (UtilCheckAbort()) \
+		if (UtilCheckAbort(ctxt)) \
 		{ \
 			PyErr_SetNone(PyExc_KeyboardInterrupt); \
 			return nullptr; \

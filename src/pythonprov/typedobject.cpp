@@ -12,7 +12,7 @@
 #include "process.h"
 #include <wdbgexts.h>
 #include "util.h"
-#include "../util.h"
+#include "common.h"
 
 struct ProcessObj;
 
@@ -193,7 +193,7 @@ allocSubTypedObject(
 	typObj->TypedData = *typedData;
 	typObj->TypedDataValid = true;
 
-	hr = GetDllGlobals()->DebugSymbols->GetTypeName(
+	hr = GetPythonProvGlobals()->HostCtxt->DebugSymbols->GetTypeName(
 		typObj->TypedData.ModBase,
 		typObj->TypedData.TypeId,
 		STRING_AND_CCH(typObj->TypeName),
@@ -239,7 +239,10 @@ TypedObject_sequence_get_item(
 	_In_ PyObject* self,
 	_In_ Py_ssize_t index)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+
 	TypedObject* typObj = (TypedObject*)self;
 	PyObject* ret = nullptr;
 
@@ -268,7 +271,7 @@ TypedObject_sequence_get_item(
 	static_assert(sizeof(request) == sizeof(response),
 		"Request and response must be equi-sized");
 
-	HRESULT hr = GetDllGlobals()->DebugAdvanced->Request(
+	HRESULT hr = hostCtxt->DebugAdvanced->Request(
 		DEBUG_REQUEST_EXT_TYPED_DATA_ANSI,
 		&request,
 		sizeof(request),
@@ -295,7 +298,9 @@ TypedObject_mapping_subscript(
 	_In_ PyObject* self,
 	_In_ PyObject* key)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 	TypedObject* typedObj = (TypedObject*)self;
 	PyObject* newTypedObj = nullptr;
 	EXT_TYPED_DATA* request = nullptr;
@@ -383,7 +388,7 @@ TypedObject_mapping_subscript(
 	//
 	memcpy(requestBuf + sizeof(EXT_TYPED_DATA), fieldName, fieldNameLen + 1);
 
-	hr = GetDllGlobals()->DebugAdvanced->Request(
+	hr = hostCtxt->DebugAdvanced->Request(
 		DEBUG_REQUEST_EXT_TYPED_DATA_ANSI,
 		request,
 		reqSize,
@@ -535,7 +540,9 @@ static PyObject*
 TypedObject_str(
 	_In_ PyObject* /*self*/)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 
 	// String formatting is really slow.
 	//
@@ -547,7 +554,9 @@ TypedObject_get_value(
 	_In_ PyObject* self,
 	_In_opt_ void* /* closure */)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 	TypedObject* typObj = (TypedObject*)self;
 	PyObject* ret = nullptr;
 
@@ -580,7 +589,7 @@ TypedObject_get_value(
 	//
 	ULONG cbRead = 0;
 	assert(typObj->TypedData.Size <= 8);
-	HRESULT hr = GetDllGlobals()->DebugSymbols->ReadTypedDataVirtual(
+	HRESULT hr = hostCtxt->DebugSymbols->ReadTypedDataVirtual(
 		typObj->TypedData.Offset,
 		typObj->TypedData.ModBase,
 		typObj->TypedData.TypeId,
@@ -749,7 +758,7 @@ AllocTypedObject(
 		request.InData.Offset = virtualAddress;
 		request.InData.TypeId = typeId;
 
-		hr = GetDllGlobals()->DebugAdvanced->Request(
+		hr = GetPythonProvGlobals()->HostCtxt->DebugAdvanced->Request(
 			DEBUG_REQUEST_EXT_TYPED_DATA_ANSI,
 			&request,
 			sizeof(request),

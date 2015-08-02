@@ -2,7 +2,8 @@
 #include "thread.h"
 #include "typedobject.h"
 #include "util.h"
-#include "../symcache.h"
+#include "../support/symcache.h"
+#include "common.h"
 
 struct ProcessObj
 {
@@ -21,7 +22,9 @@ Process_create_typed_object(
 	_In_ PyObject* self,
 	_In_ PyObject* args)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 
 	PyObject *ret = nullptr;
 	const char *typeName = nullptr;
@@ -34,7 +37,7 @@ Process_create_typed_object(
 
 	// Lookup typeid/moduleBase from type name.
 	//
-	ModuleAndTypeId* typeInfo = GetCachedSymbolType(typeName);
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(hostCtxt, typeName);
 	if (!typeInfo)
 	{
 		PyErr_Format(PyExc_ValueError, "Failed to get type id for type '%s'.", typeName);
@@ -52,7 +55,9 @@ Process_resolve_enum(
 	_In_ PyObject* /*self*/,
 	_In_ PyObject* args)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 
 	PyObject *ret = nullptr;
 	const char* enumTypeName = nullptr;
@@ -63,14 +68,14 @@ Process_resolve_enum(
 		return nullptr;
 	}
 
-	ModuleAndTypeId* typeInfo = GetCachedSymbolType(enumTypeName);
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(hostCtxt, enumTypeName);
 	if (!typeInfo)
 	{
 		PyErr_Format(PyExc_ValueError, "Failed to get type id for type '%s'.", enumTypeName);
 		goto exit;
 	}
 
-	HRESULT hr = GetDllGlobals()->DebugSymbols->GetConstantName(
+	HRESULT hr = hostCtxt->DebugSymbols->GetConstantName(
 		typeInfo->ModuleBase,
 		typeInfo->TypeId,
 		value, STRING_AND_CCH(enumElementName), nullptr);
@@ -90,7 +95,9 @@ Process_get_global(
 	_In_ PyObject* self,
 	_In_ PyObject* args)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 
 	PyObject *ret = nullptr;
 	const char* symbol = nullptr;
@@ -100,21 +107,22 @@ Process_get_global(
 	{
 		return nullptr;
 	}
-	HRESULT hr = GetDllGlobals()->DebugSymbols->GetOffsetByName(symbol, &addr);
+	HRESULT hr = hostCtxt->DebugSymbols->GetOffsetByName(symbol, &addr);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_ValueError, "Failed to get virtual address for symbol '%s'. Error 0x%08x.", symbol, hr);
 		goto exit;
 	}
 
-	ModuleAndTypeId* typeInfo = GetCachedSymbolType(symbol);
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(
+		hostCtxt, symbol);
 	if (!typeInfo)
 	{
 		PyErr_Format(PyExc_ValueError, "Failed to get type id for type '%s'.", symbol);
 		goto exit;
 	}
 
-	hr = GetDllGlobals()->DebugSymbols->GetTypeName(
+	hr = hostCtxt->DebugSymbols->GetTypeName(
 		typeInfo->ModuleBase,
 		typeInfo->TypeId,
 		STRING_AND_CCH(typeName),
@@ -142,7 +150,9 @@ Process_read_ptr(
 	_In_ PyObject* /*self*/,
 	_In_ PyObject* args)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 
 	PyObject *ret = nullptr;
 	UINT64 addr = 0;
@@ -152,7 +162,7 @@ Process_read_ptr(
 		return nullptr;
 	}
 
-	HRESULT hr = UtilReadPointer(addr, &ptrVal);
+	HRESULT hr = UtilReadPointer(hostCtxt, addr, &ptrVal);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_ValueError, "Failed to read pointer value from address '%p'. Error 0x%08x.", addr, hr);
@@ -170,7 +180,9 @@ Process_get_threads(
 	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 
 	// TODO: The bulk of this code is not Python-specific. Factor it out when
 	// implementing Ruby provider.
@@ -178,7 +190,7 @@ Process_get_threads(
 	ULONG* engineThreadIds = nullptr;
 	ULONG* sysThreadIds = nullptr;
 	PyObject* tuple = nullptr;
-	IDebugSystemObjects* sysObj = GetDllGlobals()->DebugSysObj;
+	IDebugSystemObjects* sysObj = hostCtxt->DebugSysObj;
 	ProcessObj* proc = (ProcessObj*)self;
 
 	ULONG cThreads = 0;
@@ -289,7 +301,9 @@ Process_get_current_thread(
 	_In_ PyObject* self,
 	_In_opt_ void* /* closure */)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 
 	PyObject* ret = nullptr;
 	ProcessObj* proc = (ProcessObj*)self;
@@ -298,14 +312,14 @@ Process_get_current_thread(
 	//
 	ULONG engineThreadId = 0;
 	ULONG systemThreadId = 0;
-	HRESULT hr = GetDllGlobals()->DebugSysObj->GetCurrentThreadId(&engineThreadId);
+	HRESULT hr = hostCtxt->DebugSysObj->GetCurrentThreadId(&engineThreadId);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_OSError, "Failed to get engine thread id. Error 0x%08x.", hr);
 		goto exit;
 	}
 
-	hr = GetDllGlobals()->DebugSysObj->GetCurrentThreadSystemId(&systemThreadId);
+	hr = hostCtxt->DebugSysObj->GetCurrentThreadSystemId(&systemThreadId);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_OSError, "Failed to get system thread id. Error 0x%08x.", hr);

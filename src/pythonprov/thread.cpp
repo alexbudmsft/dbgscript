@@ -2,6 +2,7 @@
 #include "stackframe.h"
 #include <structmember.h>
 #include "util.h"
+#include "common.h"
 
 struct ProcessObj;
 
@@ -41,13 +42,15 @@ Thread_get_teb(
 	_In_ PyObject* /* self */,
 	_In_opt_ void* /* closure */)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 	PyObject* ret = nullptr;
 
 	// Get TEB from debug client.
 	//
 	UINT64 teb = 0;
-	HRESULT hr = GetDllGlobals()->DebugSysObj->GetCurrentThreadTeb(&teb);
+	HRESULT hr = hostCtxt->DebugSysObj->GetCurrentThreadTeb(&teb);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_OSError, "Failed to get TEB. Error 0x%08x.", hr);
@@ -65,9 +68,11 @@ Thread_get_current_frame(
 	_In_ PyObject* self,
 	_In_opt_ void* /* closure */)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 	PyObject* ret = nullptr;
-	IDebugSymbols3* dbgSym = GetDllGlobals()->DebugSymbols;
+	IDebugSymbols3* dbgSym = hostCtxt->DebugSymbols;
 	ULONG curFrameIdx = 0;
 	UINT64 instructionOffset = 0;
 	DEBUG_STACK_FRAME frame;
@@ -99,7 +104,7 @@ CAutoSwitchThread::CAutoSwitchThread(
 {
 	// Get current thread id.
 	//
-	IDebugSystemObjects* sysObj = GetDllGlobals()->DebugSysObj;
+	IDebugSystemObjects* sysObj = GetPythonProvGlobals()->HostCtxt->DebugSysObj;
 	HRESULT hr = sysObj->GetCurrentThreadId(&m_PrevThreadId);
 	assert(SUCCEEDED(hr));
 
@@ -119,7 +124,7 @@ CAutoSwitchThread::~CAutoSwitchThread()
 	//
 	if (m_DidSwitch)
 	{
-		HRESULT hr = GetDllGlobals()->DebugSysObj->SetCurrentThreadId(m_PrevThreadId);
+		HRESULT hr = GetPythonProvGlobals()->HostCtxt->DebugSysObj->SetCurrentThreadId(m_PrevThreadId);
 		assert(SUCCEEDED(hr));
 	}
 }
@@ -129,7 +134,9 @@ Thread_get_stack(
 	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
-	CHECK_ABORT;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
 	// TODO: The bulk of this code is not Python-specific. Factor it out when
 	// implementing Ruby provider.
 
@@ -147,7 +154,7 @@ Thread_get_stack(
 		//
 		CAutoSwitchThread autoSwitchThd(thd);
 
-		hr = GetDllGlobals()->DebugControl->GetStackTrace(
+		hr = hostCtxt->DebugControl->GetStackTrace(
 			0, 0, 0, frames, _countof(frames), &framesFilled);
 		if (FAILED(hr))
 		{

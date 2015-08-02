@@ -1,7 +1,30 @@
 #include "common.h"
-#include "util.h"
-#include "outputcallback.h"
 #include <strsafe.h>
+
+// Nothing private because this class is hidden in the .cpp file.
+//
+class DbgScriptOutputCallbacks : public IDebugOutputCallbacks
+{
+public:
+	// IUnknown.
+	//
+	STDMETHOD(QueryInterface) (
+		_In_ REFIID InterfaceId,
+		_Out_ PVOID* Interface
+		) override;
+	STDMETHOD_(ULONG, AddRef) (
+		) override;
+	STDMETHOD_(ULONG, Release) (
+		) override;
+
+	// IDebugOutputCallbacks
+	//
+	STDMETHOD(Output) (
+		_In_ ULONG mask,
+		_In_z_ PCSTR text) override;
+
+	char Buf[4096];
+};
 
 static DbgScriptOutputCallbacks s_DbgScriptOutputCb;
 
@@ -30,10 +53,11 @@ DbgScriptOutputCallbacks::Output(
 	return S_OK;
 }
 
-const char*
-DbgScriptOutputCallbacks::GetBuffer() const
+char*
+DbgScriptOutCallbacksGetBuffer(
+	_In_ DbgScriptOutputCallbacks* cb)
 {
-	return Buf;
+	return cb->Buf;
 }
 
 STDMETHODIMP
