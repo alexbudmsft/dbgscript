@@ -275,6 +275,8 @@ runscript(
 	int cArgs = 0;
 	WCHAR** argList = nullptr;
 	const WCHAR* wszArgs = nullptr;
+	DWORD startTime = 0;
+	DWORD endTime = 0;
 
 	if (!args[0])
 	{
@@ -307,18 +309,41 @@ runscript(
 		goto exit;
 	}
 
+	bool timeRun = false;
+	int i = 0;
+	for (i = 0; i < cArgs; ++i)
+	{
+		if (!wcscmp(argList[i], L"--"))
+		{
+			// Swallow and break out.
+			//
+			++i;
+			break;
+		}
 
-	// In the future, !runscript will keep the first several args for itself,
-	// and pass the rest on to the script provider.
-	//
-	// Currently, it doesn't so we just pass everything.
-	//
+		// Keep switches to ourselves.
+		//
+		if (argList[i][0] == L'-')
+		{
+			if (!wcscmp(argList[i], L"-t"))
+			{
+				timeRun = true;
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+
 	// Rebase the arguments from the script to after what we consumed for the
 	// host.
 	//
-	WCHAR** argsForScriptProv = &argList[0];
-	int cArgsForScriptProv = cArgs;
+	WCHAR** argsForScriptProv = &argList[i];
+	int cArgsForScriptProv = cArgs - i;
 	assert(cArgsForScriptProv >= 0);
+
+	startTime = GetTickCount();
 
 	// We should examine the extension of the script and walk the list
 	// of registered providers to find the first one that claims the extension.
@@ -329,6 +354,16 @@ runscript(
 	{
 		goto exit;
 	}
+
+	endTime = GetTickCount();
+
+	if (timeRun)
+	{
+		DWORD elapsedMs = endTime - startTime;
+		GetDllGlobals()->DebugControl->Output(
+			DEBUG_OUTPUT_NORMAL, "\nExecution time: %.2f s\n", elapsedMs / 1000.0);
+	}
+
 exit:
 
 	// Reset buffering flag, in case script forgets (or has an exception.)

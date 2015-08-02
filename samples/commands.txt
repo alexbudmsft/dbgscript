@@ -1,5 +1,7 @@
 .load E:\dev\dbgscript\build\x64\Debug\dbgscript.dll
 .load E:\dev\dbgscript\build\x64\Release\dbgscript.dll
+.load E:\dev\dbgscript\deploy\release\dbgscript.dll
+.load E:\dev\dbgscript\deploy\debug\dbgscript.dll
 !scriptpath E:\dev\dbgscript\samples\py,E:\src\py
 !runscript E:\dev\dbgscript\samples\py\test.py
 !runscript E:\dev\dbgscript\samples\py\stack_test.py
