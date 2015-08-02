@@ -3,6 +3,7 @@
 #include <strsafe.h>
 #include <assert.h>
 #include "util.h"
+#include "outputcallback.h"
 
 static DllGlobals g_DllGlobals;
 
@@ -329,6 +330,16 @@ runscript(
 		goto exit;
 	}
 exit:
+
+	// Reset buffering flag, in case script forgets (or has an exception.)
+	//
+	GetDllGlobals()->IsBuffering = 0;
+
+	// Flush any remaining buffer (in case an exception was raised in the script,
+	// or they failed to stop buffering.
+	//
+	UtilFlushMessageBuffer();
+
 	if (FAILED(hr))
 	{
 		GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);

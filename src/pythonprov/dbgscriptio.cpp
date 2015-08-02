@@ -16,9 +16,18 @@ DbgScriptIO_write(PyObject* /* self */, PyObject* args)
 	{
 		return nullptr;
 	}
-
 	const size_t len = strlen(data);
-	GetDllGlobals()->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "%s", data);
+	DllGlobals* globals = GetDllGlobals();
+	if (globals->IsBuffering > 0)
+	{
+		UtilBufferOutput(data, len);
+	}
+	else
+	{
+		// Unbuffered case.
+		//
+		globals->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "%s", data);
+	}
 	return PyLong_FromSize_t(len);
 }
 

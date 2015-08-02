@@ -8,8 +8,49 @@
 #include "typedobject.h"
 #include "util.h"
 #include <strsafe.h>
+#include "../outputcallback.h"
 
 static const char* x_ModuleName = "dbgscript";
+
+static PyObject*
+DbgScript_start_buffering(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* /*args*/)
+{
+	// Currently this is single-threaded access, but will make it simpler in
+	// case we ever have more than one concurrent client.
+	//
+	InterlockedIncrement(&GetDllGlobals()->IsBuffering);
+
+	Py_RETURN_NONE;
+}
+
+static PyObject*
+DbgScript_stop_buffering(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* /*args*/)
+{
+	// Currently this is single-threaded access, but will make it simpler in
+	// case we ever have more than one concurrent client.
+	//
+	DllGlobals* globals = GetDllGlobals();
+	const LONG newVal = InterlockedDecrement(&globals->IsBuffering);
+	if (newVal < 0)
+	{
+		GetDllGlobals()->IsBuffering = 0;
+		PyErr_SetString(PyExc_RuntimeError, "Can't stop buffering if it isn't started.");
+		return nullptr;
+	}
+
+	// If the buffer refcount hit zero, flush remaining buffered content, if any.
+	//
+	if (newVal == 0)
+	{
+		UtilFlushMessageBuffer();
+	}
+
+	Py_RETURN_NONE;
+}
 
 // Global function in the dbgscript module.
 //
@@ -19,22 +60,55 @@ DbgScript_execute_command(
 	_In_ PyObject* args)
 {
 	const char* command = nullptr;
+	HRESULT hr = S_OK;
+
 	if (!PyArg_ParseTuple(args, "s:execute_command", &command))
 	{
 		return nullptr;
 	}
 
+	DllGlobals* globals = GetDllGlobals();
+
 	// CONSIDER: adding an option letting user control whether we echo the
 	// command or not.
 	//
-	HRESULT hr = GetDllGlobals()->DebugControl->Execute(
-		DEBUG_OUTCTL_ALL_CLIENTS,
-		command,
-		DEBUG_EXECUTE_ECHO | DEBUG_EXECUTE_NO_REPEAT);
-	if (FAILED(hr))
+	if (globals->IsBuffering > 0)
 	{
-		PyErr_Format(PyExc_ValueError, "Failed to execute command '%s'. Error 0x%08x.", command, hr);
-		goto exit;
+		// Capture the output for this scope.
+		//
+		{
+			CAutoSetOutputCallback autoSetCb(GetDbgScriptOutputCb());
+
+			hr = GetDllGlobals()->DebugControl->Execute(
+				DEBUG_OUTCTL_THIS_CLIENT,
+				command,
+				DEBUG_EXECUTE_NO_REPEAT | DEBUG_OUTCTL_NOT_LOGGED);
+			if (FAILED(hr))
+			{
+				PyErr_Format(PyExc_ValueError, "Failed to execute command '%s'. Error 0x%08x.", command, hr);
+				goto exit;
+			}
+
+			// Dtor will revert the callback.
+			//
+		}
+
+		// Extract the buffered output.
+		//
+		const char* buf = GetDbgScriptOutputCb()->GetBuffer();
+		UtilBufferOutput(buf, strlen(buf));
+	}
+	else
+	{
+		hr = GetDllGlobals()->DebugControl->Execute(
+			DEBUG_OUTCTL_ALL_CLIENTS,
+			command,
+			DEBUG_EXECUTE_ECHO | DEBUG_EXECUTE_NO_REPEAT);
+		if (FAILED(hr))
+		{
+			PyErr_Format(PyExc_ValueError, "Failed to execute command '%s'. Error 0x%08x.", command, hr);
+			goto exit;
+		}
 	}
 
 exit:
@@ -48,6 +122,18 @@ static PyMethodDef dbgscript_MethodsDef[] =
 		DbgScript_execute_command,
 		METH_VARARGS,
 		PyDoc_STR("Execute a debugger command.")
+	},
+	{
+		"start_buffering",
+		DbgScript_start_buffering,
+		METH_NOARGS,
+		PyDoc_STR("Start buffering output.")
+	},
+	{
+		"stop_buffering",
+		DbgScript_stop_buffering,
+		METH_NOARGS,
+		PyDoc_STR("Stop buffering output.")
 	},
 	{NULL, NULL, 0, NULL}        /* Sentinel */
 };

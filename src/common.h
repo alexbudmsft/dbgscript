@@ -42,6 +42,16 @@ struct DllGlobals
 	IScriptProvider* ScriptProvider;
 
 	ScriptPathElem* ScriptPath;
+
+	// Are we buffering output? This is a refcount to support nested calls.
+	//
+	LONG IsBuffering;
+
+	// Buffer used for output if buffering enabled.
+	//
+	char MessageBuf[4096];
+
+	size_t BufPosition;
 };
 
 _Check_return_ DllGlobals*
