@@ -2,6 +2,7 @@
 #include "thread.h"
 #include "typedobject.h"
 #include "util.h"
+#include "../symcache.h"
 
 struct ProcessObj
 {
@@ -25,8 +26,6 @@ Process_create_typed_object(
 	PyObject *ret = nullptr;
 	const char *typeName = nullptr;
 	UINT64 addr = 0;
-	ULONG typeId = 0;
-	UINT64 modBase = 0;
 
 	if (!PyArg_ParseTuple(args, "sK:create_typed_object", &typeName, &addr))
 	{
@@ -35,14 +34,15 @@ Process_create_typed_object(
 
 	// Lookup typeid/moduleBase from type name.
 	//
-	HRESULT hr = GetDllGlobals()->DebugSymbols->GetSymbolTypeId(typeName, &typeId, &modBase);
-	if (FAILED(hr))
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(typeName);
+	if (!typeInfo)
 	{
-		PyErr_Format(PyExc_ValueError, "Failed to get type id for type '%s'. Error 0x%08x.", typeName, hr);
+		PyErr_Format(PyExc_ValueError, "Failed to get type id for type '%s'.", typeName);
 		goto exit;
 	}
 
-	ret = AllocTypedObject(0, nullptr, typeName, typeId, modBase, addr, (ProcessObj*)self);
+	ret = AllocTypedObject(
+		0, nullptr, typeName, typeInfo->TypeId, typeInfo->ModuleBase, addr, (ProcessObj*)self);
 exit:
 	return ret;
 }
@@ -57,22 +57,23 @@ Process_resolve_enum(
 	PyObject *ret = nullptr;
 	const char* enumTypeName = nullptr;
 	UINT64 value = 0;
-	UINT64 modBase = 0;
-	ULONG typeId = 0;
 	char enumElementName[MAX_SYMBOL_NAME_LEN] = {};
 	if (!PyArg_ParseTuple(args, "sK:resolve_enum", &enumTypeName, &value))
 	{
 		return nullptr;
 	}
 
-	HRESULT hr = GetDllGlobals()->DebugSymbols->GetSymbolTypeId(enumTypeName, &typeId, &modBase);
-	if (FAILED(hr))
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(enumTypeName);
+	if (!typeInfo)
 	{
-		PyErr_Format(PyExc_ValueError, "Failed to get type id for symbol '%s'. Error 0x%08x.", enumTypeName, hr);
+		PyErr_Format(PyExc_ValueError, "Failed to get type id for type '%s'.", enumTypeName);
 		goto exit;
 	}
 
-	hr = GetDllGlobals()->DebugSymbols->GetConstantName(modBase, typeId, value, STRING_AND_CCH(enumElementName), nullptr);
+	HRESULT hr = GetDllGlobals()->DebugSymbols->GetConstantName(
+		typeInfo->ModuleBase,
+		typeInfo->TypeId,
+		value, STRING_AND_CCH(enumElementName), nullptr);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_ValueError, "Failed to get element name for enum '%s' with value '%llu'. Error 0x%08x.", enumTypeName, value, hr);
@@ -94,8 +95,6 @@ Process_get_global(
 	PyObject *ret = nullptr;
 	const char* symbol = nullptr;
 	UINT64 addr = 0;
-	ULONG typeId = 0;
-	UINT64 modBase = 0;
 	char typeName[MAX_SYMBOL_NAME_LEN] = {};
 	if (!PyArg_ParseTuple(args, "s:get_global", &symbol))
 	{
@@ -108,21 +107,32 @@ Process_get_global(
 		goto exit;
 	}
 
-	hr = GetDllGlobals()->DebugSymbols->GetSymbolTypeId(symbol, &typeId, &modBase);
-	if (FAILED(hr))
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(symbol);
+	if (!typeInfo)
 	{
-		PyErr_Format(PyExc_ValueError, "Failed to get type id for symbol '%s'. Error 0x%08x.", symbol, hr);
+		PyErr_Format(PyExc_ValueError, "Failed to get type id for type '%s'.", symbol);
 		goto exit;
 	}
 
-	hr = GetDllGlobals()->DebugSymbols->GetTypeName(modBase, typeId, STRING_AND_CCH(typeName), nullptr);
+	hr = GetDllGlobals()->DebugSymbols->GetTypeName(
+		typeInfo->ModuleBase,
+		typeInfo->TypeId,
+		STRING_AND_CCH(typeName),
+		nullptr);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_ValueError, "Failed to get type name for symbol '%s'. Error 0x%08x.", symbol, hr);
 		goto exit;
 	}
 
-	ret = AllocTypedObject(0, symbol, typeName, typeId, modBase, addr, (ProcessObj*)self);
+	ret = AllocTypedObject(
+		0,
+		symbol,
+		typeName,
+		typeInfo->TypeId,
+		typeInfo->ModuleBase,
+		addr,
+		(ProcessObj*)self);
 exit:
 	return ret;
 }
