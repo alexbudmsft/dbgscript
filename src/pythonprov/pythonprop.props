@@ -5,10 +5,10 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(DepsDir)\python\include;$(SolutionDir)\..\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(DepsDir)\python\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>dbgeng.lib;dbgscriptsupp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbgscriptsupp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(DepsDir)\python\lib;$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
