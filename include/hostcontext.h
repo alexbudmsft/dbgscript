@@ -4,6 +4,7 @@
 #include <dbgeng.h>
 
 struct IScriptProvider;
+struct ScriptProviderInfo;
 class DbgScriptOutputCallbacks;
 
 struct ScriptPathElem
@@ -19,6 +20,8 @@ struct ScriptPathElem
 
 struct DbgScriptHostContext
 {
+	// Handle to the DbgScript DLL.
+	//
 	HINSTANCE HModule;
 
 	// DbgEng Interfaces.
@@ -30,10 +33,12 @@ struct DbgScriptHostContext
 	IDebugAdvanced2* DebugAdvanced;
 	IDebugDataSpaces4* DebugDataSpaces;
 
-	// FUTURE: This will be a list of all script providers.
+	// List of all registered script providers (based on registry.)
 	//
-	IScriptProvider* ScriptProvider;
+	ScriptProviderInfo* ScriptProviders;
 
+	// Script path to search for scripts (!scriptpath)
+	//
 	ScriptPathElem* ScriptPath;
 
 	// Are we buffering output? This is a refcount to support nested calls.
@@ -44,8 +49,13 @@ struct DbgScriptHostContext
 	//
 	char MessageBuf[4096];
 
+	// Position in 'MessageBuf'.
+	//
 	size_t BufPosition;
 
+	// BufferedOutputCallbacks - Output callback for DbgEng to capture and
+	// buffer output.
+	//
 	DbgScriptOutputCallbacks* BufferedOutputCallbacks;
 };
 

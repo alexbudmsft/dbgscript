@@ -14,8 +14,12 @@ GetHostContext()
 	return &g_HostCtxt;
 }
 
-struct ScriptProviderCallbacks
+static const int MAX_LANG_ID = 64;
+
+struct ScriptProviderInfo
 {
+	ScriptProviderInfo* Next;
+
 	// Module handle.
 	//
 	HMODULE Module;
@@ -31,6 +35,10 @@ struct ScriptProviderCallbacks
 	// Factory function.
 	//
 	SCRIPT_PROV_CREATE_FUNC CreateFunc;
+
+	IScriptProvider* ScriptProvider;
+
+	WCHAR LangId[MAX_LANG_ID]; // -l <lang>
 };
 
 struct ScriptProvCallbackBinding
@@ -44,14 +52,10 @@ struct ScriptProvCallbackBinding
 //
 static const ScriptProvCallbackBinding x_CallbackBindings[] =
 {
-	{ SCRIPT_PROV_INIT, offsetof(ScriptProviderCallbacks, InitFunc) },
-	{ SCRIPT_PROV_CLEANUP, offsetof(ScriptProviderCallbacks, CleanupFunc) },
-	{ SCRIPT_PROV_CREATE, offsetof(ScriptProviderCallbacks, CreateFunc) },
+	{ SCRIPT_PROV_INIT, offsetof(ScriptProviderInfo, InitFunc) },
+	{ SCRIPT_PROV_CLEANUP, offsetof(ScriptProviderInfo, CleanupFunc) },
+	{ SCRIPT_PROV_CREATE, offsetof(ScriptProviderInfo, CreateFunc) },
 };
-
-// TODO: For now, hardcode a single provider. Later this will be a list.
-//
-static ScriptProviderCallbacks s_PyProvCb;
 
 BOOL WINAPI DllMain(
 	_In_ HINSTANCE hinstDLL,
@@ -73,6 +77,191 @@ BOOL WINAPI DllMain(
 	}
 
 	return TRUE;
+}
+
+static _Check_return_ HRESULT
+loadAndCreateScriptProvider(
+	_In_z_ const WCHAR* dllFileName,
+	_Out_ ScriptProviderInfo* info)
+{
+	HRESULT hr = S_OK;
+
+	WCHAR dllPath[MAX_PATH] = {};
+	StringCchCopy(STRING_AND_CCH(dllPath), dllFileName);
+	WCHAR* lastBackSlash = wcsrchr(dllPath, L'\\');
+	assert(lastBackSlash);
+
+	// Null out the slash to get only the directory path of the DLL.
+	//
+	*lastBackSlash = 0;
+
+	BOOL fOk = SetDllDirectory(dllPath);
+	if (!fOk)
+	{
+		hr = HRESULT_FROM_WIN32(GetLastError());
+		goto exit;
+	}
+
+	info->Module = LoadLibrary(dllFileName);
+	if (!info->Module)
+	{
+		hr = HRESULT_FROM_WIN32(GetLastError());
+		goto exit;
+	}
+
+	// Bind all the callbacks.
+	//
+	for (int i = 0; i < _countof(x_CallbackBindings); ++i)
+	{
+		DWORD_PTR* storeLoc = (DWORD_PTR*)((BYTE*)info + x_CallbackBindings[i].CallbackOffset);
+		*storeLoc = (DWORD_PTR)GetProcAddress(info->Module, x_CallbackBindings[i].ExportName);
+
+		if (!*storeLoc)
+		{
+			hr = HRESULT_FROM_WIN32(GetLastError());
+			goto exit;
+		}
+	}
+
+	// Initialize the provider DLL.
+	//
+	info->InitFunc(&g_HostCtxt);
+
+	// For now we only have one.
+	//
+	info->ScriptProvider = info->CreateFunc();
+	if (!info->ScriptProvider)
+	{
+		// Handle error.
+		//
+		hr = E_FAIL;
+		goto exit;
+	}
+
+	// Call provider instance's init routine.
+	//
+	hr = info->ScriptProvider->Init();
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+exit:
+	return hr;
+}
+
+static void
+cleanupScriptProviders()
+{
+	ScriptProviderInfo* cur = g_HostCtxt.ScriptProviders;
+	while (cur)
+	{
+		// Capture next before we destroy it.
+		//
+		ScriptProviderInfo* next = cur->Next;
+
+		// Call provider instance cleanup routine.
+		//
+		cur->ScriptProvider->Cleanup();
+
+		// Call DLL cleanup routine.
+		//
+		cur->CleanupFunc();
+
+		// Unload the module.
+		//
+		BOOL fOk = FreeLibrary(cur->Module);
+		assert(fOk);
+
+		// Free the elem in the list.
+		//
+		delete cur;
+		cur = next;
+	}
+
+	g_HostCtxt.ScriptProviders = nullptr;
+}
+
+static _Check_return_ HRESULT
+registerScriptProviders()
+{
+	HRESULT hr = S_OK;
+	static const WCHAR* x_ProviderKey = L"Software\\Microsoft\\DbgScript\\Providers";
+	HKEY hKey = nullptr;
+	LONG ret = RegOpenKey(HKEY_CURRENT_USER, x_ProviderKey, &hKey);
+	if (ret != ERROR_SUCCESS)
+	{
+		hr = HRESULT_FROM_WIN32(ret);
+		goto exit;
+	}
+	DWORD valType = 0;
+	WCHAR valName[64];
+	WCHAR data[MAX_PATH];
+	DWORD cbData = 0;
+	DWORD cchValName = 0;
+	DWORD idx = 0;
+	do
+	{
+		cbData = sizeof(data);
+		cchValName = _countof(valName);
+
+		ret = RegEnumValue(hKey, idx++, valName, &cchValName, nullptr, &valType, (BYTE*)data, &cbData);
+		if (ret == ERROR_NO_MORE_ITEMS)
+		{
+			break;
+		}
+		else if (ret != ERROR_SUCCESS)
+		{
+			hr = HRESULT_FROM_WIN32(ret);
+			goto exit;
+		}
+
+		// Validate type.
+		//
+		if (valType != REG_SZ)
+		{
+			hr = E_INVALIDARG;
+			GetHostContext()->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: Provider value '%ls' not REG_SZ.\n", valName);
+			goto exit;
+		}
+
+		// data is the path to the DLL
+		// valName is the language token for the -l <lang> switch.
+		//
+		ScriptProviderInfo* head = g_HostCtxt.ScriptProviders;
+		ScriptProviderInfo* info = new ScriptProviderInfo;
+		StringCchCopy(STRING_AND_CCH(info->LangId), valName);
+		info->Next = head;
+		hr = loadAndCreateScriptProvider(data, info);
+		if (FAILED(hr))
+		{
+			goto exit;
+		}
+
+		// Prepend to head.
+		//
+		g_HostCtxt.ScriptProviders = info;
+
+	} while (ret != ERROR_NO_MORE_ITEMS);
+
+	if (!g_HostCtxt.ScriptProviders)
+	{
+		// No providers found!
+		//
+		hr = E_INVALIDARG;
+		GetHostContext()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: No script providers found!\n");
+		goto exit;
+	}
+exit:
+	if (hKey)
+	{
+		RegCloseKey(hKey);
+		hKey = nullptr;
+	}
+	return hr;
 }
 
 // Called to initialize the DLL.
@@ -128,64 +317,14 @@ DLLEXPORT HRESULT DebugExtensionInitialize(
 
 	g_HostCtxt.BufferedOutputCallbacks = GetDbgScriptOutputCb();
 
-	// TODO: Initialize all registered script providers.
+	// Initialize all registered script providers.
 	//
-
-	// TODO: Expose an ini file with pointers to various providers for registration.
-	//
-	WCHAR dllPath[MAX_PATH] = {};
-	WCHAR pythonProv[MAX_PATH] = {};
-	WCHAR pythonProvDll[MAX_PATH] = {};
-	GetModuleFileName(g_HostCtxt.HModule, dllPath, _countof(dllPath));
-	WCHAR* lastBackSlash = wcsrchr(dllPath, L'\\');
-	assert(lastBackSlash);
-	// Null out the slash to get only the directory path of the DLL.
-	//
-	*lastBackSlash = 0;
-	StringCchPrintf(STRING_AND_CCH(pythonProv), L"%s\\pythonprov", dllPath);
-	StringCchPrintf(STRING_AND_CCH(pythonProvDll), L"%s\\pythonprov.dll", pythonProv);
-
-	BOOL fOk = SetDllDirectory(pythonProv);
-	assert(fOk);
-
-	s_PyProvCb.Module = LoadLibrary(pythonProvDll);
-
-	// TODO: Real error handling.
-	//
-	assert(s_PyProvCb.Module);
-
-	// Bind all the callbacks.
-	//
-	for (int i = 0; i < _countof(x_CallbackBindings); ++i)
-	{
-		DWORD_PTR* storeLoc = (DWORD_PTR*)((BYTE*)&s_PyProvCb + x_CallbackBindings[i].CallbackOffset);
-		*storeLoc = (DWORD_PTR)GetProcAddress(s_PyProvCb.Module, x_CallbackBindings[i].ExportName);
-
-		// TODO: Real error handling.
-		//
-		assert(*storeLoc);
-	}
-
-	// Initialize the provider DLL.
-	//
-	s_PyProvCb.InitFunc(&g_HostCtxt);
-
-	// For now we only have one.
-	//
-	g_HostCtxt.ScriptProvider = s_PyProvCb.CreateFunc();
-	if (!g_HostCtxt.ScriptProvider)
-	{
-		// Handle error.
-		//
-		hr = E_FAIL;
-		goto exit;
-	}
-
-	hr = g_HostCtxt.ScriptProvider->Init();
+	hr = registerScriptProviders();
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
+
 exit:
 	// Here all the registered engines should be initialized.
 	//
@@ -197,22 +336,7 @@ exit:
 DLLEXPORT void CALLBACK 
 DebugExtensionUninitialize()
 {
-	// Call the provider instance's cleanup routine.
-	//
-	if (g_HostCtxt.ScriptProvider)
-	{
-		g_HostCtxt.ScriptProvider->Cleanup();
-		g_HostCtxt.ScriptProvider = nullptr;
-	}
-
-	// Call the provider's DLL cleanup routine.
-	//
-	s_PyProvCb.CleanupFunc();
-
-	// Unload the provider DLL.
-	//
-	BOOL fOk = FreeLibrary(s_PyProvCb.Module);
-	assert(fOk);
+	cleanupScriptProviders();
 
 	if (g_HostCtxt.DebugDataSpaces)
 	{
@@ -346,6 +470,144 @@ exit:
 	return hr;
 }
 
+struct ParsedArgs
+{
+	bool TimeRun;
+	const WCHAR* LangId;
+	WCHAR** RemainingArgv;
+	int RemainingArgc;
+
+	WCHAR* WideArgsToFree;
+	WCHAR** ArgListToFree;
+};
+
+static _Check_return_ HRESULT
+parseArgs(
+	_In_z_ const char* args,
+	_Out_ ParsedArgs* parsedArgs)
+{
+	HRESULT hr = S_OK;
+	int cArgs = 0;
+	WCHAR* wszArgs = UtilConvertAnsiToWide(args);
+	if (!wszArgs)
+	{
+		GetHostContext()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Failed to convert args to wide string.\n");
+		hr = E_FAIL;
+		goto exit;
+	}
+
+	WCHAR** argList = CommandLineToArgvW(wszArgs, &cArgs);
+	if (!argList)
+	{
+		hr = HRESULT_FROM_WIN32(GetLastError());
+		GetHostContext()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Failed to parse arguments: 0x%08x\n", hr);
+		goto exit;
+	}
+
+	int i = 0;
+	for (i = 0; i < cArgs; ++i)
+	{
+		if (!wcscmp(argList[i], L"--"))
+		{
+			// Swallow and break out.
+			//
+			++i;
+			break;
+		}
+
+		// Keep switches to ourselves.
+		//
+		if (argList[i][0] == L'-')
+		{
+			if (!wcscmp(argList[i], L"-t"))
+			{
+				parsedArgs->TimeRun = true;
+			}
+			if (!wcscmp(argList[i], L"-l"))
+			{
+				if (i + 1 >= cArgs)
+				{
+					hr = E_INVALIDARG;
+					GetHostContext()->DebugControl->Output(
+						DEBUG_OUTPUT_ERROR,
+						"Error: -l requires a language ID.\n");
+					goto exit;
+				}
+				++i;
+				parsedArgs->LangId = argList[i];
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+	// Rebase the arguments from the script to after what we consumed for the
+	// host.
+	//
+	parsedArgs->RemainingArgv = &argList[i];
+	parsedArgs->RemainingArgc = cArgs - i;
+	assert(parsedArgs->RemainingArgc >= 0);
+exit:
+	return hr;
+}
+
+static void
+freeArgs(
+	_In_ ParsedArgs* parsedArgs)
+{
+	delete[] parsedArgs->WideArgsToFree;
+	LocalFree(parsedArgs->ArgListToFree);
+}
+
+static _Check_return_ HRESULT
+getScriptProvider(
+	_In_opt_z_ const WCHAR* langId,
+	_Outptr_ IScriptProvider** scriptProv)
+{
+	HRESULT hr = S_OK;
+	// Validated during DLL initalization that we found at least one provider.
+	//
+	assert(GetHostContext()->ScriptProviders);
+
+	// Default to the head of the list.
+	//
+	*scriptProv = GetHostContext()->ScriptProviders->ScriptProvider;
+	assert(scriptProv);
+
+	if (langId)
+	{
+		ScriptProviderInfo* cur = GetHostContext()->ScriptProviders;
+		bool found = false;
+		while (cur)
+		{
+			if (!wcscmp(cur->LangId, langId))
+			{
+				*scriptProv = cur->ScriptProvider;
+				found = true;
+				break;
+			}
+
+			cur = cur->Next;
+		}
+
+		if (!found)
+		{
+			hr = E_INVALIDARG;
+			GetHostContext()->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: No script provider with lang ID '%ls' found.\n", langId);
+			goto exit;
+		}
+	}
+exit:
+	return hr;
+}
+
 // TODO: Use script provider based on file extension.
 // Later, allow ini file for registration of script provider DLLs with mapping from extension to DLL.
 // Or maybe have a callback in each DLL that says which file extensions it supports.
@@ -364,12 +626,10 @@ runscript(
 	_In_opt_ PCSTR         args)
 {
 	HRESULT hr = S_OK;
-	int cArgs = 0;
-	WCHAR** argList = nullptr;
-	const WCHAR* wszArgs = nullptr;
 	DWORD startTime = 0;
 	DWORD endTime = 0;
-
+	ParsedArgs parsedArgs = {};
+	IScriptProvider* scriptProv = nullptr;
 	if (!args[0])
 	{
 		// If it's an empty string, fail now.
@@ -381,67 +641,21 @@ runscript(
 		goto exit;
 	}
 
-	wszArgs = UtilConvertAnsiToWide(args);
-	if (!wszArgs)
+	hr = parseArgs(args, &parsedArgs);
+	if (FAILED(hr))
 	{
-		GetHostContext()->DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			"Error: Failed to convert args to wide string.\n");
-		hr = E_FAIL;
 		goto exit;
 	}
-
-	argList = CommandLineToArgvW(wszArgs, &cArgs);
-	if (!argList)
-	{
-		hr = HRESULT_FROM_WIN32(GetLastError());
-		GetHostContext()->DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			"Error: Failed to parse arguments: 0x%08x\n", hr);
-		goto exit;
-	}
-
-	bool timeRun = false;
-	int i = 0;
-	for (i = 0; i < cArgs; ++i)
-	{
-		if (!wcscmp(argList[i], L"--"))
-		{
-			// Swallow and break out.
-			//
-			++i;
-			break;
-		}
-
-		// Keep switches to ourselves.
-		//
-		if (argList[i][0] == L'-')
-		{
-			if (!wcscmp(argList[i], L"-t"))
-			{
-				timeRun = true;
-			}
-		}
-		else
-		{
-			break;
-		}
-	}
-
-	// Rebase the arguments from the script to after what we consumed for the
-	// host.
-	//
-	WCHAR** argsForScriptProv = &argList[i];
-	int cArgsForScriptProv = cArgs - i;
-	assert(cArgsForScriptProv >= 0);
 
 	startTime = GetTickCount();
 
-	// We should examine the extension of the script and walk the list
-	// of registered providers to find the first one that claims the extension.
-	// For now, we only have one provider.
-	//
-	hr = GetHostContext()->ScriptProvider->Run(cArgsForScriptProv, argsForScriptProv);
+	hr = getScriptProvider(parsedArgs.LangId, &scriptProv);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
+	hr = scriptProv->Run(parsedArgs.RemainingArgc, parsedArgs.RemainingArgv);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -449,7 +663,7 @@ runscript(
 
 	endTime = GetTickCount();
 
-	if (timeRun)
+	if (parsedArgs.TimeRun)
 	{
 		DWORD elapsedMs = endTime - startTime;
 		GetHostContext()->DebugControl->Output(
@@ -471,16 +685,9 @@ exit:
 	{
 		GetHostContext()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
 	}
-	if (wszArgs)
-	{
-		delete[] wszArgs;
-		wszArgs = nullptr;
-	}
-	if (argList)
-	{
-		LocalFree(argList);
-		argList = nullptr;
-	}
+
+	freeArgs(&parsedArgs);
+
 	return hr;
 }
 
@@ -493,12 +700,49 @@ evalstring(
 	_In_opt_ PCSTR         args)
 {
 	HRESULT hr = S_OK;
+	ParsedArgs parsedArgs = {};
+	IScriptProvider* scriptProv = nullptr;
+	size_t cConverted = 0;
+	char ansiStringToEval[4096] = {};
+	errno_t err = 0;
 
-	// We should examine the extension of the script and walk the list
-	// of registered providers to find the first one that claims the extension.
-	// For now, we only have one provider.
+	if (!args[0])
+	{
+		// If it's an empty string, fail now.
+		//
+		GetHostContext()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: !evalstring requires at least one argument.\n");
+		hr = E_INVALIDARG;
+		goto exit;
+	}
+
+	hr = parseArgs(args, &parsedArgs);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
+	hr = getScriptProvider(parsedArgs.LangId, &scriptProv);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
+	// Convert to ANSI.
 	//
-	hr = GetHostContext()->ScriptProvider->RunString(args);
+	err = wcstombs_s(
+		&cConverted, ansiStringToEval, parsedArgs.RemainingArgv[0], _countof(ansiStringToEval));
+	if (err)
+	{
+		g_HostCtxt.DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Failed to convert wide string to ANSI: %d.\n", err);
+		hr = E_FAIL;
+		goto exit;
+	}
+
+	hr = scriptProv->RunString(ansiStringToEval);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -508,6 +752,7 @@ exit:
 	{
 		GetHostContext()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
 	}
+	freeArgs(&parsedArgs);
 	return hr;
 }
 
