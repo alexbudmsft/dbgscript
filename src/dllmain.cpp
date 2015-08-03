@@ -608,17 +608,11 @@ exit:
 	return hr;
 }
 
-// TODO: Use script provider based on file extension.
-// Later, allow ini file for registration of script provider DLLs with mapping from extension to DLL.
-// Or maybe have a callback in each DLL that says which file extensions it supports.
-//
 // Debugger syntax: !runscript <scriptfile>
 //
 // 'args' is a single string with the entire command line passed in, unprocessed.
 // E.g. if run with !runscript a b c d blah
 // then args will be "a b c d blah"
-//
-// We have to do the tokenization ourselves.
 //
 DLLEXPORT HRESULT CALLBACK
 runscript(
@@ -691,8 +685,7 @@ exit:
 	return hr;
 }
 
-// Runs a script in a string. Currently this is hardcoded to python, but we'll
-// extend with a "language" parameter once we have other providers.
+// Runs a script in a string.
 //
 DLLEXPORT HRESULT CALLBACK
 evalstring(
@@ -729,19 +722,66 @@ evalstring(
 		goto exit;
 	}
 
-	// Convert to ANSI.
+	memset(ansiStringToEval, ' ', sizeof(ansiStringToEval) - 1);
+
+	// Join the remaining args into a single string to be evaluated.
 	//
-	err = wcstombs_s(
-		&cConverted, ansiStringToEval, parsedArgs.RemainingArgv[0], _countof(ansiStringToEval));
-	if (err)
+	size_t bufPos = 0;
+	for (int i = 0; i < parsedArgs.RemainingArgc; ++i)
 	{
-		g_HostCtxt.DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			"Error: Failed to convert wide string to ANSI: %d.\n", err);
-		hr = E_FAIL;
-		goto exit;
+		char ansiStringTemp[4096] = {};
+
+		// Convert to ANSI.
+		//
+		err = wcstombs_s(
+			&cConverted,
+			ansiStringTemp,
+			parsedArgs.RemainingArgv[i],
+			_countof(ansiStringTemp));
+
+		if (err)
+		{
+			g_HostCtxt.DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: Failed to convert wide string to ANSI: %d.\n", err);
+			hr = E_FAIL;
+			goto exit;
+		}
+
+		size_t len = strlen(ansiStringTemp);
+
+		if (bufPos + len > _countof(ansiStringToEval) - 1)
+		{
+			// Can't fit any more.
+			//
+			g_HostCtxt.DebugControl->Output(
+				DEBUG_OUTPUT_WARNING,
+				"Warning: String to evaluate was too long and has been truncated.\n");
+		}
+
+		len = min(len, _countof(ansiStringToEval) - 1 - bufPos);
+		if (!len)
+		{
+			break;
+		}
+
+		assert(len > 0);
+		memcpy(
+			ansiStringToEval + bufPos,
+			ansiStringTemp,
+			len);
+
+		// Skip over the string and leave one space character.
+		//
+		bufPos += len + 1;
 	}
 
+	// Null terminate.
+	//
+	ansiStringToEval[bufPos] = 0;
+	g_HostCtxt.DebugControl->Output(
+		DEBUG_OUTPUT_VERBOSE,
+		"Evaluating string '%s'.\n", ansiStringToEval);
 	hr = scriptProv->RunString(ansiStringToEval);
 	if (FAILED(hr))
 	{
