@@ -21,7 +21,8 @@ for %%f in (%FLAVORS%) do (
     md !OUTDIR!\pythonprov
     md !OUTDIR!\rubyprov
     
-    if "%%f" == "debug" (
+    set INVERSE=
+    if /I "%%f" == "debug" (
         set PYTHON_DLL=!PYTHON_DLL!_d
     ) else (
 		set INVERSE=/v
