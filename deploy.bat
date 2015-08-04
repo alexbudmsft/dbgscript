@@ -6,10 +6,10 @@ echo Deploying dbgscript...
 rd /q/s deploy
 md deploy
 
-set FLAVORS=debug release
+set FLAVORS=Debug RelWithDebInfo
 
-dir /s/b deps\python\DLLs\*.pyd | findstr _d > debug_pyd.txt
-dir /s/b deps\python\DLLs\*.pyd | findstr /v _d > release_pyd.txt
+set PYDLISTFILE=pydlist.txt
+dir /s/b deps\python\DLLs\*.pyd > %PYDLISTFILE%
 
 for %%f in (%FLAVORS%) do (
     echo Deploying %%f
@@ -23,18 +23,20 @@ for %%f in (%FLAVORS%) do (
     
     if "%%f" == "debug" (
         set PYTHON_DLL=!PYTHON_DLL!_d
+    ) else (
+		set INVERSE=/v
     )
-
+    
     REM Copy DbgScript host DLL/PDB.
     REM
-    copy build\x64\%%f\dbgscript.dll deploy\%%f\
-    copy build\x64\%%f\dbgscript.pdb deploy\%%f\
+    copy build\%%f\dbgscript.dll deploy\%%f\
+    copy build\%%f\dbgscript.pdb deploy\%%f\
     
     REM ========================================================================
     REM Copy Python provider.
     REM
-    copy build\x64\%%f\pythonprov.dll deploy\%%f\pythonprov\
-    copy build\x64\%%f\pythonprov.pdb deploy\%%f\pythonprov\
+    copy build\src\pythonprov\%%f\pythonprov.dll deploy\%%f\pythonprov\
+    copy build\src\pythonprov\%%f\pythonprov.pdb deploy\%%f\pythonprov\
 
     REM Copy over the Python standard library.
     REM
@@ -47,17 +49,13 @@ for %%f in (%FLAVORS%) do (
     
     REM Copy all standard native modules
     REM
-    for /F %%a in (%%f_pyd.txt) do copy %%a deploy\%%f\pythonprov\
-    
-    REM Delete the temp file.
-    REM
-    del %%f_pyd.txt
+    for /F %%a in ('findstr !INVERSE! _d %PYDLISTFILE%') do copy %%a deploy\%%f\pythonprov\
     
     REM ========================================================================
     REM Copy Ruby provider.
     REM
-    copy build\x64\%%f\rubyprov.dll deploy\%%f\rubyprov\
-    copy build\x64\%%f\rubyprov.pdb deploy\%%f\rubyprov\
+    copy build_rb_prov\%%f\rubyprov.dll deploy\%%f\rubyprov\
+    copy build_rb_prov\%%f\rubyprov.pdb deploy\%%f\rubyprov\
     
     REM Copy over the Ruby standard library.
     REM
@@ -68,3 +66,7 @@ for %%f in (%FLAVORS%) do (
     copy deps\ruby\lib\x64-msvcr120-ruby220.dll deploy\%%f\rubyprov\
     copy deps\ruby\lib\x64-msvcr120-ruby220.pdb deploy\%%f\rubyprov\
 )
+    
+REM Delete the temp file.
+REM
+del %PYDLISTFILE%
