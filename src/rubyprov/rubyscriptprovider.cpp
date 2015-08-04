@@ -5,6 +5,7 @@
 
 #include <iscriptprovider.h>
 #include "common.h"
+#include "../support/util.h"
 
 class CRubyScriptProvider : public IScriptProvider
 {
@@ -38,12 +39,20 @@ DbgScript_write(
 	_In_ VALUE /*self*/,
 	_In_ VALUE input)
 {
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+
 	const char* str = StringValueCStr(input);
 
-	// TODO: Buffered writes like pythonprov.
-	//
-	GetRubyProvGlobals()->HostCtxt->DebugControl->Output(
-		DEBUG_OUTPUT_NORMAL, "%s", str);
+	if (hostCtxt->IsBuffering > 0)
+	{
+		UtilBufferOutput(hostCtxt, str, strlen(str));
+	}
+	else
+	{
+		hostCtxt->DebugControl->Output(DEBUG_OUTPUT_NORMAL, "%s", str);
+	}
 
 	return Qnil;
 }

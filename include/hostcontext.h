@@ -47,7 +47,7 @@ struct DbgScriptHostContext
 
 	// Buffer used for output if buffering enabled.
 	//
-	char MessageBuf[4096];
+	char MessageBuf[8192];
 
 	// Position in 'MessageBuf'.
 	//
