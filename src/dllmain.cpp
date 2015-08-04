@@ -171,6 +171,7 @@ cleanupScriptProviders()
 		//
 		BOOL fOk = FreeLibrary(cur->Module);
 		assert(fOk);
+		fOk;
 
 		// Free the elem in the list.
 		//

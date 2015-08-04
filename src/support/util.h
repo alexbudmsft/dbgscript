@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <dbgeng.h>
 #include <hostcontext.h>
+#include "../common.h"
 
 _Check_return_ HRESULT
 UtilReadPointer(
@@ -54,6 +55,7 @@ public:
 		IDebugClient* client = m_HostCtxt->DebugClient;
 		HRESULT hr = client->SetOutputCallbacks(m_Prev);
 		assert(SUCCEEDED(hr));
+		hr;
 	}
 private:
 	DbgScriptHostContext* m_HostCtxt;

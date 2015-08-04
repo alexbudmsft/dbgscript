@@ -88,6 +88,7 @@ exit:
 	return hr;
 }
 
+#if 0
 // Catches all exceptions.
 //
 static VALUE 
@@ -102,6 +103,7 @@ topLevelExceptionHandler(
 		rb_obj_classname(exc));
 	return Qnil;
 }
+#endif
 
 static _Check_return_ HRESULT
 narrowArgvFromWide(
@@ -171,7 +173,7 @@ exit:
 
 _Check_return_ HRESULT
 CRubyScriptProvider::RunString(
-	_In_z_ const char* scriptString)
+	_In_z_ const char* /*scriptString*/)
 {
 	ruby_script("<embed>");
 	return S_OK;

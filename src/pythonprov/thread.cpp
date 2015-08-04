@@ -126,6 +126,7 @@ CAutoSwitchThread::~CAutoSwitchThread()
 	{
 		HRESULT hr = GetPythonProvGlobals()->HostCtxt->DebugSysObj->SetCurrentThreadId(m_PrevThreadId);
 		assert(SUCCEEDED(hr));
+		hr;
 	}
 }
 

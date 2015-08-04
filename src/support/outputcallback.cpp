@@ -1,4 +1,4 @@
-#include "common.h"
+#include "../common.h"
 #include <strsafe.h>
 
 // Nothing private because this class is hidden in the .cpp file.
