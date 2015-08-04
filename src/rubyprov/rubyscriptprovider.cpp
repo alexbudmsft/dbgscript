@@ -111,7 +111,8 @@ topLevelExceptionHandler(
 	// Assumes a 'simple' null-terminated string.
 	//
 	ctrl->Output(
-		DEBUG_OUTPUT_ERROR, "Unhandled exception: %s\n", RSTRING_PTR(message));
+		DEBUG_OUTPUT_ERROR, "Unhandled exception: %s: %s\n",
+		rb_obj_classname(exc), RSTRING_PTR(message));
 
 	VALUE stackTrace = rb_funcall(exc, rb_intern("backtrace"), 0);
 	const int stackLen = RARRAY_LEN(stackTrace);
