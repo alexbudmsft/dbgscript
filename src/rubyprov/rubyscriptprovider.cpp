@@ -34,7 +34,7 @@ CRubyScriptProvider::CRubyScriptProvider()
 }
 
 static VALUE
-customWrite(
+DbgScript_write(
 	_In_ VALUE /*self*/,
 	_In_ VALUE input)
 {
@@ -77,7 +77,7 @@ CRubyScriptProvider::Init()
 	rb_define_singleton_method(
 		out,
 		"write",
-		RUBY_METHOD_FUNC(customWrite),
+		RUBY_METHOD_FUNC(DbgScript_write),
 		1 /* numParams */);
 
 	// Set the ruby stdout/stderr to use our newly-created object.
