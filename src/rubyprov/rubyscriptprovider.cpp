@@ -3,16 +3,34 @@
 #include <ruby.h>
 #pragma warning(pop)
 
-#include "../include/iscriptprovider.h"
+#include <iscriptprovider.h>
 
 class CRubyScriptProvider : public IScriptProvider
 {
-	_Check_return_ HRESULT 
+public:
+	CRubyScriptProvider();
+
+	_Check_return_ HRESULT
 	Init() override;
 
-	_Check_return_ HRESULT 
+	_Check_return_ HRESULT
+	Run(
+		_In_ int argc,
+		_In_ WCHAR** argv) override;
+
+	_Check_return_ HRESULT
+	RunString(
+		_In_z_ const char* scriptString) override;
+
+	_Check_return_ void
 	Cleanup() override;
+
 };
+
+CRubyScriptProvider::CRubyScriptProvider()
+{
+
+}
 
 static VALUE
 customWrite(
@@ -29,7 +47,15 @@ customWrite(
 _Check_return_ HRESULT 
 CRubyScriptProvider::Init()
 {
+	// Fake argc/argv.
+	//
+	int argc = 1;
+	char* args[] = { "embed" };
+	char **argv = args;
+
 	HRESULT hr = S_OK;
+	ruby_sysinit(&argc, &argv);
+	RUBY_INIT_STACK;
 	int ret = ruby_setup();
 	if (ret != 0)
 	{
@@ -58,7 +84,22 @@ exit:
 	return hr;
 }
 
-_Check_return_ HRESULT 
+_Check_return_ HRESULT
+CRubyScriptProvider::Run(
+	_In_ int argc,
+	_In_ WCHAR** argv)
+{
+	return S_OK;
+}
+
+_Check_return_ HRESULT
+CRubyScriptProvider::RunString(
+	_In_z_ const char* scriptString)
+{
+	return S_OK;
+}
+
+_Check_return_ void 
 CRubyScriptProvider::Cleanup()
 {
 	ruby_cleanup(0);

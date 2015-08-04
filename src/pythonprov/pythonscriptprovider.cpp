@@ -323,7 +323,7 @@ exit:
 _Check_return_ HRESULT
 CPythonScriptProvider::Run(
 	_In_ int argc,
-	_In_z_ WCHAR** argv)
+	_In_ WCHAR** argv)
 {
 	char ansiScriptName[MAX_PATH];
 	WCHAR* moduleToRun = nullptr;

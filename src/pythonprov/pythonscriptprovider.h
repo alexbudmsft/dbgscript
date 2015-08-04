@@ -12,7 +12,7 @@ public:
 	_Check_return_ HRESULT
 	Run(
 		_In_ int argc,
-		_In_z_ WCHAR** argv) override;
+		_In_ WCHAR** argv) override;
 
 	_Check_return_ HRESULT
 	RunString(
