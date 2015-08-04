@@ -7,3 +7,4 @@
 *.dll
 x64/
 deploy/
+build*/
