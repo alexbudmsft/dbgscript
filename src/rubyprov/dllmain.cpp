@@ -3,12 +3,12 @@
 #include <hostcontext.h>
 #include "common.h"
 
-static PythonProvGlobals s_PythonProvGlobals;
+static RubyProvGlobals s_RubyProvGlobals;
 
-_Check_return_ PythonProvGlobals*
-GetPythonProvGlobals()
+_Check_return_ RubyProvGlobals*
+GetRubyProvGlobals()
 {
-	return &s_PythonProvGlobals;
+	return &s_RubyProvGlobals;
 }
 
 BOOL WINAPI DllMain(
@@ -19,7 +19,7 @@ BOOL WINAPI DllMain(
 	switch (fdwReason)
 	{
 	case DLL_PROCESS_ATTACH:
-		s_PythonProvGlobals.HModule = hinstDLL;
+		s_RubyProvGlobals.HModule = hinstDLL;
 		break;
 
 	case DLL_PROCESS_DETACH:

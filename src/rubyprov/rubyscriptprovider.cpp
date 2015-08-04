@@ -4,6 +4,7 @@
 #pragma warning(pop)
 
 #include <iscriptprovider.h>
+#include "common.h"
 
 class CRubyScriptProvider : public IScriptProvider
 {
@@ -38,22 +39,25 @@ customWrite(
 	_In_ VALUE input)
 {
 	const char* str = StringValueCStr(input);
-	str;
-	// TODO: Global IDebugControl->Output.
+
+	// TODO: Buffered writes like pythonprov.
 	//
+	GetRubyProvGlobals()->HostCtxt->DebugControl->Output(
+		DEBUG_OUTPUT_NORMAL, "%s", str);
+
 	return Qnil;
 }
 
 _Check_return_ HRESULT 
 CRubyScriptProvider::Init()
 {
-	// Fake argc/argv.
-	//
-	int argc = 1;
-	char* args[] = { "embed" };
-	char **argv = args;
+	int argc = 0;
+	char **argv = nullptr;
 
 	HRESULT hr = S_OK;
+
+	// Ruby does command line parsing for us. We're not going to use its output though.
+	//
 	ruby_sysinit(&argc, &argv);
 	RUBY_INIT_STACK;
 	int ret = ruby_setup();
@@ -84,18 +88,92 @@ exit:
 	return hr;
 }
 
+// Catches all exceptions.
+//
+static VALUE 
+topLevelExceptionHandler(
+	_In_ VALUE args,
+	_In_ VALUE exc)
+{
+	// TODO: Print stack.
+	//
+	fprintf(stderr, "topLevelHandler args %s, object classname %s\n",
+		StringValueCStr(args),
+		rb_obj_classname(exc));
+	return Qnil;
+}
+
+static _Check_return_ HRESULT
+narrowArgvFromWide(
+	_In_ int argc,
+	_In_ WCHAR** argv,
+	_Outptr_ char*** narrowArgv)
+{
+	HRESULT hr = S_OK;
+	*narrowArgv = new char*[argc];
+	if (!*narrowArgv)
+	{
+		hr = E_OUTOFMEMORY;
+		goto exit;
+	}
+
+	for (int i = 0; i < argc; ++i)
+	{
+		size_t cConverted = 0;
+
+		const size_t cbAnsiArg = wcslen(argv[i]) + 1;
+		char* ansiArg = new char[cbAnsiArg];
+		if (!ansiArg)
+		{
+			hr = E_OUTOFMEMORY;
+			goto exit;
+		}
+
+		// Convert to ANSI.
+		//
+		errno_t err = wcstombs_s(
+			&cConverted, ansiArg, cbAnsiArg, argv[i], cbAnsiArg - 1);
+		if (err)
+		{
+			GetRubyProvGlobals()->HostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: Failed to convert wide string to ANSI: %d.\n", err);
+			hr = E_FAIL;
+			goto exit;
+		}
+
+		(*narrowArgv)[i] = ansiArg;
+	}
+
+exit:
+	return hr;
+}
+
 _Check_return_ HRESULT
 CRubyScriptProvider::Run(
 	_In_ int argc,
 	_In_ WCHAR** argv)
 {
-	return S_OK;
+	HRESULT hr = S_OK;
+	char** narrowArgv = nullptr;
+	hr = narrowArgvFromWide(argc, argv, &narrowArgv);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
+	ruby_script(narrowArgv[0]);
+	ruby_set_argv(argc, narrowArgv);
+	rb_load(rb_str_new2(narrowArgv[0]), 0);
+exit:
+	return hr;
 }
 
 _Check_return_ HRESULT
 CRubyScriptProvider::RunString(
 	_In_z_ const char* scriptString)
 {
+	ruby_script("<embed>");
 	return S_OK;
 }
 
@@ -103,18 +181,25 @@ _Check_return_ void
 CRubyScriptProvider::Cleanup()
 {
 	ruby_cleanup(0);
+
+	delete this;
 }
 
-/* Run the script.
+_Check_return_ DLLEXPORT HRESULT
+ScriptProviderInit(
+_In_ DbgScriptHostContext* hostCtxt)
+{
+	GetRubyProvGlobals()->HostCtxt = hostCtxt;
+	return S_OK;
+}
 
-// TODO: set the logical script name for ruby's $0 variable, based on the filename we're running.
-//
-// ruby_script("new name")
-//
-void* node = rb_load_file(args);
-if (0 != ruby_exec_node(node))
+_Check_return_ DLLEXPORT void
+ScriptProviderCleanup()
 {
 }
 
-
-*/
+DLLEXPORT IScriptProvider*
+ScriptProviderCreate()
+{
+	return new CRubyScriptProvider;
+}

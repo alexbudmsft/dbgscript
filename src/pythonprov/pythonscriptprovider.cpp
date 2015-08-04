@@ -512,6 +512,8 @@ _Check_return_ void
 CPythonScriptProvider::Cleanup()
 {
 	Py_Finalize();
+
+	delete this;
 }
 
 
@@ -528,10 +530,6 @@ ScriptProviderCleanup()
 {
 }
 
-// TODO: Every provider will expose a factory method to create itself.
-// All installed providers will be created on DLL load. Appropriate one is then
-// invoked based on file extension claims.
-//
 DLLEXPORT IScriptProvider*
 ScriptProviderCreate()
 {
