@@ -88,22 +88,42 @@ exit:
 	return hr;
 }
 
-#if 0
 // Catches all exceptions.
 //
 static VALUE 
 topLevelExceptionHandler(
-	_In_ VALUE args,
+	_In_ VALUE /*args*/,
 	_In_ VALUE exc)
 {
-	// TODO: Print stack.
+	IDebugControl* ctrl = GetRubyProvGlobals()->HostCtxt->DebugControl;
+
+	VALUE message = rb_funcall(exc, rb_intern("message"), 0);
+
+	// Assumes a 'simple' null-terminated string.
 	//
-	fprintf(stderr, "topLevelHandler args %s, object classname %s\n",
-		StringValueCStr(args),
-		rb_obj_classname(exc));
+	ctrl->Output(
+		DEBUG_OUTPUT_ERROR, "Unhandled exception: %s\n", RSTRING_PTR(message));
+
+	VALUE stackTrace = rb_funcall(exc, rb_intern("backtrace"), 0);
+	const int stackLen = RARRAY_LEN(stackTrace);
+
+	ctrl->Output(
+		DEBUG_OUTPUT_ERROR, "Stack trace:\n");
+	for (int i = 0; i < stackLen; ++i)
+	{
+		VALUE frame = rb_ary_entry(stackTrace, i);
+
+		// Normally we can't assume a Ruby string is null terminated or
+		// doesn't contain embedded NULLs. In this case however, the string
+		// is a stack frame, which should be a "simple" string.
+		//
+		const char* frameStr = RSTRING_PTR(frame);
+
+		ctrl->Output(
+			DEBUG_OUTPUT_ERROR, "  %s\n", frameStr);
+	}
 	return Qnil;
 }
-#endif
 
 static _Check_return_ HRESULT
 narrowArgvFromWide(
@@ -151,6 +171,15 @@ exit:
 	return hr;
 }
 
+typedef VALUE(*RESCUECB)(ANYARGS);
+
+static VALUE
+runScriptGuarded(VALUE name)
+{
+	rb_load(name, 0);
+	return Qnil;
+}
+
 _Check_return_ HRESULT
 CRubyScriptProvider::Run(
 	_In_ int argc,
@@ -165,8 +194,25 @@ CRubyScriptProvider::Run(
 	}
 
 	ruby_script(narrowArgv[0]);
+
+	// Set up argv for the script.
+	//
 	ruby_set_argv(argc, narrowArgv);
-	rb_load(rb_str_new2(narrowArgv[0]), 0);
+
+	// Invoke the script in a "begin..rescue..end" block. (I.e. try/catch in
+	// other languages).
+	//
+	// NOTE: rb_rescue only filters for StandardError exceptions (and subclasses).
+	// This does NOT include LoadError. Thus we must use rb_rescue2.
+	//
+	rb_rescue2(
+		(RESCUECB)runScriptGuarded,
+		rb_str_new2(narrowArgv[0]),
+		(RESCUECB)topLevelExceptionHandler,
+		Qnil,
+		rb_eException,
+		0 /* sentinel */);
+
 exit:
 	return hr;
 }
