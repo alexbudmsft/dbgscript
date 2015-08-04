@@ -34,8 +34,34 @@ CRubyScriptProvider::CRubyScriptProvider()
 
 }
 
+// We don't yet support the second parameter to io.read. (outbuf)
+//
 static VALUE
-DbgScript_write(
+DbgScriptStdIO_gets(
+	_In_ VALUE /*self*/,
+	_In_ VALUE length)
+{
+	// TODO: Make sure the params here are actually correct.
+	//
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+
+	char buf[4096] = { 0 };
+	ULONG actualLen = 0;
+
+	int maxToRead = FIX2INT(length);
+
+	hostCtxt->DebugControl->Input(
+		buf,
+		min(maxToRead, _countof(buf)),
+		&actualLen);
+
+	return rb_str_new2(buf);
+}
+
+static VALUE
+DbgScriptStdIO_write(
 	_In_ VALUE /*self*/,
 	_In_ VALUE input)
 {
@@ -65,7 +91,8 @@ CRubyScriptProvider::Init()
 
 	HRESULT hr = S_OK;
 
-	// Ruby does command line parsing for us. We're not going to use its output though.
+	// Ruby does command line parsing for us. We're not going to use its output
+	// though.
 	//
 	ruby_sysinit(&argc, &argv);
 	RUBY_INIT_STACK;
@@ -76,25 +103,49 @@ CRubyScriptProvider::Init()
 		goto exit;
 	}
 
-	// TODO: Verify we can access the entire ruby standard library. Same goes for python when we implement it.
-	//
 	ruby_init_loadpath();
 
-	// Redirect all writes/prints to our custom routine.
+	// Redirect all writes/prints/readlines to our custom routines.
 	//
-	VALUE out = rb_class_new_instance(0, 0, rb_cObject);
 	rb_define_singleton_method(
-		out,
+		rb_stdout,
 		"write",
-		RUBY_METHOD_FUNC(DbgScript_write),
+		RUBY_METHOD_FUNC(DbgScriptStdIO_write),
 		1 /* numParams */);
+
+	rb_define_singleton_method(
+		rb_stderr,
+		"write",
+		RUBY_METHOD_FUNC(DbgScriptStdIO_write),
+		1 /* numParams */);
+
+	rb_define_singleton_method(
+		rb_stdin,
+		"gets",
+		RUBY_METHOD_FUNC(DbgScriptStdIO_gets),
+		-1 /* numParams */);
 
 	// Set the ruby stdout/stderr to use our newly-created object.
 	//
-	rb_stdout = out;
-	rb_stderr = out;
+	//rb_stdout = dbgscriptStdio;
+	//rb_stderr = dbgscriptStdio;
+	//rb_stdin = dbgscriptStdio;
 exit:
 	return hr;
+}
+
+struct NoArgMethodInfo
+{
+	VALUE Object;
+	ID Method;
+};
+
+static VALUE 
+noArgMethodWrapper(
+	_In_ VALUE args)
+{
+	NoArgMethodInfo* info = (NoArgMethodInfo*)args;
+	return rb_funcall(info->Object, info->Method, 0);
 }
 
 // Catches all exceptions.
@@ -106,7 +157,17 @@ topLevelExceptionHandler(
 {
 	IDebugControl* ctrl = GetRubyProvGlobals()->HostCtxt->DebugControl;
 
-	VALUE message = rb_funcall(exc, rb_intern("message"), 0);
+	NoArgMethodInfo info = { exc, rb_intern("message") };
+
+	int status = 0;
+	VALUE message = rb_protect(noArgMethodWrapper, (VALUE)&info, &status);
+	if (status)
+	{
+		ctrl->Output(
+			DEBUG_OUTPUT_ERROR, "Exception occurred while trying to obtain message for unhandled exception! %d\n",
+			status);
+		goto exit;
+	}
 
 	// Assumes a 'simple' null-terminated string.
 	//
@@ -114,6 +175,8 @@ topLevelExceptionHandler(
 		DEBUG_OUTPUT_ERROR, "Unhandled exception: %s: %s\n",
 		rb_obj_classname(exc), RSTRING_PTR(message));
 
+	// TODO: Protect.
+	//
 	VALUE stackTrace = rb_funcall(exc, rb_intern("backtrace"), 0);
 	const int stackLen = RARRAY_LEN(stackTrace);
 
@@ -132,6 +195,7 @@ topLevelExceptionHandler(
 		ctrl->Output(
 			DEBUG_OUTPUT_ERROR, "  %s\n", frameStr);
 	}
+exit:
 	return Qnil;
 }
 
@@ -238,7 +302,13 @@ CRubyScriptProvider::RunString(
 _Check_return_ void 
 CRubyScriptProvider::Cleanup()
 {
-	ruby_cleanup(0);
+	int status = ruby_cleanup(0);
+	if (status)
+	{
+		GetRubyProvGlobals()->HostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_WARNING,
+			"Warning: Ruby failed to cleanup: %d.\n", status);
+	}
 
 	delete this;
 }
