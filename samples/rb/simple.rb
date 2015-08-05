@@ -5,12 +5,17 @@
 t = DbgScript.current_thread
 p t
 p t.engine_id, t.thread_id
+
+#line = STDIN.gets
+#puts line
+
 #exit!
 #p 'aaaaa'
 #puts $:
-#require 'debug'
+require 'debug'
 #require 'base64'
 
+puts 'aaa'
 #begin
 #    require 'aaa'
 #rescue LoadError

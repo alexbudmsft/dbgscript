@@ -48,27 +48,29 @@ CRubyScriptProvider::CRubyScriptProvider()
 
 }
 
-// We don't yet support the second parameter to io.read. (outbuf)
-//
 static VALUE
 DbgScriptStdIO_gets(
-	_In_ VALUE /*self*/,
-	_In_ VALUE length)
+	_In_ int /*argc*/,
+	_In_ VALUE * /*argv*/,
+	_In_ VALUE /*self*/)
 {
-	// TODO: Make sure the params here are actually correct.
-	//
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
 
 	CHECK_ABORT(hostCtxt);
 
+	// IO.gets supports a bunch of different parameters (see 'rb_io_gets_m').
+	//
+	// Maybe in the future we'll support them, but now now, just handle the
+	// common use-case: no args.
+	//
+	// I.e. read one line from the debugger.
+	//
 	char buf[4096] = { 0 };
 	ULONG actualLen = 0;
 
-	int maxToRead = FIX2INT(length);
-
 	hostCtxt->DebugControl->Input(
 		buf,
-		min(maxToRead, _countof(buf)),
+		_countof(buf),
 		&actualLen);
 
 	return rb_str_new2(buf);
@@ -147,6 +149,8 @@ CRubyScriptProvider::Init()
 	//
 	Init_Thread();
 
+	// Prevent Kernel#exit et al.
+	//
 	rb_undef_method(rb_mKernel, "exit");
 	rb_undef_method(rb_mKernel, "exit!");
 
@@ -298,9 +302,9 @@ CRubyScriptProvider::Run(
 	// This does NOT include LoadError. Thus we must use rb_rescue2.
 	//
 	rb_rescue2(
-		(RUBYMETHOD)runScriptGuarded,
+		RUBY_METHOD_FUNC(runScriptGuarded),
 		rb_str_new2(narrowArgv[0]),
-		(RUBYMETHOD)topLevelExceptionHandler,
+		RUBY_METHOD_FUNC(topLevelExceptionHandler),
 		Qnil,
 		rb_eException,
 		0 /* sentinel */);
@@ -313,6 +317,8 @@ _Check_return_ HRESULT
 CRubyScriptProvider::RunString(
 	_In_z_ const char* /*scriptString*/)
 {
+	// TODO
+	//
 	ruby_script("<embed>");
 	return S_OK;
 }

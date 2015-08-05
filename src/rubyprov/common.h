@@ -8,8 +8,6 @@
 #include <hostcontext.h>
 #include "../support/util.h"
 
-typedef VALUE(*RUBYMETHOD)(ANYARGS);
-
 struct RubyProvGlobals
 {
 	// Ruby Provider DLL Module handle.

@@ -115,13 +115,13 @@ Init_Thread()
 	rb_define_method(
 		threadClass,
 		"engine_id",
-		(RUBYMETHOD)Thread_engine_id,
+		RUBY_METHOD_FUNC(Thread_engine_id),
 		0 /* argc */);
 
 	rb_define_method(
 		threadClass,
 		"thread_id",
-		(RUBYMETHOD)Thread_thread_id,
+		RUBY_METHOD_FUNC(Thread_thread_id),
 		0 /* argc */);
 
 	rb_define_alloc_func(threadClass, Thread_alloc);

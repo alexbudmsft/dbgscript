@@ -81,10 +81,10 @@ Init_DbgScript()
 	VALUE module = rb_define_module("DbgScript");
 
 	rb_define_module_function(
-		module, "read_ptr", (RUBYMETHOD)DbgScript_read_ptr, 1);
+		module, "read_ptr", RUBY_METHOD_FUNC(DbgScript_read_ptr), 1);
 
 	rb_define_module_function(
-		module, "current_thread", (RUBYMETHOD)DbgScript_current_thread, 0);
+		module, "current_thread", RUBY_METHOD_FUNC(DbgScript_current_thread), 0);
 
 	// Save off the module.
 	//
