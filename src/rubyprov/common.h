@@ -19,6 +19,10 @@ struct RubyProvGlobals
 	// DbgScript Host context block.
 	//
 	DbgScriptHostContext* HostCtxt;
+
+	// DbgScript Ruby Module.
+	//
+	VALUE DbgScriptModule;
 };
 
 _Check_return_ RubyProvGlobals*

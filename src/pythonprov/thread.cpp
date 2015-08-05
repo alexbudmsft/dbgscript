@@ -3,30 +3,14 @@
 #include <structmember.h>
 #include "util.h"
 #include "common.h"
+#include <dsthread.h>
 
 struct ProcessObj;
 
-struct ThreadObj
-{
-	PyObject_HEAD
-
-	// Engine thread ID.
-	//
-	ULONG EngineId;
-
-	// System Thread ID.
-	//
-	ULONG ThreadId;
-
-	// Parent process object.
-	//
-	ProcessObj* Process;
-};
-
 static PyMemberDef Thread_MemberDef [] = 
 {
-	{ "engine_id", T_ULONG, offsetof(ThreadObj, EngineId), READONLY },
-	{ "thread_id", T_ULONG, offsetof(ThreadObj, ThreadId), READONLY },
+	{ "engine_id", T_ULONG, offsetof(ThreadObj, Thread.EngineId), READONLY },
+	{ "thread_id", T_ULONG, offsetof(ThreadObj, Thread.ThreadId), READONLY },
 	{ NULL }
 };
 
@@ -97,39 +81,6 @@ exit:
 	return ret;
 }
 
-CAutoSwitchThread::CAutoSwitchThread(
-	_In_ const ThreadObj* thd)
-	:
-	m_DidSwitch(false)
-{
-	// Get current thread id.
-	//
-	IDebugSystemObjects* sysObj = GetPythonProvGlobals()->HostCtxt->DebugSysObj;
-	HRESULT hr = sysObj->GetCurrentThreadId(&m_PrevThreadId);
-	assert(SUCCEEDED(hr));
-
-	// Don't bother switching if we're already on the desired thread.
-	//
-	if (m_PrevThreadId != thd->EngineId)
-	{
-		hr = sysObj->SetCurrentThreadId(thd->EngineId);
-		assert(SUCCEEDED(hr));
-		m_DidSwitch = true;
-	}
-}
-
-CAutoSwitchThread::~CAutoSwitchThread()
-{
-	// Revert to previous thread.
-	//
-	if (m_DidSwitch)
-	{
-		HRESULT hr = GetPythonProvGlobals()->HostCtxt->DebugSysObj->SetCurrentThreadId(m_PrevThreadId);
-		assert(SUCCEEDED(hr));
-		hr;
-	}
-}
-
 static PyObject*
 Thread_get_stack(
 	_In_ PyObject* self,
@@ -153,7 +104,7 @@ Thread_get_stack(
 		// Need to switch thread context to 'this' thread, capture stack, then
 		// switch back.
 		//
-		CAutoSwitchThread autoSwitchThd(thd);
+		CAutoSwitchThread autoSwitchThd(hostCtxt, &thd->Thread);
 
 		hr = hostCtxt->DebugControl->GetStackTrace(
 			0, 0, 0, frames, _countof(frames), &framesFilled);
@@ -283,8 +234,8 @@ AllocThreadObj(
 	// Set up fields.
 	//
 	ThreadObj* thd = (ThreadObj*)obj;
-	thd->EngineId = engineId;
-	thd->ThreadId = threadId;
+	thd->Thread.EngineId = engineId;
+	thd->Thread.ThreadId = threadId;
 	thd->Process = proc;
 
 	return obj;

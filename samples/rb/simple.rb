@@ -1,5 +1,6 @@
-p DbgScript.read_ptr(0x000000ac176eec48)
-
+#p DbgScript.read_ptr(0x000000ac176eec48)
+t = DbgScript::Thread.new
+p t
 #puts $:
 #require 'debug'
 #require 'base64'

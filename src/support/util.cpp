@@ -121,3 +121,38 @@ UtilBufferOutput(
 	hostCtxt->BufPosition += len;
 	assert(hostCtxt->BufPosition <= _countof(hostCtxt->MessageBuf) - 1);
 }
+
+CAutoSwitchThread::CAutoSwitchThread(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ const DbgScriptThread* thd)
+	:
+	m_HostCtxt(hostCtxt),
+	m_DidSwitch(false)
+{
+	// Get current thread id.
+	//
+	IDebugSystemObjects* sysObj = hostCtxt->DebugSysObj;
+	HRESULT hr = sysObj->GetCurrentThreadId(&m_PrevThreadId);
+	assert(SUCCEEDED(hr));
+
+	// Don't bother switching if we're already on the desired thread.
+	//
+	if (m_PrevThreadId != thd->EngineId)
+	{
+		hr = sysObj->SetCurrentThreadId(thd->EngineId);
+		assert(SUCCEEDED(hr));
+		m_DidSwitch = true;
+	}
+}
+
+CAutoSwitchThread::~CAutoSwitchThread()
+{
+	// Revert to previous thread.
+	//
+	if (m_DidSwitch)
+	{
+		HRESULT hr = m_HostCtxt->DebugSysObj->SetCurrentThreadId(m_PrevThreadId);
+		assert(SUCCEEDED(hr));
+		hr;
+	}
+}

@@ -1,8 +1,26 @@
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: rubyscriptprovider.cpp
+// @Author: alexbud
+//
+// Purpose:
+//
+//  Ruby Script Provider primary module.
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************  
+
 #include "common.h"
 
 #include <iscriptprovider.h>
-#include "../support/util.h"
+
+// Ruby modules and classes.
+//
 #include "dbgscript.h"
+#include "thread.h"
 
 class CRubyScriptProvider : public IScriptProvider
 {
@@ -124,6 +142,10 @@ CRubyScriptProvider::Init()
 	// Initialize DbgScript module.
 	//
 	Init_DbgScript();
+
+	// Initialize Thread class.
+	//
+	Init_Thread();
 exit:
 	return hr;
 }
@@ -307,7 +329,7 @@ CRubyScriptProvider::Cleanup()
 
 _Check_return_ DLLEXPORT HRESULT
 ScriptProviderInit(
-_In_ DbgScriptHostContext* hostCtxt)
+	_In_ DbgScriptHostContext* hostCtxt)
 {
 	GetRubyProvGlobals()->HostCtxt = hostCtxt;
 	return S_OK;

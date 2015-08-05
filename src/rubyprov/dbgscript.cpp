@@ -1,3 +1,18 @@
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: dbgscript.cpp
+// @Author: alexbud
+//
+// Purpose:
+//
+//  DbgScript module for Ruby Provider.
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************  
+
 #include "common.h"
 
 // Read a pointer from address 'addr'.
@@ -29,5 +44,9 @@ Init_DbgScript()
 
 	rb_define_module_function(
 		module, "read_ptr", (RUBYMETHOD)DbgScript_read_ptr, 1);
+
+	// Save off the module.
+	//
+	GetRubyProvGlobals()->DbgScriptModule = module;
 }
 

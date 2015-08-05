@@ -4,6 +4,7 @@
 #include <dbgeng.h>
 #include "../include/iscriptprovider.h"
 #include "../include/hostcontext.h"
+#include "../include/dsthread.h"
 
 #define STRING_AND_CCH(x) x, _countof(x)
 

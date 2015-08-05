@@ -92,7 +92,7 @@ getVariablesHelper(
 	ULONG numSym = 0;
 
 	{
-		CAutoSwitchThread autoSwitchThd(stackFrame->Thread);
+		CAutoSwitchThread autoSwitchThd(GetPythonProvGlobals()->HostCtxt, &stackFrame->Thread->Thread);
 		CAutoSwitchStackFrame autoSwitchFrame(stackFrame->FrameNumber);
 		if (PyErr_Occurred())
 		{

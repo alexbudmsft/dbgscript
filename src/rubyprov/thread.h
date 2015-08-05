@@ -1,12 +1,12 @@
 //******************************************************************************
 //  Copyright (c) Microsoft Corporation.
 //
-// @File: dbgscript.h
+// @File: thread.h
 // @Author: alexbud
 //
 // Purpose:
 //
-//  DbgScript module for Ruby Provider.
+//  Thread class for Ruby Provider.
 //  
 // Notes:
 //
@@ -16,4 +16,4 @@
 #pragma once
 
 void
-Init_DbgScript();
+Init_Thread();

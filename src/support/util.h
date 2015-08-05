@@ -1,9 +1,25 @@
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: util.h
+// @Author: alexbud
+//
+// Purpose:
+//
+//  Utility routines and classes for the DbgScript support library.
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************
 #pragma once
+
 #include <assert.h>
 #include <windows.h>
 #include <dbgeng.h>
 #include <hostcontext.h>
 #include "../common.h"
+#include <dsthread.h>
 
 _Check_return_ HRESULT
 UtilReadPointer(
@@ -60,4 +76,21 @@ public:
 private:
 	DbgScriptHostContext* m_HostCtxt;
 	IDebugOutputCallbacks* m_Prev;
+};
+
+// CAutoSwitchThread - Utility class to switch the debugger's thread context.
+//
+class CAutoSwitchThread
+{
+public:
+
+	CAutoSwitchThread(
+		_In_ DbgScriptHostContext* hostCtxt,
+		_In_ const DbgScriptThread* thd);
+	~CAutoSwitchThread();
+
+private:
+	DbgScriptHostContext* m_HostCtxt;
+	ULONG m_PrevThreadId;
+	bool m_DidSwitch;
 };
