@@ -37,6 +37,44 @@ DbgScript_read_ptr(
 	return ULL2NUM(ptrVal);
 }
 
+static VALUE
+DbgScript_current_thread(
+	_In_ VALUE /* self */)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	// Get TEB from debug client.
+	//
+	ULONG engineThreadId = 0;
+	ULONG systemThreadId = 0;
+	HRESULT hr = hostCtxt->DebugSysObj->GetCurrentThreadId(&engineThreadId);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "Failed to get engine thread id. Error 0x%08x.", hr);
+	}
+
+	hr = hostCtxt->DebugSysObj->GetCurrentThreadSystemId(&systemThreadId);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "Failed to get system thread id. Error 0x%08x.", hr);
+	}
+
+	// Allocate a Thread object.
+	//
+	VALUE thdObj = rb_class_new_instance(
+		0, nullptr, GetRubyProvGlobals()->ThreadClass);
+
+	DbgScriptThread* thd = nullptr;
+
+	Data_Get_Struct(thdObj, DbgScriptThread, thd);
+
+	thd->EngineId = engineThreadId;
+	thd->ThreadId = systemThreadId;
+
+	return thdObj;
+}
+
 void
 Init_DbgScript()
 {
@@ -44,6 +82,9 @@ Init_DbgScript()
 
 	rb_define_module_function(
 		module, "read_ptr", (RUBYMETHOD)DbgScript_read_ptr, 1);
+
+	rb_define_module_function(
+		module, "current_thread", (RUBYMETHOD)DbgScript_current_thread, 0);
 
 	// Save off the module.
 	//

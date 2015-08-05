@@ -146,6 +146,10 @@ CRubyScriptProvider::Init()
 	// Initialize Thread class.
 	//
 	Init_Thread();
+
+	rb_undef_method(rb_mKernel, "exit");
+	rb_undef_method(rb_mKernel, "exit!");
+
 exit:
 	return hr;
 }

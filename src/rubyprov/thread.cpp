@@ -40,6 +40,31 @@ Thread_engine_id(
 }
 
 //------------------------------------------------------------------------------
+// Function: Thread_thread_id
+//
+// Description:
+//
+//  Attribute-style getter method for the thread's OS id.
+//  
+// Returns:
+//
+// Notes:
+//
+static VALUE
+Thread_thread_id(
+_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	DbgScriptThread* thd = nullptr;
+
+	Data_Get_Struct(self, DbgScriptThread, thd);
+
+	return ULONG2NUM(thd->ThreadId);
+}
+
+//------------------------------------------------------------------------------
 // Function: Thread_free
 //
 // Description:
@@ -93,6 +118,19 @@ Init_Thread()
 		(RUBYMETHOD)Thread_engine_id,
 		0 /* argc */);
 
-	rb_define_alloc_func(threadClass, Thread_alloc);
-}
+	rb_define_method(
+		threadClass,
+		"thread_id",
+		(RUBYMETHOD)Thread_thread_id,
+		0 /* argc */);
 
+	rb_define_alloc_func(threadClass, Thread_alloc);
+
+	// Prevent scripter from instantiating directly.
+	//
+	rb_undef_method(CLASS_OF(threadClass), "new");
+
+	// Save the thread class so others can instantiate it.
+	//
+	GetRubyProvGlobals()->ThreadClass = threadClass;
+}
