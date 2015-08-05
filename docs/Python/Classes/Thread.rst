@@ -1,33 +1,43 @@
-.. default-domain:: py
+.. py:currentmodule:: dbgscript
+.. rb:currentmodule:: DbgScript
 
-.. currentmodule:: dbgscript
-
-Thread class
+Thread
 =================
 
-.. class:: Thread
+Python 
 
+.. py:class:: Thread
 
-Thread attributes
+Ruby
+
+.. rb:class:: Thread
+
+Attributes
 ----------------------
 
-.. attribute:: Thread.engine_id
+Python
+
+.. py:attribute:: Thread.engine_id
+
+Ruby
+
+.. rb:attr_reader:: Thread.engine_id
 
    The debugger engine thread identifier.
    
    :rtype: int
    
-.. attribute:: Thread.thread_id
+.. py:attribute:: Thread.thread_id
 
    Get the name of the object, if available. Some objects have no name, for
    example if they were created from array elements. Returns a :class:`Thread`.
    
-.. attribute:: Thread.teb
+.. py:attribute:: Thread.teb
 
    Get the name of the object, if available. Some objects have no name, for
    example if they were created from array elements. Returns a :class:`Thread`.
    
-.. attribute:: Thread.current_frame
+.. py:attribute:: Thread.current_frame
 
    Get the name of the object, if available. Some objects have no name, for
    example if they were created from array elements. Returns a :class:`Thread`.

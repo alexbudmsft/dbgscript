@@ -12,7 +12,7 @@ p t.engine_id, t.thread_id
 #exit!
 #p 'aaaaa'
 #puts $:
-require 'debug'
+#require 'debug'
 #require 'base64'
 
 puts 'aaa'
