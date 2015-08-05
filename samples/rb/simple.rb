@@ -1,4 +1,4 @@
-DbgScript.read_ptr
+p DbgScript.read_ptr(0x000000ac176eec48)
 
 #puts $:
 #require 'debug'

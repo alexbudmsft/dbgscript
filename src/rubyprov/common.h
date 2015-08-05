@@ -6,6 +6,7 @@
 #pragma warning(pop)
 
 #include <hostcontext.h>
+#include "../support/util.h"
 
 typedef VALUE(*RUBYMETHOD)(ANYARGS);
 
