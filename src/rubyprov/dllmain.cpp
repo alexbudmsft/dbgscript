@@ -1,6 +1,3 @@
-#include <windows.h>
-#include <iscriptprovider.h>
-#include <hostcontext.h>
 #include "common.h"
 
 static RubyProvGlobals s_RubyProvGlobals;

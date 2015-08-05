@@ -14,7 +14,7 @@ include_directories (
 
 link_directories(${DBGSCRIPTROOT}/deps/ruby/lib)
 
-set (SOURCES dllmain.cpp rubyscriptprovider.cpp)
+set (SOURCES dllmain.cpp rubyscriptprovider.cpp dbgscript.cpp)
 
 # Make a DLL.
 #

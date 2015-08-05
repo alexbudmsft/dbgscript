@@ -1,11 +1,8 @@
-#pragma warning(push)
-#pragma warning(disable: 4510 4512 4610 4100)
-#include <ruby.h>
-#pragma warning(pop)
+#include "common.h"
 
 #include <iscriptprovider.h>
-#include "common.h"
 #include "../support/util.h"
+#include "dbgscript.h"
 
 class CRubyScriptProvider : public IScriptProvider
 {
@@ -26,7 +23,6 @@ public:
 
 	_Check_return_ void
 	Cleanup() override;
-
 };
 
 CRubyScriptProvider::CRubyScriptProvider()
@@ -125,11 +121,9 @@ CRubyScriptProvider::Init()
 		RUBY_METHOD_FUNC(DbgScriptStdIO_gets),
 		-1 /* numParams */);
 
-	// Set the ruby stdout/stderr to use our newly-created object.
+	// Initialize DbgScript module.
 	//
-	//rb_stdout = dbgscriptStdio;
-	//rb_stderr = dbgscriptStdio;
-	//rb_stdin = dbgscriptStdio;
+	Init_DbgScript();
 exit:
 	return hr;
 }
@@ -245,8 +239,6 @@ exit:
 	return hr;
 }
 
-typedef VALUE(*RESCUECB)(ANYARGS);
-
 static VALUE
 runScriptGuarded(VALUE name)
 {
@@ -280,9 +272,9 @@ CRubyScriptProvider::Run(
 	// This does NOT include LoadError. Thus we must use rb_rescue2.
 	//
 	rb_rescue2(
-		(RESCUECB)runScriptGuarded,
+		(RUBYMETHOD)runScriptGuarded,
 		rb_str_new2(narrowArgv[0]),
-		(RESCUECB)topLevelExceptionHandler,
+		(RUBYMETHOD)topLevelExceptionHandler,
 		Qnil,
 		rb_eException,
 		0 /* sentinel */);

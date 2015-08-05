@@ -1,5 +1,7 @@
-puts $:
-require 'debug'
+DbgScript.read_ptr
+
+#puts $:
+#require 'debug'
 #require 'base64'
 
 #begin
@@ -9,7 +11,7 @@ require 'debug'
 #end
 
 
-puts 'aaa'
+#puts 'aaa'
 
 #for i in 0..5
 #    puts i

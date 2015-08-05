@@ -1,10 +1,22 @@
 #pragma once
 
+#pragma warning(push)
+#pragma warning(disable: 4510 4512 4610 4100)
+#include <ruby.h>
+#pragma warning(pop)
+
 #include <hostcontext.h>
+
+typedef VALUE(*RUBYMETHOD)(ANYARGS);
 
 struct RubyProvGlobals
 {
+	// Ruby Provider DLL Module handle.
+	//
 	HMODULE HModule;
+
+	// DbgScript Host context block.
+	//
 	DbgScriptHostContext* HostCtxt;
 };
 
