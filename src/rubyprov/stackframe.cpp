@@ -84,13 +84,10 @@ Init_StackFrame()
 		rb_cObject);
 
 	rb_define_alloc_func(stackFrameClass, StackFrame_alloc);
-
+	
 	// Prevent scripter from instantiating directly.
-	// TODO: Factor out.
 	//
-	rb_undef_method(CLASS_OF(stackFrameClass), "new");
-	rb_undef_method(CLASS_OF(stackFrameClass), "dup");
-	rb_undef_method(CLASS_OF(stackFrameClass), "clone");
+	LockDownClass(stackFrameClass);
 	
 	// Save the thread class so others can instantiate it.
 	//

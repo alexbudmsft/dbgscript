@@ -7,6 +7,7 @@
 
 #include <hostcontext.h>
 #include "../support/util.h"
+#include "util.h"
 
 struct RubyProvGlobals
 {

@@ -181,9 +181,7 @@ Init_Thread()
 
 	// Prevent scripter from instantiating directly.
 	//
-	rb_undef_method(CLASS_OF(threadClass), "new");
-	rb_undef_method(CLASS_OF(threadClass), "dup");
-	rb_undef_method(CLASS_OF(threadClass), "clone");
+	LockDownClass(threadClass);
 	
 	// Save the thread class so others can instantiate it.
 	//

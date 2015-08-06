@@ -20,6 +20,7 @@ set (SOURCES
 	dbgscript.cpp
 	thread.cpp
 	stackframe.cpp
+	util.cpp
 )
 
 # Make a DLL.
