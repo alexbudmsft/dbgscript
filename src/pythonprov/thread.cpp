@@ -53,29 +53,21 @@ Thread_get_current_frame(
 	_In_opt_ void* /* closure */)
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
-
 	CHECK_ABORT(hostCtxt);
+	
 	PyObject* ret = nullptr;
-	IDebugSymbols3* dbgSym = hostCtxt->DebugSymbols;
-	ULONG curFrameIdx = 0;
-	UINT64 instructionOffset = 0;
-	DEBUG_STACK_FRAME frame;
+	DbgScriptStackFrame dsframe = {};
 
-	HRESULT hr = dbgSym->GetCurrentScopeFrameIndex(&curFrameIdx);
+	// Call the support library to fill in the frame information.
+	//
+	HRESULT hr = DsGetCurrentStackFrame(hostCtxt, &dsframe);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "Failed to get current frame index. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_OSError, "DsGetCurrentStackFrame failed. Error 0x%08x.", hr);
 		goto exit;
 	}
-
-	hr = dbgSym->GetScope(&instructionOffset, &frame, nullptr, 0);
-	if (FAILED(hr))
-	{
-		PyErr_Format(PyExc_OSError, "Failed to get current scope. Error 0x%08x.", hr);
-		goto exit;
-	}
-
-	ret = AllocStackFrameObj(curFrameIdx, instructionOffset, reinterpret_cast<ThreadObj*>(self));
+	
+	ret = AllocStackFrameObj(&dsframe, reinterpret_cast<ThreadObj*>(self));
 
 exit:
 	return ret;
@@ -123,7 +115,10 @@ Thread_get_stack(
 	//
 	for (ULONG i = 0; i < framesFilled; ++i)
 	{
-		PyObject* frame = AllocStackFrameObj(i, frames[i].InstructionOffset, thd);
+		DbgScriptStackFrame frm;
+		frm.FrameNumber = i;
+		frm.InstructionOffset = frames[i].InstructionOffset;
+		PyObject* frame = AllocStackFrameObj(&frm, thd);
 		if (!frame)
 		{
 			// Exception has already been setup by callee.

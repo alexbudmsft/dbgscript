@@ -9,14 +9,10 @@ struct StackFrameObj
 {
 	PyObject_HEAD
 
-	// Frame Number.
+	// Language-independent stack frame.
 	//
-	ULONG FrameNumber;
-
-	// See DEBUG_STACK_FRAME::InstructionOffset.
-	//
-	UINT64 InstructionOffset;
-
+	DbgScriptStackFrame Frame;
+	
 	// Backpointer to the owning thread. Opaque.
 	//
 	const ThreadObj* Thread;
@@ -93,7 +89,7 @@ getVariablesHelper(
 
 	{
 		CAutoSwitchThread autoSwitchThd(GetPythonProvGlobals()->HostCtxt, &stackFrame->Thread->Thread);
-		CAutoSwitchStackFrame autoSwitchFrame(stackFrame->FrameNumber);
+		CAutoSwitchStackFrame autoSwitchFrame(stackFrame->Frame.FrameNumber);
 		if (PyErr_Occurred())
 		{
 			goto exit;
@@ -235,8 +231,8 @@ StackFrame_dealloc(PyObject* self)
 }
 static PyMemberDef StackFrame_MemberDef[] =
 {
-	{ "frame_number", T_ULONG, offsetof(StackFrameObj, FrameNumber), READONLY },
-	{ "instruction_offset", T_ULONGLONG, offsetof(StackFrameObj, InstructionOffset), READONLY },
+	{ "frame_number", T_ULONG, offsetof(StackFrameObj, Frame.FrameNumber), READONLY },
+	{ "instruction_offset", T_ULONGLONG, offsetof(StackFrameObj, Frame.InstructionOffset), READONLY },
 	{ NULL }
 };
 
@@ -285,8 +281,7 @@ InitStackFrameType()
 
 _Check_return_ PyObject*
 AllocStackFrameObj(
-	_In_ ULONG frameNum,
-	_In_ UINT64 instructionOffset,
+	_In_ DbgScriptStackFrame* frame,
 	_In_ const ThreadObj* ThreadThread)
 {
 	PyObject* obj = nullptr;
@@ -304,8 +299,7 @@ AllocStackFrameObj(
 	// Set up fields.
 	//
 	StackFrameObj* stackFrame = (StackFrameObj*)obj;
-	stackFrame->FrameNumber = frameNum;
-	stackFrame->InstructionOffset = instructionOffset;
+	stackFrame->Frame = *frame;
 
 	// Take a ref on the Thread object we're going to store.
 	//

@@ -10,6 +10,5 @@ InitStackFrameType();
 
 _Check_return_ PyObject*
 AllocStackFrameObj(
-	_In_ ULONG frameNum,
-	_In_ UINT64 instructionOffset,
+	_In_ DbgScriptStackFrame* frame,
 	_In_ const ThreadObj* parentThread);

@@ -25,6 +25,10 @@ struct RubyProvGlobals
 	// Ruby DbgScript::Thread class.
 	//
 	VALUE ThreadClass;
+
+	// Ruby DbgScript::StackFrame class.
+	//
+	VALUE StackFrameClass;
 };
 
 _Check_return_ RubyProvGlobals*

@@ -13,6 +13,7 @@
 // @EndHeader@
 //******************************************************************************  
 #include "common.h"
+#include "stackframe.h"
 
 //------------------------------------------------------------------------------
 // Function: Thread_engine_id
@@ -52,7 +53,7 @@ Thread_engine_id(
 //
 static VALUE
 Thread_thread_id(
-_In_ VALUE self)
+	_In_ VALUE self)
 {
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
 	CHECK_ABORT(hostCtxt);
@@ -62,6 +63,52 @@ _In_ VALUE self)
 	Data_Get_Struct(self, DbgScriptThread, thd);
 
 	return ULONG2NUM(thd->ThreadId);
+}
+
+//------------------------------------------------------------------------------
+// Function: Thread_current_frame
+//
+// Description:
+//
+//  Attribute-style getter method for the thread's current stack frame.
+//  
+// Returns:
+//
+// Notes:
+//
+static VALUE
+Thread_current_frame(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	DbgScriptStackFrame dsframe = {};
+
+	// Call the support library to fill in the frame information.
+	//
+	HRESULT hr = DsGetCurrentStackFrame(hostCtxt, &dsframe);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "DsGetCurrentStackFrame failed. Error 0x%08x.", hr);
+	}
+
+	// Allocate a StackFrame object.
+	//
+	VALUE frameObj = rb_class_new_instance(
+		0, nullptr, GetRubyProvGlobals()->StackFrameClass);
+
+	StackFrameObj* frame = nullptr;
+
+	Data_Get_Struct(frameObj, StackFrameObj, frame);
+
+	// Copy over the fields.
+	//
+	frame->Frame = dsframe;
+	
+	frame->Thread = self;
+	
+	return frameObj;
 }
 
 //------------------------------------------------------------------------------
@@ -77,7 +124,7 @@ _In_ VALUE self)
 //
 static void
 Thread_free(
-_In_ void* obj)
+	_In_ void* obj)
 {
 	DbgScriptThread* thd = (DbgScriptThread*)obj;
 	delete thd;
@@ -124,12 +171,20 @@ Init_Thread()
 		RUBY_METHOD_FUNC(Thread_thread_id),
 		0 /* argc */);
 
+	rb_define_method(
+		threadClass,
+		"current_frame",
+		RUBY_METHOD_FUNC(Thread_current_frame),
+		0 /* argc */);
+	
 	rb_define_alloc_func(threadClass, Thread_alloc);
 
 	// Prevent scripter from instantiating directly.
 	//
 	rb_undef_method(CLASS_OF(threadClass), "new");
-
+	rb_undef_method(CLASS_OF(threadClass), "dup");
+	rb_undef_method(CLASS_OF(threadClass), "clone");
+	
 	// Save the thread class so others can instantiate it.
 	//
 	GetRubyProvGlobals()->ThreadClass = threadClass;

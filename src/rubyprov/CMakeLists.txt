@@ -18,7 +18,9 @@ set (SOURCES
 	dllmain.cpp
 	rubyscriptprovider.cpp
 	dbgscript.cpp
-	thread.cpp)
+	thread.cpp
+	stackframe.cpp
+)
 
 # Make a DLL.
 #
