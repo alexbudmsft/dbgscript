@@ -31,3 +31,11 @@ _Check_return_ HRESULT
 DsGetCurrentStackFrame(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_Out_ DbgScriptStackFrame* stackFrame);
+
+_Check_return_ HRESULT
+DsGetStackTrace(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ DbgScriptThread* thread,
+	_Out_writes_(cFrames) DEBUG_STACK_FRAME* frames,
+	_In_ ULONG cFrames,
+	_Out_ ULONG* framesFilled);

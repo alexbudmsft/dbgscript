@@ -8,24 +8,13 @@ p t.engine_id, t.thread_id
 frame = t.current_frame
 p frame
 
+stack = t.get_stack
+p stack
+
 #frame.clone
-frame.dup
+#frame.dup
 #line = STDIN.gets
 #puts line
-
-#exit!
-#p 'aaaaa'
-#puts $:
-#require 'debug'
-#require 'base64'
-
-puts 'aaa'
-#begin
-#    require 'aaa'
-#rescue LoadError
-#    puts 'got an error'
-#end
-
 
 #puts 'aaa'
 

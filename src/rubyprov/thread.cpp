@@ -66,6 +66,78 @@ Thread_thread_id(
 }
 
 //------------------------------------------------------------------------------
+// Function: Thread_get_stack
+//
+// Description:
+//
+//  Attribute-style getter method for the thread's current stack frame.
+//  
+// Returns:
+//
+// Notes:
+//
+static VALUE
+Thread_get_stack(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	DEBUG_STACK_FRAME frames[512];
+	ULONG framesFilled = 0;
+	
+	DbgScriptThread* thd = nullptr;
+	Data_Get_Struct(self, DbgScriptThread, thd);
+	
+	// Call the support library to fill in the frame information.
+	//
+	HRESULT hr = DsGetStackTrace(
+		hostCtxt,
+		thd,
+		frames,
+		_countof(frames),
+		&framesFilled);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "DsGetStackTrace failed. Error 0x%08x.", hr);
+	}
+
+	VALUE framesArray = rb_ary_new2(framesFilled);
+
+	// Build an array of StackFrame objects.
+	//
+	for (ULONG i = 0; i < framesFilled; ++i)
+	{
+		DbgScriptStackFrame frm;
+
+		// TODO: Could add a utility to convert a DEBUG_STACK_FRAME to
+		// DbgScriptStackFrame in the future.
+		//
+		frm.FrameNumber = frames[i].FrameNumber;
+		frm.InstructionOffset = frames[i].InstructionOffset;
+		
+		// Allocate a StackFrame object.
+		//
+		VALUE frameObj = rb_class_new_instance(
+			0, nullptr, GetRubyProvGlobals()->StackFrameClass);
+		
+		StackFrameObj* frame = nullptr;
+		
+		Data_Get_Struct(frameObj, StackFrameObj, frame);
+		
+		// Copy over the fields.
+		//
+		frame->Frame = frm;
+		
+		frame->Thread = self;
+
+		rb_ary_store(framesArray, i, frameObj);
+	}
+
+	return framesArray;
+}
+
+//------------------------------------------------------------------------------
 // Function: Thread_current_frame
 //
 // Description:
@@ -175,6 +247,12 @@ Init_Thread()
 		threadClass,
 		"current_frame",
 		RUBY_METHOD_FUNC(Thread_current_frame),
+		0 /* argc */);
+	
+	rb_define_method(
+		threadClass,
+		"get_stack",
+		RUBY_METHOD_FUNC(Thread_get_stack),
 		0 /* argc */);
 	
 	rb_define_alloc_func(threadClass, Thread_alloc);

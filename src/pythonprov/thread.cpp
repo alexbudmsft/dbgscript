@@ -81,8 +81,6 @@ Thread_get_stack(
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 
 	CHECK_ABORT(hostCtxt);
-	// TODO: The bulk of this code is not Python-specific. Factor it out when
-	// implementing Ruby provider.
 
 	ThreadObj* thd = (ThreadObj*)self;
 	HRESULT hr = S_OK;
@@ -92,31 +90,26 @@ Thread_get_stack(
 	DEBUG_STACK_FRAME frames[512];
 	ULONG framesFilled = 0;
 
+	hr = DsGetStackTrace(
+		hostCtxt,
+		&thd->Thread,
+		frames,
+		_countof(frames),
+		&framesFilled);
+	if (FAILED(hr))
 	{
-		// Need to switch thread context to 'this' thread, capture stack, then
-		// switch back.
-		//
-		CAutoSwitchThread autoSwitchThd(hostCtxt, &thd->Thread);
-
-		hr = hostCtxt->DebugControl->GetStackTrace(
-			0, 0, 0, frames, _countof(frames), &framesFilled);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "Failed to get stacktrace. Error 0x%08x.", hr);
-			goto exit;
-		}
+		PyErr_Format(PyExc_OSError, "DsGetStackTrace failed. Error 0x%08x.", hr);
+		goto exit;
 	}
-
-	assert(framesFilled > 0);
 
 	tuple = PyTuple_New(framesFilled);
 
-	// Build a tuple of Thread objects.
+	// Build a tuple of StackFrame objects.
 	//
 	for (ULONG i = 0; i < framesFilled; ++i)
 	{
 		DbgScriptStackFrame frm;
-		frm.FrameNumber = i;
+		frm.FrameNumber = frames[i].FrameNumber;
 		frm.InstructionOffset = frames[i].InstructionOffset;
 		PyObject* frame = AllocStackFrameObj(&frm, thd);
 		if (!frame)
