@@ -5,7 +5,11 @@
 t = DbgScript.current_thread
 p t
 p t.engine_id, t.thread_id
+frame = t.current_frame
+p frame
 
+#frame.clone
+frame.dup
 #line = STDIN.gets
 #puts line
 

@@ -32,11 +32,12 @@ LockDownClass(
 	// Prevent scripter from instantiating directly.
 	//
 	// 'rb_undef_method' undefs an *instance* method of the given class,
-	// so for cases like 'new' which is a 'class method', we have to get the
+	// so for 'new' which is a 'class method', we have to get the
 	// object's class.
 	//
 	rb_undef_method(CLASS_OF(klass), "new");
-	rb_undef_method(CLASS_OF(klass), "dup");
-	rb_undef_method(CLASS_OF(klass), "clone");
+	
+	rb_undef_method(klass, "dup");
+	rb_undef_method(klass, "clone");
 	
 }
