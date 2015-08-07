@@ -16,6 +16,50 @@
 #include "stackframe.h"
 
 //------------------------------------------------------------------------------
+// Function: StackFrame_frame_number
+//
+// Description:
+//
+//  Attribute-style getter method for the StackFrame's frame number.
+//  
+// Returns:
+//
+// Notes:
+//
+static VALUE
+StackFrame_frame_number(
+	_In_ VALUE self)
+{
+	StackFrameObj* frame = nullptr;
+
+	Data_Get_Struct(self, StackFrameObj, frame);
+
+	return ULONG2NUM(frame->Frame.FrameNumber);
+}
+
+//------------------------------------------------------------------------------
+// Function: StackFrame_frame_number
+//
+// Description:
+//
+//  Attribute-style getter method for the StackFrame's instruction offset.
+//  
+// Returns:
+//
+// Notes:
+//
+static VALUE
+StackFrame_instruction_offset(
+	_In_ VALUE self)
+{
+	StackFrameObj* frame = nullptr;
+
+	Data_Get_Struct(self, StackFrameObj, frame);
+
+	return ULL2NUM(frame->Frame.InstructionOffset);
+}
+
+//------------------------------------------------------------------------------
 // Function: StackFrame_free
 //
 // Description:
@@ -30,7 +74,7 @@ static void
 StackFrame_free(
 	_In_ void* obj)
 {
-	DbgScriptStackFrame* frame = (DbgScriptStackFrame*)obj;
+	StackFrameObj* frame = (StackFrameObj*)obj;
 	delete frame;
 }
 
@@ -39,7 +83,7 @@ StackFrame_free(
 //
 // Description:
 //
-//  Marks children of a DbgScriptStackFrame object to prevent their premature
+//  Marks children of a StackFrameObj object to prevent their premature
 //  garbage collection. (Called during 'mark' phase of mark-and-sweep Ruby GC.)
 //  
 // Returns:
@@ -59,7 +103,7 @@ StackFrame_mark(
 //
 // Description:
 //
-//  Allocates a Ruby-wrapped DbgScriptStackFrame object.
+//  Allocates a Ruby-wrapped StackFrameObj object.
 //  
 // Returns:
 //
@@ -84,6 +128,18 @@ Init_StackFrame()
 		rb_cObject);
 
 	rb_define_alloc_func(stackFrameClass, StackFrame_alloc);
+	
+	rb_define_method(
+		stackFrameClass,
+		"frame_number",
+		RUBY_METHOD_FUNC(StackFrame_frame_number),
+		0 /* argc */);
+	
+	rb_define_method(
+		stackFrameClass,
+		"instruction_offset",
+		RUBY_METHOD_FUNC(StackFrame_instruction_offset),
+		0 /* argc */);
 	
 	// Prevent scripter from instantiating directly.
 	//
