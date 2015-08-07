@@ -22,6 +22,7 @@
 #include "dbgscript.h"
 #include "thread.h"
 #include "stackframe.h"
+#include "typedobject.h"
 
 class CRubyScriptProvider : public IScriptProvider
 {
@@ -153,6 +154,10 @@ CRubyScriptProvider::Init()
 	// Initialize StackFrame class.
 	//
 	Init_StackFrame();
+	
+	// Initialize StackFrame class.
+	//
+	Init_TypedObject();
 
 	// Prevent Kernel#exit et al.
 	//

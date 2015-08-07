@@ -10,22 +10,24 @@ GetCachedSymbolType(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_z_ const char* sym)
 {
+	ModuleAndTypeId tmp = {0};
 	SymCacheMapT::iterator it = s_SymCache.find(sym);
 	if (it != s_SymCache.end())
 	{
 		return &it->second;
 	}
 
-	ModuleAndTypeId& info = s_SymCache[sym];
-
 	HRESULT hr = hostCtxt->DebugSymbols->GetSymbolTypeId(
 		sym,
-		&info.TypeId,
-		&info.ModuleBase);
+		&tmp.TypeId,
+		&tmp.ModuleBase);
 	if (FAILED(hr))
 	{
 		return nullptr;
 	}
+
+	ModuleAndTypeId& info = s_SymCache[sym];
+	info = tmp;
 
 	return &info;
 }

@@ -21,6 +21,7 @@ set (SOURCES
 	thread.cpp
 	stackframe.cpp
 	util.cpp
+	typedobject.cpp
 )
 
 # Make a DLL.

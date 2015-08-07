@@ -17,6 +17,9 @@ stack.each do |frame|
     puts "#{frame.frame_number}: Instruction offset: 0x#{frame.instruction_offset.to_s(16)}"
 end
 
+puts 0x000000ac176ee780.class
+DbgScript.create_typed_object('hkengtest!UtRuntime', 0x000000ac176ee780)
+
 #frame.clone
 #frame.dup
 #line = STDIN.gets

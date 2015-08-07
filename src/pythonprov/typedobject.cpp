@@ -1,154 +1,31 @@
 #include <windows.h>
 
-#pragma warning(push)
-#pragma warning(disable: 4091)
-#define _NO_CVCONST_H
-#include <dbghelp.h>
-#pragma warning(pop)
-
 #include "typedobject.h"
 #include <strsafe.h>
 #include <structmember.h>
 #include "process.h"
-#include <wdbgexts.h>
 #include "util.h"
 #include "common.h"
 
 struct ProcessObj;
 
-// From typedata.hpp.
-//
-#define DBG_NATIVE_TYPE_BASE    0x80000000
-#define DBG_GENERATED_TYPE_BASE 0x80001000
-
-enum BuiltinType
-{
-	DNTYPE_VOID = DBG_NATIVE_TYPE_BASE,
-	DNTYPE_CHAR,
-	DNTYPE_WCHAR_T,
-	DNTYPE_INT8,
-	DNTYPE_INT16,
-	DNTYPE_INT32,
-	DNTYPE_INT64,
-	DNTYPE_UINT8,
-	DNTYPE_UINT16,
-	DNTYPE_UINT32,
-	DNTYPE_UINT64,
-	DNTYPE_FLOAT32,
-	DNTYPE_FLOAT64,
-	DNTYPE_FLOAT80,
-	DNTYPE_BOOL,
-	DNTYPE_LONG32,
-	DNTYPE_ULONG32,
-	DNTYPE_HRESULT,
-
-	//
-	// The following types aren't true native types but
-	// are very basic aliases for native types that
-	// need special identification.  For example, WCHAR
-	// is here so that the debugger knows it's characters
-	// and not just an unsigned short.
-	//
-
-	DNTYPE_WCHAR,
-
-	//
-	// Artificial type to mark cases where type information
-	// is coming from the contained CLR value.
-	//
-
-	DNTYPE_CLR_TYPE,
-
-	//
-	// Artificial function type for CLR methods.
-	//
-
-	DNTYPE_MSIL_METHOD,
-	DNTYPE_CLR_METHOD,
-	DNTYPE_CLR_INTERNAL,
-
-	//
-	// Artificial pointer types for special-case handling
-	// of things like vtables.
-	//
-
-	DNTYPE_PTR_FUNCTION32,
-	DNTYPE_PTR_FUNCTION64,
-
-	//
-	// Placeholder for objects that don't have valid
-	// type information but still need to be represented
-	// for other reasons, such as enumeration.
-	//
-
-	DNTYPE_NO_TYPE,
-	DNTYPE_ERROR,
-
-	//  Types used by the Data Model for displaying children data
-	DNTYPE_RAW_VIEW,
-	DNTYPE_CONTINUATION,
-
-	DNTYPE_END_MARKER
-};
-
-struct TypedObjectValue
-{
-	// See TypedObject.TypedData.BaseTypeId for type.
-	//
-
-	union
-	{
-		BYTE ByteVal;
-		WORD WordVal;
-		DWORD DwVal;
-		INT64 I64Val;
-		UINT64 UI64Val;
-		BOOL BoolVal;
-		float FloatVal;
-		double DoubleVal;
-	} Value;
-};
-
 struct TypedObject
 {
 	PyObject_HEAD
-
-	// Name of the typObjbol. (T_STRING_INPLACE).
-	//
-	char Name[MAX_SYMBOL_NAME_LEN];
-
-	// Type of the typObjbol.
-	//
-	char TypeName[MAX_SYMBOL_NAME_LEN];
 
 	// Backpointer to process object.
 	//
 	ProcessObj* Process;
 
-	// DbgEng typed-data information used for walking object hierarchies.
-	//
-	DEBUG_TYPED_DATA TypedData;
-
-	// Is 'TypedData' valid?
-	//
-	bool TypedDataValid;
-
-	// Value if this object represents a primitive type.
-	// I.e. TypedData.Tag == SymTagBaseType.
-	//
-	TypedObjectValue Value;
-
-	// Has the value been initialized?
-	//
-	bool ValueValid;
+	DbgScriptTypedObject Data;
 };
 
 static PyMemberDef TypedObject_MemberDef[] =
 {
-	{ "size", T_ULONG, offsetof(TypedObject, TypedData.Size), READONLY },
-	{ "name", T_STRING_INPLACE, offsetof(TypedObject, Name), READONLY },
-	{ "type", T_STRING_INPLACE, offsetof(TypedObject, TypeName), READONLY },
-	{ "address", T_ULONGLONG, offsetof(TypedObject, TypedData.Offset), READONLY },
+	{ "size", T_ULONG, offsetof(TypedObject, Data.TypedData.Size), READONLY },
+	{ "name", T_STRING_INPLACE, offsetof(TypedObject, Data.Name), READONLY },
+	{ "type", T_STRING_INPLACE, offsetof(TypedObject, Data.TypeName), READONLY },
+	{ "address", T_ULONGLONG, offsetof(TypedObject, Data.TypedData.Offset), READONLY },
 	{ NULL }
 };
 
@@ -167,6 +44,7 @@ allocSubTypedObject(
 	_In_ const DEBUG_TYPED_DATA* typedData,
 	_In_ ProcessObj* proc)
 {
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 	PyObject* obj = nullptr;
 	PyObject* ret = nullptr;
 
@@ -187,23 +65,13 @@ allocSubTypedObject(
 	Py_INCREF(proc);
 	typObj->Process = proc;
 
-	HRESULT hr = StringCchCopyA(STRING_AND_CCH(typObj->Name), name);
-	assert(SUCCEEDED(hr));
-
-	typObj->TypedData = *typedData;
-	typObj->TypedDataValid = true;
-
-	hr = GetPythonProvGlobals()->HostCtxt->DebugSymbols->GetTypeName(
-		typObj->TypedData.ModBase,
-		typObj->TypedData.TypeId,
-		STRING_AND_CCH(typObj->TypeName),
-		nullptr);
+	HRESULT hr = DsWrapTypedData(hostCtxt, name, typedData, &typObj->Data);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "Failed to get type name. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_OSError, "DsWrapTypedData failed. Error 0x%08x.", hr);
 		goto exit;
 	}
-
+	
 	// Transfer ownership on success.
 	//
 	ret = obj;
@@ -222,7 +90,7 @@ exit:
 static bool checkTypedData(
 	_In_ TypedObject* typedObj)
 {
-	if (!typedObj->TypedDataValid)
+	if (!typedObj->Data.TypedDataValid)
 	{
 		// This object has no typed data. It must have been a null ptr.
 		//
@@ -251,8 +119,8 @@ TypedObject_sequence_get_item(
 		return nullptr;
 	}
 
-	if (typObj->TypedData.Tag != SymTagPointerType &&
-		typObj->TypedData.Tag != SymTagArrayType)
+	if (typObj->Data.TypedData.Tag != SymTagPointerType &&
+		typObj->Data.TypedData.Tag != SymTagArrayType)
 	{
 		// Not a pointer or array.
 		//
@@ -265,7 +133,7 @@ TypedObject_sequence_get_item(
 	EXT_TYPED_DATA request = {};
 	EXT_TYPED_DATA response = {};
 	request.Operation = EXT_TDOP_GET_ARRAY_ELEMENT;
-	request.InData = typObj->TypedData;
+	request.InData = typObj->Data.TypedData;
 	request.In64 = index;
 
 	static_assert(sizeof(request) == sizeof(response),
@@ -381,7 +249,7 @@ TypedObject_mapping_subscript(
 	//
 	request = (EXT_TYPED_DATA*)requestBuf;
 	request->Operation = EXT_TDOP_GET_FIELD;
-	request->InData = typedObj->TypedData;
+	request->InData = typedObj->Data.TypedData;
 	request->InStrIndex = sizeof(EXT_TYPED_DATA);
 
 	// Must be NULL terminated.
@@ -455,10 +323,10 @@ static PyObject*
 pyValueFromCValue(
 	_In_ TypedObject* typObj)
 {
-	assert(typObj->ValueValid);
-	assert(typObj->TypedDataValid);
-	const TypedObjectValue* cValue = &typObj->Value;
-	DEBUG_TYPED_DATA* typedData = &typObj->TypedData;
+	assert(typObj->Data.ValueValid);
+	assert(typObj->Data.TypedDataValid);
+	const TypedObjectValue* cValue = &typObj->Data.Value;
+	DEBUG_TYPED_DATA* typedData = &typObj->Data.TypedData;
 	PyObject* ret = nullptr;
 
 	if (typedData->Tag == SymTagPointerType)
@@ -527,7 +395,7 @@ pyValueFromCValue(
 		default:
 			PyErr_Format(PyExc_AttributeError, "Unsupported type id: %d (%s)",
 				typedData->BaseTypeId,
-				typObj->TypeName);
+				typObj->Data.TypeName);
 			break;
 		}
 	}
@@ -560,7 +428,7 @@ TypedObject_get_value(
 	TypedObject* typObj = (TypedObject*)self;
 	PyObject* ret = nullptr;
 
-	if (!typObj->TypedDataValid)
+	if (!typObj->Data.TypedDataValid)
 	{
 		PyErr_SetString(PyExc_AttributeError, "No typed data available.");
 		return nullptr;
@@ -568,7 +436,7 @@ TypedObject_get_value(
 
 	bool primitiveType = false;
 
-	switch (typObj->TypedData.Tag)
+	switch (typObj->Data.TypedData.Tag)
 	{
 	case SymTagBaseType:
 	case SymTagPointerType:
@@ -588,24 +456,24 @@ TypedObject_get_value(
 	// What primitive type is bigger than 8 bytes?
 	//
 	ULONG cbRead = 0;
-	assert(typObj->TypedData.Size <= 8);
+	assert(typObj->Data.TypedData.Size <= 8);
 	HRESULT hr = hostCtxt->DebugSymbols->ReadTypedDataVirtual(
-		typObj->TypedData.Offset,
-		typObj->TypedData.ModBase,
-		typObj->TypedData.TypeId,
-		&typObj->Value.Value,
-		sizeof(typObj->Value.Value),
+		typObj->Data.TypedData.Offset,
+		typObj->Data.TypedData.ModBase,
+		typObj->Data.TypedData.TypeId,
+		&typObj->Data.Value.Value,
+		sizeof(typObj->Data.Value.Value),
 		&cbRead);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_OSError, "Failed to read typed data. Error 0x%08x.", hr);
 		goto exit;
 	}
-	assert(cbRead == typObj->TypedData.Size);
+	assert(cbRead == typObj->Data.TypedData.Size);
 	
 	// Value has been populated.
 	//
-	typObj->ValueValid = true;
+	typObj->Data.ValueValid = true;
 
 	ret = pyValueFromCValue(typObj);
 
@@ -627,8 +495,8 @@ TypedObject_sequence_length(
 		return -1;
 	}
 
-	if (typObj->TypedData.Tag != SymTagPointerType &&
-		typObj->TypedData.Tag != SymTagArrayType)
+	if (typObj->Data.TypedData.Tag != SymTagPointerType &&
+		typObj->Data.TypedData.Tag != SymTagArrayType)
 	{
 		// Not a pointer or array.
 		//
@@ -646,14 +514,14 @@ TypedObject_sequence_length(
 		return -1;
 	}
 
-	assert(tmp->TypedDataValid);
-	const ULONG elemSize = tmp->TypedData.Size;
+	assert(tmp->Data.TypedDataValid);
+	const ULONG elemSize = tmp->Data.TypedData.Size;
 
 	// Release the temporary object.
 	//
 	Py_DECREF(tmp);
 
-	return typObj->TypedData.Size / elemSize;
+	return typObj->Data.TypedData.Size / elemSize;
 }
 
 static PyGetSetDef TypedObject_GetSetDef[] =
@@ -729,58 +597,22 @@ AllocTypedObject(
 
 	Py_INCREF(proc);
 	typObj->Process = proc;
-
-	if (name)
+	
+	hr = DsInitializeTypedObject(
+		GetPythonProvGlobals()->HostCtxt,
+		size,
+		name,
+		type,
+		typeId,
+		moduleBase,
+		virtualAddress,
+		&typObj->Data);
+	if (FAILED(hr))
 	{
-		hr = StringCchCopyA(STRING_AND_CCH(typObj->Name), name);
-		assert(SUCCEEDED(hr));
+		PyErr_Format(PyExc_OSError, "DsInitializeTypedObject failed. Error 0x%08x.", hr);
+		goto exit;
 	}
-	else
-	{
-		hr = StringCchCopyA(STRING_AND_CCH(typObj->Name), "<unnamed>");
-		assert(SUCCEEDED(hr));
-	}
-
-	hr = StringCchCopyA(STRING_AND_CCH(typObj->TypeName), type);
-	assert(SUCCEEDED(hr));
-
-	// Can't generate typed data for null pointers. Then again, doesn't matter
-	// much since can't traverse a null pointer anyway.
-	//
-	if (virtualAddress)
-	{
-		// TODO: Encapsulate this logic into a separate class perhaps.
-		//
-		EXT_TYPED_DATA request = {};
-		EXT_TYPED_DATA response = {};
-		request.Operation = EXT_TDOP_SET_FROM_TYPE_ID_AND_U64;
-		request.InData.ModBase = moduleBase;
-		request.InData.Offset = virtualAddress;
-		request.InData.TypeId = typeId;
-
-		hr = GetPythonProvGlobals()->HostCtxt->DebugAdvanced->Request(
-			DEBUG_REQUEST_EXT_TYPED_DATA_ANSI,
-			&request,
-			sizeof(request),
-			&response,
-			sizeof(response),
-			nullptr);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "EXT_TDOP_SET_FROM_TYPE_ID_AND_U64 operation failed. Error 0x%08x.", hr);
-			goto exit;
-		}
-
-		typObj->TypedData = response.OutData;
-		typObj->TypedDataValid = true;
-
-		assert(typObj->TypedData.Offset == virtualAddress);
-	}
-	else
-	{
-		typObj->TypedData.Size = size;
-	}
-
+	
 	// Transfer ownership on success.
 	//
 	ret = obj;

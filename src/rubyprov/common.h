@@ -7,6 +7,7 @@
 
 #include <hostcontext.h>
 #include "../support/util.h"
+#include "../support/symcache.h"
 #include "util.h"
 
 struct RubyProvGlobals
@@ -30,6 +31,10 @@ struct RubyProvGlobals
 	// Ruby DbgScript::StackFrame class.
 	//
 	VALUE StackFrameClass;
+	
+	// Ruby DbgScript::TypedObject class.
+	//
+	VALUE TypedObjectClass;
 };
 
 _Check_return_ RubyProvGlobals*
