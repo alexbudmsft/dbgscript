@@ -199,3 +199,54 @@ exit:
 	}
 	return hr;
 }
+
+_Check_return_ HRESULT
+DsTypedObjectGetArrayElement(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ DbgScriptTypedObject* typObj,
+	_In_ UINT64 index,
+	_Out_ DEBUG_TYPED_DATA* outData)
+{
+	HRESULT hr = S_OK;
+	EXT_TYPED_DATA request = {};
+	EXT_TYPED_DATA response = {};
+
+	if (typObj->TypedData.Tag != SymTagPointerType &&
+		typObj->TypedData.Tag != SymTagArrayType)
+	{
+		// Not a pointer or array.
+		//
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Object not a pointer or array.");
+		hr = E_INVALIDARG;
+		goto exit;
+	}
+
+	request.Operation = EXT_TDOP_GET_ARRAY_ELEMENT;
+	request.InData = typObj->TypedData;
+	request.In64 = index;
+
+	static_assert(sizeof(request) == sizeof(response),
+		"Request and response must be equi-sized");
+
+	hr = hostCtxt->DebugAdvanced->Request(
+		DEBUG_REQUEST_EXT_TYPED_DATA_ANSI,
+		&request,
+		sizeof(request),
+		&response,
+		sizeof(response),
+		nullptr);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: EXT_TDOP_GET_ARRAY_ELEMENT operation failed. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	*outData = response.OutData;
+	
+exit:
+	return hr;
+}

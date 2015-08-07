@@ -26,6 +26,11 @@ puts ja.name, ja.type, ja.address, ja.size
 obj = DbgScript.create_typed_object('bool', 0xac176ee7e8)
 p obj.name, obj.value, obj.type, obj.address, obj.size
 
+for i in 0..runtime['CountThreads'].value
+    thd = runtime['Threads'][i]
+    puts i, thd.name, thd.address, thd.type, thd.size
+end
+
 #frame.clone
 #frame.dup
 #line = STDIN.gets

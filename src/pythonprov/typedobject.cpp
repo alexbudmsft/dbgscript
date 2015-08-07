@@ -109,7 +109,7 @@ TypedObject_sequence_get_item(
 	_In_ Py_ssize_t index)
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
-
+	HRESULT hr = S_OK;
 	CHECK_ABORT(hostCtxt);
 
 	TypedObject* typObj = (TypedObject*)self;
@@ -120,42 +120,21 @@ TypedObject_sequence_get_item(
 		return nullptr;
 	}
 
-	if (typObj->Data.TypedData.Tag != SymTagPointerType &&
-		typObj->Data.TypedData.Tag != SymTagArrayType)
-	{
-		// Not a pointer or array.
-		//
-		// This object has no typed data. It must have been a null ptr.
-		//
-		PyErr_SetString(PyExc_AttributeError, "Object not a pointer or array.");
-		return nullptr;
-	}
-
-	EXT_TYPED_DATA request = {};
-	EXT_TYPED_DATA response = {};
-	request.Operation = EXT_TDOP_GET_ARRAY_ELEMENT;
-	request.InData = typObj->Data.TypedData;
-	request.In64 = index;
-
-	static_assert(sizeof(request) == sizeof(response),
-		"Request and response must be equi-sized");
-
-	HRESULT hr = hostCtxt->DebugAdvanced->Request(
-		DEBUG_REQUEST_EXT_TYPED_DATA_ANSI,
-		&request,
-		sizeof(request),
-		&response,
-		sizeof(response),
-		nullptr);
+	DEBUG_TYPED_DATA typedData = {0};
+	hr = DsTypedObjectGetArrayElement(
+		hostCtxt,
+		&typObj->Data,
+		index,
+		&typedData);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "EXT_TDOP_GET_ARRAY_ELEMENT operation failed. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_OSError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 
 	// Array elements have no name.
 	//
-	ret = allocSubTypedObject("<unnamed>", &response.OutData, typObj->Process);
+	ret = allocSubTypedObject(ARRAY_ELEM_NAME, &typedData, typObj->Process);
 exit:
 	return ret;
 }

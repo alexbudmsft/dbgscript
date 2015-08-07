@@ -27,6 +27,10 @@
 const int MAX_MODULE_NAME_LEN = 256;
 const int MAX_SYMBOL_NAME_LEN = 512;
 
+// Name to use for anonymous array elements.
+//
+#define ARRAY_ELEM_NAME "<arr-elem>"
+
 // From typedata.hpp.
 //
 #define DBG_NATIVE_TYPE_BASE    0x80000000
@@ -176,3 +180,9 @@ DsTypedObjectGetField(
 	_In_z_ const char* fieldName,
 	_Out_ DEBUG_TYPED_DATA* outData);
 
+_Check_return_ HRESULT
+DsTypedObjectGetArrayElement(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ DbgScriptTypedObject* typedObj,
+	_In_ UINT64 index,
+	_Out_ DEBUG_TYPED_DATA* outData);

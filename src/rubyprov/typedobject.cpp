@@ -275,6 +275,28 @@ checkTypedData(
 }
 
 static VALUE
+allocTypedObjFromTypedData(
+	_In_z_ const char* name,
+	_In_ DEBUG_TYPED_DATA* typedData)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	VALUE newObj = rb_class_new_instance(
+		0, nullptr, GetRubyProvGlobals()->TypedObjectClass);
+	
+	DbgScriptTypedObject* obj = nullptr;
+	
+	Data_Get_Struct(newObj, DbgScriptTypedObject, obj);
+	
+	HRESULT hr = DsWrapTypedData(hostCtxt, name, typedData, obj);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "DsWrapTypedData failed. Error 0x%08x.", hr);
+	}
+	
+	return newObj;
+}
+
+static VALUE
 TypedObject_get_item(
 	_In_ VALUE self,
 	_In_ VALUE key)
@@ -306,33 +328,28 @@ TypedObject_get_item(
 		{
 			rb_raise(rb_eSystemCallError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
 		}
-
-		// Allocate a Typed Object.
-		//
-		VALUE newObj = rb_class_new_instance(
-			0, nullptr, GetRubyProvGlobals()->TypedObjectClass);
-
-		DbgScriptTypedObject* obj = nullptr;
-
-		Data_Get_Struct(newObj, DbgScriptTypedObject, obj);
-
-		HRESULT hr = DsWrapTypedData(hostCtxt, field, &typedData, obj);
-		if (FAILED(hr))
-		{
-			rb_raise(rb_eSystemCallError, "DsWrapTypedData failed. Error 0x%08x.", hr);
-		}
-
-		return newObj;
+		return allocTypedObjFromTypedData(field, &typedData);
 	}
 	else
 	{
 		// Try convert to int.
 		//
 		VALUE intKey = rb_check_to_int(key);
-		intKey;
+		const int index = NUM2INT(intKey);
+		
 		// Array lookup.
 		//
-		return Qnil;
+		DEBUG_TYPED_DATA typedData = {0};
+		hr = DsTypedObjectGetArrayElement(
+			hostCtxt,
+			typObj,
+			index,
+			&typedData);
+		if (FAILED(hr))
+		{
+			rb_raise(rb_eSystemCallError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+		}
+		return allocTypedObjFromTypedData(ARRAY_ELEM_NAME, &typedData);
 	}
 }
 
