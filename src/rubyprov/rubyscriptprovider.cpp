@@ -282,8 +282,15 @@ exit:
 static VALUE
 runScriptGuarded(VALUE name)
 {
-	rb_load(name, 0);
+	rb_load(name, 0 /* wrap */);
 	return Qnil;
+}
+
+static VALUE
+runStringGuarded(
+	_In_ const char* str)
+{
+	return rb_eval_string(str);
 }
 
 _Check_return_ HRESULT
@@ -325,11 +332,22 @@ exit:
 
 _Check_return_ HRESULT
 CRubyScriptProvider::RunString(
-	_In_z_ const char* /*scriptString*/)
+	_In_z_ const char* scriptString)
 {
-	// TODO
+	// Invoke the script in a "begin..rescue..end" block. (I.e. try/catch in
+	// other languages).
 	//
-	ruby_script("<embed>");
+	// NOTE: rb_rescue only filters for StandardError exceptions (and subclasses).
+	// This does NOT include LoadError. Thus we must use rb_rescue2.
+	//
+	rb_rescue2(
+		RUBY_METHOD_FUNC(runStringGuarded),
+		(VALUE)scriptString,
+		RUBY_METHOD_FUNC(topLevelExceptionHandler),
+		Qnil,
+		rb_eException,
+		0 /* sentinel */);
+	
 	return S_OK;
 }
 
