@@ -114,3 +114,88 @@ exit:
 	return hr;
 }
 
+_Check_return_ HRESULT
+DsTypedObjectGetField(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ DbgScriptTypedObject* typedObj,
+	_In_z_ const char* fieldName,
+	_Out_ DEBUG_TYPED_DATA* outData)
+{
+	HRESULT hr = S_OK;
+	EXT_TYPED_DATA* request = nullptr;
+	EXT_TYPED_DATA* responseBuf = nullptr;
+	BYTE* requestBuf = nullptr;
+	const ULONG fieldNameLen = (ULONG)strlen(fieldName);
+	const ULONG reqSize = sizeof(EXT_TYPED_DATA) + fieldNameLen + 1;
+
+	requestBuf = (BYTE*)malloc(reqSize);
+	if (!requestBuf)
+	{
+		hr = E_OUTOFMEMORY;
+		goto exit;
+	}
+
+	// Response buffer must be as big as request since dbgeng memcpy's from
+	// request to response as a first step.
+	//
+	responseBuf = (EXT_TYPED_DATA*)malloc(reqSize);
+	if (!responseBuf)
+	{
+		hr = E_OUTOFMEMORY;
+		goto exit;
+	}
+
+	memset(requestBuf, 0, reqSize);
+
+	// TODO: Currently this doesn't support register-based variables, as the
+	// virtual address is not correct.
+	// Figure out what to do about them.
+	//
+	request = (EXT_TYPED_DATA*)requestBuf;
+	request->Operation = EXT_TDOP_GET_FIELD;
+	request->InData = typedObj->TypedData;
+	request->InStrIndex = sizeof(EXT_TYPED_DATA);
+
+	// Must be NULL terminated.
+	//
+	memcpy(requestBuf + sizeof(EXT_TYPED_DATA), fieldName, fieldNameLen + 1);
+
+	hr = hostCtxt->DebugAdvanced->Request(
+		DEBUG_REQUEST_EXT_TYPED_DATA_ANSI,
+		request,
+		reqSize,
+		responseBuf,
+		reqSize,
+		nullptr);
+	if (hr == E_NOINTERFACE)
+	{
+		// This means there was no such member.
+		//
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: No such field '%s'.\n", fieldName);
+		goto exit;
+	}
+	else if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: EXT_TDOP_GET_FIELD operation failed. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	*outData = responseBuf->OutData;
+
+exit:
+	if (requestBuf)
+	{
+		free(requestBuf);
+		requestBuf = nullptr;
+	}
+	if (responseBuf)
+	{
+		free(responseBuf);
+		responseBuf = nullptr;
+	}
+	return hr;
+}

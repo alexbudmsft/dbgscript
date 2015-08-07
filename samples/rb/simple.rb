@@ -18,7 +18,11 @@ stack.each do |frame|
 end
 
 puts 0x000000ac176ee780.class
-#obj = DbgScript.create_typed_object('hkengtest!UtRuntime', 0x000000ac176ee780)
+runtime = DbgScript.create_typed_object('hkengtest!UtRuntime', 0x000000ac176ee780)
+ja = runtime['JoinAllStart']['Event']
+puts ja.name, ja.type, ja.address, ja.size
+#evt = ja['Event']
+#puts evt
 obj = DbgScript.create_typed_object('bool', 0xac176ee7e8)
 p obj.name, obj.value, obj.type, obj.address, obj.size
 

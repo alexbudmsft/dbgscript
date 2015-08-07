@@ -87,7 +87,8 @@ exit:
 	return ret;
 }
 
-static bool checkTypedData(
+static bool
+checkTypedData(
 	_In_ TypedObject* typedObj)
 {
 	if (!typedObj->Data.TypedDataValid)
@@ -171,9 +172,6 @@ TypedObject_mapping_subscript(
 	CHECK_ABORT(hostCtxt);
 	TypedObject* typedObj = (TypedObject*)self;
 	PyObject* newTypedObj = nullptr;
-	EXT_TYPED_DATA* request = nullptr;
-	EXT_TYPED_DATA* responseBuf = nullptr;
-	BYTE* requestBuf = nullptr;
 
 	// A type can only be a mapping or a sequence. If the [] syntax is used,
 	// python will first check for mapping support and call that API, ignoring
@@ -219,80 +217,25 @@ TypedObject_mapping_subscript(
 		return nullptr;
 	}
 
-	// TODO: Encapsulate this logic into a separate class perhaps.
-	//
-	const ULONG fieldNameLen = (ULONG)strlen(fieldName);
-	const ULONG reqSize = sizeof(EXT_TYPED_DATA) + fieldNameLen + 1;
-
-	requestBuf = (BYTE*)malloc(reqSize);
-	if (!requestBuf)
+	DEBUG_TYPED_DATA typedData = {0};
+	hr = DsTypedObjectGetField(
+		hostCtxt,
+		&typedObj->Data,
+		fieldName,
+		&typedData);
+	if (FAILED(hr))
 	{
-		PyErr_NoMemory();
+		PyErr_Format(PyExc_OSError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 
-	// Response buffer must be as big as request since dbgeng memcpy's from
-	// request to response as a first step.
-	//
-	responseBuf = (EXT_TYPED_DATA*)malloc(reqSize);
-	if (!responseBuf)
-	{
-		PyErr_NoMemory();
-		goto exit;
-	}
-
-	memset(requestBuf, 0, reqSize);
-
-	// TODO: Currently this doesn't support register-based variables, as the
-	// virtual address is not correct.
-	// Figure out what to do about them.
-	//
-	request = (EXT_TYPED_DATA*)requestBuf;
-	request->Operation = EXT_TDOP_GET_FIELD;
-	request->InData = typedObj->Data.TypedData;
-	request->InStrIndex = sizeof(EXT_TYPED_DATA);
-
-	// Must be NULL terminated.
-	//
-	memcpy(requestBuf + sizeof(EXT_TYPED_DATA), fieldName, fieldNameLen + 1);
-
-	hr = hostCtxt->DebugAdvanced->Request(
-		DEBUG_REQUEST_EXT_TYPED_DATA_ANSI,
-		request,
-		reqSize,
-		responseBuf,
-		reqSize,
-		nullptr);
-	if (hr == E_NOINTERFACE)
-	{
-		// This means there was no such member.
-		//
-		PyErr_SetString(PyExc_KeyError, "No such field.");
-		goto exit;
-	}
-	else if (FAILED(hr))
-	{
-		PyErr_Format(PyExc_OSError, "EXT_TDOP_GET_FIELD operation failed. Error 0x%08x.", hr);
-		goto exit;
-	}
-
-	newTypedObj = allocSubTypedObject(fieldName, &responseBuf->OutData, typedObj->Process);
+	newTypedObj = allocSubTypedObject(fieldName, &typedData, typedObj->Process);
 	if (!newTypedObj)
 	{
 		goto exit;
 	}
 
 exit:
-	if (requestBuf)
-	{
-		free(requestBuf);
-		requestBuf = nullptr;
-	}
-	if (responseBuf)
-	{
-		free(responseBuf);
-		responseBuf = nullptr;
-	}
 
 	return newTypedObj;
 }

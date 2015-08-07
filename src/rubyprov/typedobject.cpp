@@ -262,6 +262,80 @@ TypedObject_address(
 	return ULL2NUM(typObj->TypedData.Offset);
 }
 
+static void
+checkTypedData(
+	_In_ DbgScriptTypedObject* typedObj)
+{
+	if (!typedObj->TypedDataValid)
+	{
+		// This object has no typed data. It must have been a null ptr.
+		//
+		rb_raise(rb_eArgError, "Object has no typed data. Can't get fields.");
+	}
+}
+
+static VALUE
+TypedObject_get_item(
+	_In_ VALUE self,
+	_In_ VALUE key)
+{
+	HRESULT hr = S_OK;
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+	
+	DbgScriptTypedObject* typObj = nullptr;
+
+	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+	
+	checkTypedData(typObj);
+	
+	if (TYPE(key) == T_STRING)
+	{
+		// Field lookup.
+		//
+		const char* field = StringValuePtr(key);
+
+		DEBUG_TYPED_DATA typedData = {0};
+		hr = DsTypedObjectGetField(
+			hostCtxt,
+			typObj,
+			field,
+			&typedData);
+		if (FAILED(hr))
+		{
+			rb_raise(rb_eSystemCallError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
+		}
+
+		// Allocate a Typed Object.
+		//
+		VALUE newObj = rb_class_new_instance(
+			0, nullptr, GetRubyProvGlobals()->TypedObjectClass);
+
+		DbgScriptTypedObject* obj = nullptr;
+
+		Data_Get_Struct(newObj, DbgScriptTypedObject, obj);
+
+		HRESULT hr = DsWrapTypedData(hostCtxt, field, &typedData, obj);
+		if (FAILED(hr))
+		{
+			rb_raise(rb_eSystemCallError, "DsWrapTypedData failed. Error 0x%08x.", hr);
+		}
+
+		return newObj;
+	}
+	else
+	{
+		// Try convert to int.
+		//
+		VALUE intKey = rb_check_to_int(key);
+		intKey;
+		// Array lookup.
+		//
+		return Qnil;
+	}
+}
+
 void
 Init_TypedObject()
 {
@@ -301,6 +375,17 @@ Init_TypedObject()
 		"address",
 		RUBY_METHOD_FUNC(TypedObject_address),
 		0 /* argc */);
+
+	// Indexer method. Can take string or int key, for field or array access,
+	// respectively.
+	//
+	// Does not support slicing, etc like regular arrays.
+	//
+    rb_define_method(
+		typedObjectClass,
+		"[]",
+		RUBY_METHOD_FUNC(TypedObject_get_item),
+		1);
 	
 	// Prevent scripter from instantiating directly.
 	//

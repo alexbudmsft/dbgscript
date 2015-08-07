@@ -168,3 +168,11 @@ DsWrapTypedData(
 	_In_z_ const char* name,
 	_In_ const DEBUG_TYPED_DATA* typedData,
 	_Out_ DbgScriptTypedObject* typObj);
+
+_Check_return_ HRESULT
+DsTypedObjectGetField(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ DbgScriptTypedObject* typedObj,
+	_In_z_ const char* fieldName,
+	_Out_ DEBUG_TYPED_DATA* outData);
+
