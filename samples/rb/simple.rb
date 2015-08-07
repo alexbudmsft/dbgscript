@@ -20,7 +20,7 @@ end
 puts 0x000000ac176ee780.class
 #obj = DbgScript.create_typed_object('hkengtest!UtRuntime', 0x000000ac176ee780)
 obj = DbgScript.create_typed_object('bool', 0xac176ee7e8)
-p obj.value
+p obj.name, obj.value, obj.type, obj.address, obj.size
 
 #frame.clone
 #frame.dup

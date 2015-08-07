@@ -202,6 +202,65 @@ TypedObject_value(
 	return rbValueFromCValue(typObj);
 }
 
+static VALUE
+TypedObject_size(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+	
+	DbgScriptTypedObject* typObj = nullptr;
+
+	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+
+	return ULONG2NUM(typObj->TypedData.Size);
+}
+
+static VALUE
+TypedObject_name(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+	
+	DbgScriptTypedObject* typObj = nullptr;
+
+	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+
+	return rb_str_new2(typObj->Name);
+}
+
+static VALUE
+TypedObject_type(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+	
+	DbgScriptTypedObject* typObj = nullptr;
+
+	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+	
+	return rb_str_new2(typObj->TypeName);
+}
+
+static VALUE
+TypedObject_address(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+	
+	DbgScriptTypedObject* typObj = nullptr;
+
+	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+
+	return ULL2NUM(typObj->TypedData.Offset);
+}
 
 void
 Init_TypedObject()
@@ -218,7 +277,31 @@ Init_TypedObject()
 		"value",
 		RUBY_METHOD_FUNC(TypedObject_value),
 		0 /* argc */);
+	
+	rb_define_method(
+		typedObjectClass,
+		"size",
+		RUBY_METHOD_FUNC(TypedObject_size),
+		0 /* argc */);
+	
+	rb_define_method(
+		typedObjectClass,
+		"type",
+		RUBY_METHOD_FUNC(TypedObject_type),
+		0 /* argc */);
 
+	rb_define_method(
+		typedObjectClass,
+		"name",
+		RUBY_METHOD_FUNC(TypedObject_name),
+		0 /* argc */);
+	
+	rb_define_method(
+		typedObjectClass,
+		"address",
+		RUBY_METHOD_FUNC(TypedObject_address),
+		0 /* argc */);
+	
 	// Prevent scripter from instantiating directly.
 	//
 	LockDownClass(typedObjectClass);
