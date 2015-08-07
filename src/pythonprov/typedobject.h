@@ -15,5 +15,4 @@ AllocTypedObject(
 	_In_z_ const char* type,
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
-	_In_ UINT64 virtualAddress,
-	_In_ ProcessObj* proc);
+	_In_ UINT64 virtualAddress);

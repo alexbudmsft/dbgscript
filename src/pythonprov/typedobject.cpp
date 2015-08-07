@@ -13,10 +13,6 @@ struct TypedObject
 {
 	PyObject_HEAD
 
-	// Backpointer to process object.
-	//
-	ProcessObj* Process;
-
 	DbgScriptTypedObject Data;
 };
 
@@ -41,8 +37,7 @@ static PyTypeObject TypedObjectType =
 static _Check_return_ PyObject*
 allocSubTypedObject(
 	_In_z_ const char* name,
-	_In_ const DEBUG_TYPED_DATA* typedData,
-	_In_ ProcessObj* proc)
+	_In_ const DEBUG_TYPED_DATA* typedData)
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 	PyObject* obj = nullptr;
@@ -61,9 +56,6 @@ allocSubTypedObject(
 	// Set up fields.
 	//
 	TypedObject* typObj = (TypedObject*)obj;
-
-	Py_INCREF(proc);
-	typObj->Process = proc;
 
 	HRESULT hr = DsWrapTypedData(hostCtxt, name, typedData, &typObj->Data);
 	if (FAILED(hr))
@@ -134,7 +126,7 @@ TypedObject_sequence_get_item(
 
 	// Array elements have no name.
 	//
-	ret = allocSubTypedObject(ARRAY_ELEM_NAME, &typedData, typObj->Process);
+	ret = allocSubTypedObject(ARRAY_ELEM_NAME, &typedData);
 exit:
 	return ret;
 }
@@ -208,7 +200,7 @@ TypedObject_mapping_subscript(
 		goto exit;
 	}
 
-	newTypedObj = allocSubTypedObject(fieldName, &typedData, typedObj->Process);
+	newTypedObj = allocSubTypedObject(fieldName, &typedData);
 	if (!newTypedObj)
 	{
 		goto exit;
@@ -217,21 +209,6 @@ TypedObject_mapping_subscript(
 exit:
 
 	return newTypedObj;
-}
-
-static void
-TypedObject_dealloc(
-	_In_ PyObject* self)
-{
-	TypedObject* typObj = (TypedObject*)self;
-
-	// Release ref on the Process process object.
-	//
-	Py_DECREF(typObj->Process);
-
-	// Free ourselves.
-	//
-	Py_TYPE(self)->tp_free(self);
 }
 
 static PyMappingMethods TypedObject_MappingDef =
@@ -466,12 +443,11 @@ InitTypedObjectType()
 	s_SequenceMethodsDef.sq_length = TypedObject_sequence_length;
 
 	TypedObjectType.tp_flags = Py_TPFLAGS_DEFAULT;
-	TypedObjectType.tp_doc = PyDoc_STR("dbgscript.typObjbol objects");
+	TypedObjectType.tp_doc = PyDoc_STR("dbgscript.TypedObject objects");
 	TypedObjectType.tp_members = TypedObject_MemberDef;
 	TypedObjectType.tp_getset = TypedObject_GetSetDef;
 	TypedObjectType.tp_new = PyType_GenericNew;
 	TypedObjectType.tp_str = TypedObject_str;
-	TypedObjectType.tp_dealloc = TypedObject_dealloc;
 	TypedObjectType.tp_as_mapping = &TypedObject_MappingDef;
 	TypedObjectType.tp_as_sequence = &s_SequenceMethodsDef;
 
@@ -496,8 +472,7 @@ AllocTypedObject(
 	_In_z_ const char* type,
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
-	_In_ UINT64 virtualAddress,
-	_In_ ProcessObj* proc)
+	_In_ UINT64 virtualAddress)
 {
 	PyObject* obj = nullptr;
 	PyObject* ret = nullptr;
@@ -517,9 +492,6 @@ AllocTypedObject(
 	//
 	TypedObject* typObj = (TypedObject*)obj;
 
-	Py_INCREF(proc);
-	typObj->Process = proc;
-	
 	hr = DsInitializeTypedObject(
 		GetPythonProvGlobals()->HostCtxt,
 		size,

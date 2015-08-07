@@ -155,8 +155,7 @@ getVariablesHelper(
 			typeName,
 			entry.TypeId,
 			entry.ModuleBase,
-			entry.Offset,
-			ThreadObjGetProcess(stackFrame->Thread));
+			entry.Offset);
 		if (!typedObj)
 		{
 			// Exception has already been setup by callee.

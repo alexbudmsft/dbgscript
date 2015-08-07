@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
 
+#include <iscriptprovider.h>
+
 class CPythonScriptProvider : public IScriptProvider
 {
 public:

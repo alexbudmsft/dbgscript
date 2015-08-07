@@ -1,25 +1,34 @@
-#include "process.h"
-#include "thread.h"
-#include "typedobject.h"
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: dbgscript.cpp
+// @Author: alexbud
+//
+// Purpose:
+//
+//  DbgScript module for Python Provider.
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************  
+
+#include "dbgscript.h"
 #include "util.h"
 #include "../support/symcache.h"
 #include "common.h"
 
-struct ProcessObj
-{
-	PyObject_HEAD
-};
-
-static PyTypeObject ProcessType =
-{
-	PyVarObject_HEAD_INIT(0, 0)
-	"dbgscript.Process",     /* tp_name */
-	sizeof(ProcessObj)       /* tp_basicsize */
-};
+// Python classes.
+//
+#include "dbgscriptio.h"
+#include "process.h"
+#include "thread.h"
+#include "stackframe.h"
+#include "typedobject.h"
 
 static PyObject*
-Process_create_typed_object(
-	_In_ PyObject* self,
+dbgscript_create_typed_object(
+	_In_ PyObject* /*self*/,
 	_In_ PyObject* args)
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
@@ -45,13 +54,13 @@ Process_create_typed_object(
 	}
 
 	ret = AllocTypedObject(
-		0, nullptr, typeName, typeInfo->TypeId, typeInfo->ModuleBase, addr, (ProcessObj*)self);
+		0, nullptr, typeName, typeInfo->TypeId, typeInfo->ModuleBase, addr);
 exit:
 	return ret;
 }
 
 static PyObject*
-Process_resolve_enum(
+dbgscript_resolve_enum(
 	_In_ PyObject* /*self*/,
 	_In_ PyObject* args)
 {
@@ -91,8 +100,8 @@ exit:
 }
 
 static PyObject*
-Process_get_global(
-	_In_ PyObject* self,
+dbgscript_get_global(
+	_In_ PyObject* /*self*/,
 	_In_ PyObject* args)
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
@@ -139,14 +148,13 @@ Process_get_global(
 		typeName,
 		typeInfo->TypeId,
 		typeInfo->ModuleBase,
-		addr,
-		(ProcessObj*)self);
+		addr);
 exit:
 	return ret;
 }
 
 static PyObject*
-Process_read_ptr(
+dbgscript_read_ptr(
 	_In_ PyObject* /*self*/,
 	_In_ PyObject* args)
 {
@@ -176,8 +184,8 @@ exit:
 }
 
 static PyObject*
-Process_get_threads(
-	_In_ PyObject* self,
+dbgscript_get_threads(
+	_In_ PyObject* /*self*/,
 	_In_ PyObject* /* args */)
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
@@ -191,7 +199,6 @@ Process_get_threads(
 	ULONG* sysThreadIds = nullptr;
 	PyObject* tuple = nullptr;
 	IDebugSystemObjects* sysObj = hostCtxt->DebugSysObj;
-	ProcessObj* proc = (ProcessObj*)self;
 
 	ULONG cThreads = 0;
 	HRESULT hr = sysObj->GetNumberThreads(&cThreads);
@@ -219,7 +226,7 @@ Process_get_threads(
 	//
 	for (ULONG i = 0; i < cThreads; ++i)
 	{
-		PyObject* thd = AllocThreadObj(engineThreadIds[i], sysThreadIds[i], proc);
+		PyObject* thd = AllocThreadObj(engineThreadIds[i], sysThreadIds[i]);
 		if (!thd)
 		{
 			// Exception has already been setup by callee.
@@ -254,59 +261,16 @@ exit:
 	return tuple;
 }
 
-static PyMethodDef Process_MethodDef[] = 
-{
-	{
-		"get_threads",
-		Process_get_threads,
-		METH_NOARGS,
-		PyDoc_STR("Return a tuple of threads in the process")
-	},
-	{
-		"create_typed_object",
-		Process_create_typed_object,
-		METH_VARARGS,
-		PyDoc_STR("Return a TypedObject with a given type and address.")
-	},
-	{
-		"read_ptr",
-		Process_read_ptr,
-		METH_VARARGS,
-		PyDoc_STR("Read a pointer at given address.")
-	},
-	{
-		"get_global",
-		Process_get_global,
-		METH_VARARGS,
-		PyDoc_STR("Get a global variable as a TypedObject.")
-	},
-	{
-		"resolve_enum",
-		Process_resolve_enum,
-		METH_VARARGS,
-		PyDoc_STR("Get an enum element's name based on its type and value.")
-	},
-	{ NULL }  /* Sentinel */
-};
-
-static void
-Process_dealloc(
-	_In_ PyObject* self)
-{
-	Py_TYPE(self)->tp_free(self);
-}
-
 static PyObject*
-Process_get_current_thread(
-	_In_ PyObject* self,
-	_In_opt_ void* /* closure */)
+dbgscript_get_current_thread(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* /*args*/)
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 
 	CHECK_ABORT(hostCtxt);
 
 	PyObject* ret = nullptr;
-	ProcessObj* proc = (ProcessObj*)self;
 
 	// Get TEB from debug client.
 	//
@@ -326,76 +290,243 @@ Process_get_current_thread(
 		goto exit;
 	}
 
-	ret = AllocThreadObj(engineThreadId, systemThreadId, proc);
+	ret = AllocThreadObj(engineThreadId, systemThreadId);
 
 exit:
 	return ret;
 }
 
-static PyGetSetDef Process_GetSetDef[] =
+static PyObject*
+dbgscript_start_buffering(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* /*args*/)
+{
+	// Currently this is single-threaded access, but will make it simpler in
+	// case we ever have more than one concurrent client.
+	//
+	InterlockedIncrement(&GetPythonProvGlobals()->HostCtxt->IsBuffering);
+
+	Py_RETURN_NONE;
+}
+
+static PyObject*
+dbgscript_stop_buffering(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* /*args*/)
+{
+	// Currently this is single-threaded access, but will make it simpler in
+	// case we ever have more than one concurrent client.
+	//
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	const LONG newVal = InterlockedDecrement(&hostCtxt->IsBuffering);
+	if (newVal < 0)
+	{
+		GetPythonProvGlobals()->HostCtxt->IsBuffering = 0;
+		PyErr_SetString(PyExc_RuntimeError, "Can't stop buffering if it isn't started.");
+		return nullptr;
+	}
+
+	// If the buffer refcount hit zero, flush remaining buffered content, if any.
+	//
+	if (newVal == 0)
+	{
+		UtilFlushMessageBuffer(hostCtxt);
+	}
+
+	Py_RETURN_NONE;
+}
+
+// Global function in the dbgscript module.
+//
+static PyObject*
+dbgscript_execute_command(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	const char* command = nullptr;
+	HRESULT hr = S_OK;
+
+	if (!PyArg_ParseTuple(args, "s:execute_command", &command))
+	{
+		return nullptr;
+	}
+
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	// CONSIDER: adding an option letting user control whether we echo the
+	// command or not.
+	//
+	if (hostCtxt->IsBuffering > 0)
+	{
+		// Capture the output for this scope.
+		//
+		{
+			CAutoSetOutputCallback autoSetCb(
+				hostCtxt,
+				(IDebugOutputCallbacks*)hostCtxt->BufferedOutputCallbacks);
+
+			hr = hostCtxt->DebugControl->Execute(
+				DEBUG_OUTCTL_THIS_CLIENT,
+				command,
+				DEBUG_EXECUTE_NO_REPEAT | DEBUG_OUTCTL_NOT_LOGGED);
+			if (FAILED(hr))
+			{
+				PyErr_Format(PyExc_ValueError, "Failed to execute command '%s'. Error 0x%08x.", command, hr);
+				goto exit;
+			}
+
+			// Dtor will revert the callback.
+			//
+		}
+
+		// Extract the buffered output.
+		//
+		const char* buf = DbgScriptOutCallbacksGetBuffer(hostCtxt->BufferedOutputCallbacks);
+		UtilBufferOutput(hostCtxt, buf, strlen(buf));
+	}
+	else
+	{
+		hr = hostCtxt->DebugControl->Execute(
+			DEBUG_OUTCTL_ALL_CLIENTS,
+			command,
+			DEBUG_EXECUTE_ECHO | DEBUG_EXECUTE_NO_REPEAT);
+		if (FAILED(hr))
+		{
+			PyErr_Format(PyExc_ValueError, "Failed to execute command '%s'. Error 0x%08x.", command, hr);
+			goto exit;
+		}
+	}
+
+exit:
+	Py_RETURN_NONE;
+}
+
+static PyMethodDef dbgscript_MethodsDef[] = 
 {
 	{
-		"current_thread",
-		Process_get_current_thread,
-		SetReadOnlyProperty,  // Attribute is read-only.
-		PyDoc_STR("Current Thread object."),
-		NULL
+		"execute_command",
+		dbgscript_execute_command,
+		METH_VARARGS,
+		PyDoc_STR("Execute a debugger command.")
 	},
-	{ NULL }  /* Sentinel */
+	{
+		"start_buffering",
+		dbgscript_start_buffering,
+		METH_NOARGS,
+		PyDoc_STR("Start buffering output.")
+	},
+	{
+		"stop_buffering",
+		dbgscript_stop_buffering,
+		METH_NOARGS,
+		PyDoc_STR("Stop buffering output.")
+	},
+	{
+		"get_threads",
+		dbgscript_get_threads,
+		METH_NOARGS,
+		PyDoc_STR("Return a tuple of threads in the process")
+	},
+	{
+		"current_thread",
+		dbgscript_get_current_thread,
+		METH_NOARGS,
+		PyDoc_STR("Return the current Thread."),
+	},
+	{
+		"create_typed_object",
+		dbgscript_create_typed_object,
+		METH_VARARGS,
+		PyDoc_STR("Return a TypedObject with a given type and address.")
+	},
+	{
+		"read_ptr",
+		dbgscript_read_ptr,
+		METH_VARARGS,
+		PyDoc_STR("Read a pointer at given address.")
+	},
+	{
+		"get_global",
+		dbgscript_get_global,
+		METH_VARARGS,
+		PyDoc_STR("Get a global variable as a TypedObject.")
+	},
+	{
+		"resolve_enum",
+		dbgscript_resolve_enum,
+		METH_VARARGS,
+		PyDoc_STR("Get an enum element's name based on its type and value.")
+	},
+	{NULL, NULL, 0, NULL}        /* Sentinel */
+};
+
+// DbgScript Module Definition.
+//
+PyModuleDef dbgscript_ModuleDef =
+{
+	PyModuleDef_HEAD_INIT,
+	x_DbgScriptModuleName,  // Name
+	PyDoc_STR("dbgscript Module"),       // Doc
+	-1,  // size
+	dbgscript_MethodsDef,  // Methods
 };
 
 _Check_return_ bool
-InitProcessType()
+InitTypes()
 {
-	ProcessType.tp_flags = Py_TPFLAGS_DEFAULT;
-	ProcessType.tp_doc = PyDoc_STR("dbgscript.Process objects");
-	ProcessType.tp_new = PyType_GenericNew;
-	ProcessType.tp_dealloc = Process_dealloc;
-	ProcessType.tp_methods = Process_MethodDef;
-	ProcessType.tp_getset = Process_GetSetDef;
-
-	// Finalize the type definition.
+	// TODO: Make this a table of callbacks.
 	//
-	if (PyType_Ready(&ProcessType) < 0)
+	if (!InitDbgScriptIOType())
+	{
+		return false;
+	}
+
+	if (!InitThreadType())
+	{
+		return false;
+	}
+
+	if (!InitStackFrameType())
+	{
+		return false;
+	}
+
+	if (!InitTypedObjectType())
 	{
 		return false;
 	}
 	return true;
 }
 
-_Check_return_ PyObject*
-AllocProcessObj()
-{
-	PyObject* obj = nullptr;
-	PyObject* ret = nullptr;
+static PyObject* g_DbgScriptIO;
 
-	// Alloc a single instance of the DbgScriptOutType object. (Calls __new__())
-	// If the allocation fails, the allocator will set the appropriate exception
-	// internally. (i.e. OOM)
-	//
-	obj = ProcessType.tp_new(&ProcessType, nullptr, nullptr);
-	if (!obj)
+// Module initialization function for 'dbgscript'.
+//
+PyMODINIT_FUNC
+PyInit_dbgscript()
+{
+	if (!InitTypes())
 	{
 		return nullptr;
 	}
 
-	// Do anything that can fail here.
-	//
-
-	// Transfer ownership.
-	//
-	ret = obj;
-	obj = nullptr;
-
-//exit:
-
-	if (obj)
+	g_DbgScriptIO = AllocDbgScriptIOObj();
+	if (!g_DbgScriptIO)
 	{
-		// Destructor for ProcessObj automatically frees the module map.
-		//
-		Py_DECREF(obj);
-		obj = nullptr;
+		return nullptr;
 	}
 
-	return ret;
+	RedirectStdIO(g_DbgScriptIO);
+
+	// Create a module object.
+	//
+	PyObject* module = PyModule_Create(&dbgscript_ModuleDef);
+	if (!module)
+	{
+		return nullptr;
+	}
+
+	return module;
 }
+
+

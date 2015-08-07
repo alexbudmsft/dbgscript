@@ -9,6 +9,10 @@ int
 SetReadOnlyProperty(
 	PyObject* /* self */, PyObject* /* value */, void* /* closure */);
 
+void
+RedirectStdIO(
+	_In_ PyObject* obj);
+
 // Helper macro to call in every Python entry point that checks for abort
 // and raises a KeyboardInterrupt exception.
 //

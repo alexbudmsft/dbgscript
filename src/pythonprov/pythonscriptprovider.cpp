@@ -1,239 +1,10 @@
 #include <python.h>
-#include "../../include/iscriptprovider.h"
+
 #include "pythonscriptprovider.h"
-#include "dbgscriptio.h"
-#include "process.h"
-#include "thread.h"
-#include "stackframe.h"
-#include "typedobject.h"
 #include "util.h"
 #include <strsafe.h>
 #include "common.h"
-
-static const char* x_ModuleName = "dbgscript";
-
-static PyObject*
-DbgScript_start_buffering(
-	_In_ PyObject* /*self*/,
-	_In_ PyObject* /*args*/)
-{
-	// Currently this is single-threaded access, but will make it simpler in
-	// case we ever have more than one concurrent client.
-	//
-	InterlockedIncrement(&GetPythonProvGlobals()->HostCtxt->IsBuffering);
-
-	Py_RETURN_NONE;
-}
-
-static PyObject*
-DbgScript_stop_buffering(
-	_In_ PyObject* /*self*/,
-	_In_ PyObject* /*args*/)
-{
-	// Currently this is single-threaded access, but will make it simpler in
-	// case we ever have more than one concurrent client.
-	//
-	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
-	const LONG newVal = InterlockedDecrement(&hostCtxt->IsBuffering);
-	if (newVal < 0)
-	{
-		GetPythonProvGlobals()->HostCtxt->IsBuffering = 0;
-		PyErr_SetString(PyExc_RuntimeError, "Can't stop buffering if it isn't started.");
-		return nullptr;
-	}
-
-	// If the buffer refcount hit zero, flush remaining buffered content, if any.
-	//
-	if (newVal == 0)
-	{
-		UtilFlushMessageBuffer(hostCtxt);
-	}
-
-	Py_RETURN_NONE;
-}
-
-// Global function in the dbgscript module.
-//
-static PyObject*
-DbgScript_execute_command(
-	_In_ PyObject* /*self*/,
-	_In_ PyObject* args)
-{
-	const char* command = nullptr;
-	HRESULT hr = S_OK;
-
-	if (!PyArg_ParseTuple(args, "s:execute_command", &command))
-	{
-		return nullptr;
-	}
-
-	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
-
-	// CONSIDER: adding an option letting user control whether we echo the
-	// command or not.
-	//
-	if (hostCtxt->IsBuffering > 0)
-	{
-		// Capture the output for this scope.
-		//
-		{
-			CAutoSetOutputCallback autoSetCb(
-				hostCtxt,
-				(IDebugOutputCallbacks*)hostCtxt->BufferedOutputCallbacks);
-
-			hr = hostCtxt->DebugControl->Execute(
-				DEBUG_OUTCTL_THIS_CLIENT,
-				command,
-				DEBUG_EXECUTE_NO_REPEAT | DEBUG_OUTCTL_NOT_LOGGED);
-			if (FAILED(hr))
-			{
-				PyErr_Format(PyExc_ValueError, "Failed to execute command '%s'. Error 0x%08x.", command, hr);
-				goto exit;
-			}
-
-			// Dtor will revert the callback.
-			//
-		}
-
-		// Extract the buffered output.
-		//
-		const char* buf = DbgScriptOutCallbacksGetBuffer(hostCtxt->BufferedOutputCallbacks);
-		UtilBufferOutput(hostCtxt, buf, strlen(buf));
-	}
-	else
-	{
-		hr = hostCtxt->DebugControl->Execute(
-			DEBUG_OUTCTL_ALL_CLIENTS,
-			command,
-			DEBUG_EXECUTE_ECHO | DEBUG_EXECUTE_NO_REPEAT);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_ValueError, "Failed to execute command '%s'. Error 0x%08x.", command, hr);
-			goto exit;
-		}
-	}
-
-exit:
-	Py_RETURN_NONE;
-}
-
-static PyMethodDef dbgscript_MethodsDef[] = 
-{
-	{
-		"execute_command",
-		DbgScript_execute_command,
-		METH_VARARGS,
-		PyDoc_STR("Execute a debugger command.")
-	},
-	{
-		"start_buffering",
-		DbgScript_start_buffering,
-		METH_NOARGS,
-		PyDoc_STR("Start buffering output.")
-	},
-	{
-		"stop_buffering",
-		DbgScript_stop_buffering,
-		METH_NOARGS,
-		PyDoc_STR("Stop buffering output.")
-	},
-	{NULL, NULL, 0, NULL}        /* Sentinel */
-};
-
-// DbgScript Module Definition.
-//
-PyModuleDef dbgscript_ModuleDef =
-{
-	PyModuleDef_HEAD_INIT,
-	x_ModuleName,  // Name
-	PyDoc_STR("dbgscript Module"),       // Doc
-	-1,  // size
-	dbgscript_MethodsDef,  // Methods
-};
-
-_Check_return_ bool
-InitTypes()
-{
-	// TODO: Make this a table of callbacks.
-	//
-	if (!InitDbgScriptIOType())
-	{
-		return false;
-	}
-
-	if (!InitThreadType())
-	{
-		return false;
-	}
-
-	if (!InitProcessType())
-	{
-		return false;
-	}
-
-	if (!InitStackFrameType())
-	{
-		return false;
-	}
-
-	if (!InitTypedObjectType())
-	{
-		return false;
-	}
-	return true;
-}
-
-static PyObject* g_DbgScriptIO;
-
-// Module initialization function for 'dbgscript'.
-//
-PyMODINIT_FUNC
-PyInit_dbgscript()
-{
-	if (!InitTypes())
-	{
-		return nullptr;
-	}
-
-	g_DbgScriptIO = AllocDbgScriptIOObj();
-	if (!g_DbgScriptIO)
-	{
-		return nullptr;
-	}
-
-	// Create a module object.
-	//
-	PyObject* module = PyModule_Create(&dbgscript_ModuleDef);
-	if (!module)
-	{
-		return nullptr;
-	}
-
-	static PyObject* s_ProcessObj = AllocProcessObj();
-	if (!s_ProcessObj)
-	{
-		return nullptr;
-	}
-
-	Py_INCREF(s_ProcessObj);
-	PyModule_AddObject(module, "Process", s_ProcessObj);
-	
-	return module;
-}
-
-static void 
-redirectStreams()
-{
-	// Replace sys.stdout and sys.stderr with our new object.
-	//
-	PySys_SetObject("stdout", g_DbgScriptIO);
-	PySys_SetObject("__stdout__", g_DbgScriptIO);
-	PySys_SetObject("stderr", g_DbgScriptIO);
-	PySys_SetObject("__stderr__", g_DbgScriptIO);
-	PySys_SetObject("stdin", g_DbgScriptIO);
-	PySys_SetObject("__stdin__", g_DbgScriptIO);
-	PySys_SetObject("exit", nullptr);
-}
+#include "dbgscript.h"
 
 CPythonScriptProvider::CPythonScriptProvider()
 {}
@@ -242,7 +13,7 @@ _Check_return_ HRESULT
 CPythonScriptProvider::Init()
 {
 	HRESULT hr = S_OK;
-	PyImport_AppendInittab(x_ModuleName, PyInit_dbgscript);
+	PyImport_AppendInittab(x_DbgScriptModuleName, PyInit_dbgscript);
 	WCHAR dllPath[MAX_PATH] = {};
 	GetModuleFileName(GetPythonProvGlobals()->HModule, dllPath, _countof(dllPath));
 	WCHAR* lastBackSlash = wcsrchr(dllPath, L'\\');
@@ -261,8 +32,12 @@ CPythonScriptProvider::Init()
 
 	// Import 'dbgscript' module.
 	//
-	PyImport_ImportModule(x_ModuleName);
-	redirectStreams();
+	PyImport_ImportModule(x_DbgScriptModuleName);
+
+	// Prevent sys.exit.
+	//
+	PySys_SetObject("exit", nullptr);
+
 	return hr;
 }
 

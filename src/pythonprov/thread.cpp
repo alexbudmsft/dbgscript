@@ -170,17 +170,6 @@ static PyMethodDef Thread_MethodDef[] =
 	{ NULL }  /* Sentinel */
 };
 
-static void
-ThreadObj_dealloc(
-	_In_ PyObject* self)
-{
-	ThreadObj* thd = (ThreadObj*)self;
-
-	Py_DECREF(thd->Process);
-
-	Py_TYPE(self)->tp_free(self);
-}
-
 _Check_return_ bool
 InitThreadType()
 {
@@ -190,7 +179,6 @@ InitThreadType()
 	ThreadType.tp_members = Thread_MemberDef;
 	ThreadType.tp_methods = Thread_MethodDef;
 	ThreadType.tp_new = PyType_GenericNew;
-	ThreadType.tp_dealloc = ThreadObj_dealloc;
 
 	// Finalize the type definition.
 	//
@@ -204,8 +192,7 @@ InitThreadType()
 _Check_return_ PyObject*
 AllocThreadObj(
 	_In_ ULONG engineId,
-	_In_ ULONG threadId,
-	_In_ ProcessObj* proc)
+	_In_ ULONG threadId)
 {
 	PyObject* obj = nullptr;
 
@@ -224,14 +211,6 @@ AllocThreadObj(
 	ThreadObj* thd = (ThreadObj*)obj;
 	thd->Thread.EngineId = engineId;
 	thd->Thread.ThreadId = threadId;
-	thd->Process = proc;
 
 	return obj;
-}
-
-_Check_return_ ProcessObj*
-ThreadObjGetProcess(
-	_In_ const ThreadObj* thd)
-{
-	return thd->Process;
 }
