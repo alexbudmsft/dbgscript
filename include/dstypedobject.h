@@ -114,7 +114,7 @@ struct TypedObjectValue
 		DWORD DwVal;
 		INT64 I64Val;
 		UINT64 UI64Val;
-		BOOL BoolVal;
+		bool BoolVal;
 		float FloatVal;
 		double DoubleVal;
 	} Value;

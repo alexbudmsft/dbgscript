@@ -381,8 +381,8 @@ pyValueFromCValue(
 			ret = PyLong_FromUnsignedLongLong(cValue->Value.UI64Val);
 			break;
 		case DNTYPE_BOOL:
-			assert(typedData->Size == sizeof(BOOL));
-			ret = PyBool_FromLong(!!cValue->Value.BoolVal);
+			assert(typedData->Size == sizeof(bool));
+			ret = PyBool_FromLong(cValue->Value.BoolVal);
 			break;
 		case DNTYPE_FLOAT32:
 			assert(typedData->Size == sizeof(float));
