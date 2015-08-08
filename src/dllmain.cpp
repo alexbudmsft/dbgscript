@@ -94,6 +94,8 @@ unloadScriptProvider(
 {
 	if (info->ScriptProvider)
 	{
+		assert(info->Module);
+		
 		info->ScriptProvider->Cleanup();
 		info->ScriptProvider = nullptr;
 	
@@ -105,9 +107,16 @@ unloadScriptProvider(
 		//
 		BOOL fOk = FreeLibrary(info->Module);
 		assert(fOk);
-		fOk;
+		fOk;  // reference in retail.
 
 		info->Module = nullptr;
+		
+		info->CreateFunc = nullptr;
+		info->CleanupFunc = nullptr;
+		info->InitFunc = nullptr;
+
+		// DllFileName is still valid.
+		//
 	}
 }
 
@@ -180,6 +189,33 @@ exit:
 	return hr;
 }
 
+static _Check_return_ HRESULT
+loadScriptProviderIfNeeded(
+	_Inout_ ScriptProviderInfo* info)
+{
+	if (!info->ScriptProvider)
+	{
+		return loadAndCreateScriptProvider(info);
+	}
+	return S_OK;
+}
+
+// Just unload the script providers, but keep the list in tact.
+//
+static void
+unloadAllScriptProviders()
+{
+	ScriptProviderInfo* cur = g_HostCtxt.ScriptProviders;
+	while (cur)
+	{
+		unloadScriptProvider(cur);
+		cur = cur->Next;
+	}
+}
+
+
+// Unloads and destroys all script providers. Used at Dll shutdown.
+//
 static void
 cleanupScriptProviders()
 {
@@ -581,7 +617,7 @@ freeArgs(
 }
 
 static _Check_return_ HRESULT
-getScriptProvider(
+findScriptProvider(
 	_In_opt_z_ const WCHAR* langId,
 	_Outptr_ ScriptProviderInfo** scriptProv)
 {
@@ -662,22 +698,19 @@ runscript(
 
 	startTime = GetTickCount();
 
-	hr = getScriptProvider(parsedArgs.LangId, &scriptProv);
+	hr = findScriptProvider(parsedArgs.LangId, &scriptProv);
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
 
-	if (!startVMEnabled)
+	hr = loadScriptProviderIfNeeded(scriptProv);
+	if (FAILED(hr))
 	{
-		hr = loadAndCreateScriptProvider(scriptProv);
-		if (FAILED(hr))
-		{
-			goto exit;
-		}
-		
-		initializedProvider = true;
+		goto exit;
 	}
+	
+	initializedProvider = true;
 
 	hr = scriptProv->ScriptProvider->Run(parsedArgs.RemainingArgc, parsedArgs.RemainingArgv);
 	if (FAILED(hr))
@@ -695,7 +728,7 @@ runscript(
 	}
 
 exit:
-	if (initializedProvider)
+	if (!startVMEnabled && initializedProvider)
 	{
 		unloadScriptProvider(scriptProv);
 	}
@@ -752,7 +785,7 @@ evalstring(
 		goto exit;
 	}
 
-	hr = getScriptProvider(parsedArgs.LangId, &scriptProv);
+	hr = findScriptProvider(parsedArgs.LangId, &scriptProv);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -812,16 +845,13 @@ evalstring(
 		bufPos += len + 1;
 	}
 	
-	if (!startVMEnabled)
+	hr = loadScriptProviderIfNeeded(scriptProv);
+	if (FAILED(hr))
 	{
-		hr = loadAndCreateScriptProvider(scriptProv);
-		if (FAILED(hr))
-		{
-			goto exit;
-		}
-
-		initializedProvider = true;
+		goto exit;
 	}
+	
+	initializedProvider = true;
 
 	// Null terminate.
 	//
@@ -835,7 +865,7 @@ evalstring(
 		goto exit;
 	}
 exit:
-	if (initializedProvider)
+	if (!startVMEnabled && initializedProvider)
 	{
 		unloadScriptProvider(scriptProv);
 	}
@@ -862,7 +892,7 @@ startvm(
 		goto exit;
 	}
 
-	hr = getScriptProvider(parsedArgs.LangId, &scriptProv);
+	hr = findScriptProvider(parsedArgs.LangId, &scriptProv);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -878,13 +908,6 @@ startvm(
 	}
 	else
 	{
-		// Try to start the VM on the selected provider.
-		//
-		hr = loadAndCreateScriptProvider(scriptProv);
-		if (FAILED(hr))
-		{
-			goto exit;
-		}
 		GetHostContext()->StartVMEnabled = true;
 	}
 exit:
@@ -905,7 +928,7 @@ stopvm(
 		goto exit;
 	}
 
-	hr = getScriptProvider(parsedArgs.LangId, &scriptProv);
+	hr = findScriptProvider(parsedArgs.LangId, &scriptProv);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -915,15 +938,15 @@ stopvm(
 	{
 		g_HostCtxt.DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Error: VM not started. Use !start to start it.\n");
+			"Error: VM not started. Use !startvm to start it.\n");
 		hr = E_INVALIDARG;
 		goto exit;
 	}
 	else
 	{
-		// Call provider instance cleanup routine.
+		// Call all provider instance cleanup routine.
 		//
-		unloadScriptProvider(scriptProv);
+		unloadAllScriptProviders();
 		GetHostContext()->StartVMEnabled = false;
 	}
 exit:
