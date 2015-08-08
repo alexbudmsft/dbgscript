@@ -18,7 +18,13 @@ struct IScriptProvider
 {
 	virtual _Check_return_ HRESULT 
 	Init() = 0;
-
+	
+	virtual _Check_return_ HRESULT 
+	StartVM() = 0;
+	
+	virtual void
+	StopVM() = 0;
+	
 	virtual _Check_return_ HRESULT 
 	Run(
 		_In_ int argc,
@@ -28,7 +34,7 @@ struct IScriptProvider
 	RunString(
 		_In_z_ const char* scriptString) = 0;
 
-	virtual _Check_return_ void
+	virtual void
 	Cleanup() = 0;
 };
 

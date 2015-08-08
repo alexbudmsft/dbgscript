@@ -57,6 +57,11 @@ struct DbgScriptHostContext
 	// buffer output.
 	//
 	DbgScriptOutputCallbacks* BufferedOutputCallbacks;
+
+	// StartVMEnabled - If this is true, !runscript and !evalstring reuse
+	// the existing VM state instead of recycling it each time.
+	//
+	bool StartVMEnabled;
 };
 
 char*

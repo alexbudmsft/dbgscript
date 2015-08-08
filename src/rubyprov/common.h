@@ -12,10 +12,6 @@
 
 struct RubyProvGlobals
 {
-	// Ruby Provider DLL Module handle.
-	//
-	HMODULE HModule;
-
 	// DbgScript Host context block.
 	//
 	DbgScriptHostContext* HostCtxt;

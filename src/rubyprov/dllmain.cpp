@@ -8,24 +8,6 @@ GetRubyProvGlobals()
 	return &s_RubyProvGlobals;
 }
 
-BOOL WINAPI DllMain(
-	_In_ HINSTANCE hinstDLL,
-	_In_ DWORD     fdwReason,
-	_In_ LPVOID    /* lpvReserved */)
-{
-	switch (fdwReason)
-	{
-	case DLL_PROCESS_ATTACH:
-		s_RubyProvGlobals.HModule = hinstDLL;
-		break;
-
-	case DLL_PROCESS_DETACH:
-	case DLL_THREAD_ATTACH:
-	case DLL_THREAD_DETACH:
-		break;  // Nothing to do.
-	default:
-		break;
-	}
-
-	return TRUE;
-}
+// Don't define a DllMain as ruby static lib already does.
+// Fine. Let them have it.
+//

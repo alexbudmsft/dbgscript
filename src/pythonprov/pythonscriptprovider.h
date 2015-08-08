@@ -10,6 +10,12 @@ public:
 
 	_Check_return_ HRESULT
 	Init() override;
+	
+	_Check_return_ HRESULT
+	StartVM() override;
+
+	void
+	StopVM() override;
 
 	_Check_return_ HRESULT
 	Run(
@@ -20,8 +26,6 @@ public:
 	RunString(
 		_In_z_ const char* scriptString) override;
 
-	_Check_return_ void
+	void
 	Cleanup() override;
-
-private:
 };

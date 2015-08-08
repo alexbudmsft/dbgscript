@@ -9,8 +9,9 @@
 CPythonScriptProvider::CPythonScriptProvider()
 {}
 
+
 _Check_return_ HRESULT
-CPythonScriptProvider::Init()
+CPythonScriptProvider::StartVM()
 {
 	HRESULT hr = S_OK;
 	PyImport_AppendInittab(x_DbgScriptModuleName, PyInit_dbgscript);
@@ -39,6 +40,18 @@ CPythonScriptProvider::Init()
 	PySys_SetObject("exit", nullptr);
 
 	return hr;
+}
+
+void
+CPythonScriptProvider::StopVM()
+{
+	Py_Finalize();
+}
+
+_Check_return_ HRESULT
+CPythonScriptProvider::Init()
+{
+	return StartVM();
 }
 
 static bool
@@ -283,11 +296,11 @@ exit:
 	return hr;
 }
 
-_Check_return_ void
+void
 CPythonScriptProvider::Cleanup()
 {
-	Py_Finalize();
-
+	StopVM();
+	
 	delete this;
 }
 

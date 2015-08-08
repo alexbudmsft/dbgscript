@@ -31,6 +31,12 @@ public:
 
 	_Check_return_ HRESULT
 	Init() override;
+	
+	_Check_return_ HRESULT
+	StartVM() override;
+
+	void
+	StopVM() override;
 
 	_Check_return_ HRESULT
 	Run(
@@ -41,7 +47,7 @@ public:
 	RunString(
 		_In_z_ const char* scriptString) override;
 
-	_Check_return_ void
+	void
 	Cleanup() override;
 };
 
@@ -104,68 +110,7 @@ DbgScriptStdIO_write(
 _Check_return_ HRESULT 
 CRubyScriptProvider::Init()
 {
-	int argc = 0;
-	char **argv = nullptr;
-
-	HRESULT hr = S_OK;
-
-	// Ruby does command line parsing for us. We're not going to use its output
-	// though.
-	//
-	ruby_sysinit(&argc, &argv);
-	RUBY_INIT_STACK;
-	int ret = ruby_setup();
-	if (ret != 0)
-	{
-		hr = E_FAIL;  // TODO: Better error.
-		goto exit;
-	}
-
-	ruby_init_loadpath();
-
-	// Redirect all writes/prints/readlines to our custom routines.
-	//
-	rb_define_singleton_method(
-		rb_stdout,
-		"write",
-		RUBY_METHOD_FUNC(DbgScriptStdIO_write),
-		1 /* numParams */);
-
-	rb_define_singleton_method(
-		rb_stderr,
-		"write",
-		RUBY_METHOD_FUNC(DbgScriptStdIO_write),
-		1 /* numParams */);
-
-	rb_define_singleton_method(
-		rb_stdin,
-		"gets",
-		RUBY_METHOD_FUNC(DbgScriptStdIO_gets),
-		-1 /* numParams */);
-
-	// Initialize DbgScript module.
-	//
-	Init_DbgScript();
-
-	// Initialize Thread class.
-	//
-	Init_Thread();
-
-	// Initialize StackFrame class.
-	//
-	Init_StackFrame();
-	
-	// Initialize StackFrame class.
-	//
-	Init_TypedObject();
-
-	// Prevent Kernel#exit et al.
-	//
-	rb_undef_method(rb_mKernel, "exit");
-	rb_undef_method(rb_mKernel, "exit!");
-
-exit:
-	return hr;
+	return StartVM();
 }
 
 struct NoArgMethodInfo
@@ -351,8 +296,76 @@ CRubyScriptProvider::RunString(
 	return S_OK;
 }
 
-_Check_return_ void 
-CRubyScriptProvider::Cleanup()
+_Check_return_ HRESULT
+CRubyScriptProvider::StartVM()
+{
+	// These are populated by Ruby by are unused by us.
+	//
+	int argc = 0;
+	char **argv = nullptr;
+
+	HRESULT hr = S_OK;
+
+	// Ruby does command line parsing for us. We're not going to use its output
+	// though.
+	//
+	ruby_sysinit(&argc, &argv);
+	int ret = ruby_setup();
+	if (ret != 0)
+	{
+		hr = E_FAIL;  // TODO: Better error.
+		goto exit;
+	}
+
+	ruby_init_loadpath();
+
+	// Redirect all writes/prints/readlines to our custom routines.
+	//
+	rb_define_singleton_method(
+		rb_stdout,
+		"write",
+		RUBY_METHOD_FUNC(DbgScriptStdIO_write),
+		1 /* numParams */);
+
+	rb_define_singleton_method(
+		rb_stderr,
+		"write",
+		RUBY_METHOD_FUNC(DbgScriptStdIO_write),
+		1 /* numParams */);
+
+	rb_define_singleton_method(
+		rb_stdin,
+		"gets",
+		RUBY_METHOD_FUNC(DbgScriptStdIO_gets),
+		-1 /* numParams */);
+
+	// Initialize DbgScript module.
+	//
+	Init_DbgScript();
+
+	// Initialize Thread class.
+	//
+	Init_Thread();
+
+	// Initialize StackFrame class.
+	//
+	Init_StackFrame();
+	
+	// Initialize StackFrame class.
+	//
+	Init_TypedObject();
+
+	// Prevent Kernel#exit et al.
+	//
+	rb_undef_method(rb_mKernel, "exit");
+	rb_undef_method(rb_mKernel, "exit!");
+
+exit:
+	return hr;
+}
+
+void
+CRubyScriptProvider::StopVM()
 {
 	int status = ruby_cleanup(0);
 	if (status)
@@ -362,6 +375,13 @@ CRubyScriptProvider::Cleanup()
 			"Warning: Ruby failed to cleanup: %d.\n", status);
 	}
 
+}
+
+void 
+CRubyScriptProvider::Cleanup()
+{
+	StopVM();
+	
 	delete this;
 }
 

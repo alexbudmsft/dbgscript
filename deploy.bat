@@ -61,11 +61,6 @@ for %%f in (%FLAVORS%) do (
     REM Copy over the Ruby standard library.
     REM
     xcopy /EYQ deps\ruby\runtime\lib deploy\%%f\rubyprov\Lib\
-    
-    REM Copy the Ruby DLLs
-    REM
-    copy deps\ruby\lib\x64-msvcr120-ruby220.dll deploy\%%f\rubyprov\
-    copy deps\ruby\lib\x64-msvcr120-ruby220.pdb deploy\%%f\rubyprov\
 )
     
 REM Delete the temp file.
