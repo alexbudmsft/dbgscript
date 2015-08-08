@@ -202,8 +202,11 @@ TypedObject_value(
 	return rbValueFromCValue(typObj);
 }
 
+// Don't want to call it 'size' because 'size' is a builtin method on arrays
+// in Ruby which is an alias for 'length'.
+//
 static VALUE
-TypedObject_size(
+TypedObject_data_size(
 	_In_ VALUE self)
 {
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
@@ -272,6 +275,43 @@ checkTypedData(
 		//
 		rb_raise(rb_eArgError, "Object has no typed data. Can't get fields.");
 	}
+}
+
+static VALUE
+TypedObject_length(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	DbgScriptTypedObject* typObj = nullptr;
+	CHECK_ABORT(hostCtxt);
+
+	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+
+	checkTypedData(typObj);
+	
+	if (typObj->TypedData.Tag != SymTagArrayType)
+	{
+		// Not array.
+		//
+		rb_raise(rb_eArgError, "Object not array.");
+	}
+
+	// Get the zero'th item in order to get its size.
+	//
+	DEBUG_TYPED_DATA typedData = {0};
+	HRESULT hr = DsTypedObjectGetArrayElement(
+		hostCtxt,
+		typObj,
+		0 /* index */,
+		&typedData);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+	}
+
+	const ULONG elemSize = typedData.Size;
+
+	return ULONG2NUM(typObj->TypedData.Size / elemSize);
 }
 
 static VALUE
@@ -408,8 +448,8 @@ Init_TypedObject()
 	
 	rb_define_method(
 		typedObjectClass,
-		"size",
-		RUBY_METHOD_FUNC(TypedObject_size),
+		"data_size",
+		RUBY_METHOD_FUNC(TypedObject_data_size),
 		0 /* argc */);
 	
 	rb_define_method(
@@ -430,6 +470,16 @@ Init_TypedObject()
 		RUBY_METHOD_FUNC(TypedObject_address),
 		0 /* argc */);
 
+	// Length, if object is an array.
+	//
+	rb_define_method(
+		typedObjectClass,
+		"length",
+		RUBY_METHOD_FUNC(TypedObject_length),
+		0 /* argc */);
+	
+    rb_define_alias(typedObjectClass, "size", "length");
+	
 	// Indexer method. Can take string or int key, for field or array access,
 	// respectively.
 	//

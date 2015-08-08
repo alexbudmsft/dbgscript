@@ -394,18 +394,18 @@ TypedObject_sequence_length(
 		return -1;
 	}
 
-	if (typObj->Data.TypedData.Tag != SymTagPointerType &&
-		typObj->Data.TypedData.Tag != SymTagArrayType)
+	if (typObj->Data.TypedData.Tag != SymTagArrayType)
 	{
-		// Not a pointer or array.
+		// Not array.
 		//
-		// This object has no typed data. It must have been a null ptr.
-		//
-		PyErr_SetString(PyExc_AttributeError, "Object not a pointer or array.");
+		PyErr_SetString(PyExc_AttributeError, "Object not array.");
 		return -1;
 	}
 
 	// Get the zero'th item in order to get its size.
+	//
+	// TODO: Don't even need to allocate a new PyObject. Can just call
+	// DsTypedObjectGetArrayElement.
 	//
 	TypedObject* tmp = (TypedObject*)TypedObject_sequence_get_item(self, 0);
 	if (!tmp)
