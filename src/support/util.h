@@ -20,6 +20,7 @@
 #include <hostcontext.h>
 #include "../common.h"
 #include <dsthread.h>
+#include <dserrors.h>
 
 _Check_return_ HRESULT
 UtilReadPointer(
@@ -48,6 +49,11 @@ UtilBufferOutput(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_z_ const char* text,
 	_In_ size_t len);
+
+_Check_return_ HRESULT
+UtilExecuteCommand(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_z_ const char* command);
 
 // TODO: Move impl. to .cpp and add error handling.
 //

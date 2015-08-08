@@ -153,6 +153,65 @@ DbgScript_current_thread(
 }
 
 static VALUE
+DbgScript_start_buffering(
+	_In_ VALUE /* self */)
+{
+	// Currently this is single-threaded access, but will make it simpler in
+	// case we ever have more than one concurrent client.
+	//
+	InterlockedIncrement(&GetRubyProvGlobals()->HostCtxt->IsBuffering);
+
+	return Qnil;
+}
+
+static VALUE
+DbgScript_stop_buffering(
+	_In_ VALUE /* self */)
+{
+	// Currently this is single-threaded access, but will make it simpler in
+	// case we ever have more than one concurrent client.
+	//
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	const LONG newVal = InterlockedDecrement(&hostCtxt->IsBuffering);
+	if (newVal < 0)
+	{
+		hostCtxt->IsBuffering = 0;
+		rb_raise(rb_eRuntimeError, "Can't stop buffering if it isn't started.");
+	}
+
+	// If the buffer refcount hit zero, flush remaining buffered content, if any.
+	//
+	if (newVal == 0)
+	{
+		UtilFlushMessageBuffer(hostCtxt);
+	}
+
+	return Qnil;
+}
+
+static VALUE
+DbgScript_execute_command(
+	_In_ VALUE /* self */,
+	_In_ VALUE cmd)
+{
+	const char* command = StringValuePtr(cmd);
+	HRESULT hr = S_OK;
+
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	hr = UtilExecuteCommand(hostCtxt, command);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "UtilExecuteCommand failed. Error 0x%08x.", hr);
+	}
+
+	return Qnil;
+}
+
+static VALUE
 DbgScript_create_typed_object(
 	_In_ VALUE /* self */,
 	_In_ VALUE type,
@@ -200,6 +259,15 @@ Init_DbgScript()
 	
 	rb_define_module_function(
 		module, "get_global", RUBY_METHOD_FUNC(DbgScript_get_global), 1 /* argc */);
+	
+	rb_define_module_function(
+		module, "start_buffering", RUBY_METHOD_FUNC(DbgScript_start_buffering), 0 /* argc */);
+
+	rb_define_module_function(
+		module, "stop_buffering", RUBY_METHOD_FUNC(DbgScript_stop_buffering), 0 /* argc */);
+	
+	rb_define_module_function(
+		module, "execute_command", RUBY_METHOD_FUNC(DbgScript_execute_command), 1 /* argc */);
 	
 	// Save off the module.
 	//

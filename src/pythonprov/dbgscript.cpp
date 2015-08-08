@@ -355,48 +355,11 @@ dbgscript_execute_command(
 
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 
-	// CONSIDER: adding an option letting user control whether we echo the
-	// command or not.
-	//
-	if (hostCtxt->IsBuffering > 0)
+	hr = UtilExecuteCommand(hostCtxt, command);
+	if (FAILED(hr))
 	{
-		// Capture the output for this scope.
-		//
-		{
-			CAutoSetOutputCallback autoSetCb(
-				hostCtxt,
-				(IDebugOutputCallbacks*)hostCtxt->BufferedOutputCallbacks);
-
-			hr = hostCtxt->DebugControl->Execute(
-				DEBUG_OUTCTL_THIS_CLIENT,
-				command,
-				DEBUG_EXECUTE_NO_REPEAT | DEBUG_OUTCTL_NOT_LOGGED);
-			if (FAILED(hr))
-			{
-				PyErr_Format(PyExc_ValueError, "Failed to execute command '%s'. Error 0x%08x.", command, hr);
-				goto exit;
-			}
-
-			// Dtor will revert the callback.
-			//
-		}
-
-		// Extract the buffered output.
-		//
-		const char* buf = DbgScriptOutCallbacksGetBuffer(hostCtxt->BufferedOutputCallbacks);
-		UtilBufferOutput(hostCtxt, buf, strlen(buf));
-	}
-	else
-	{
-		hr = hostCtxt->DebugControl->Execute(
-			DEBUG_OUTCTL_ALL_CLIENTS,
-			command,
-			DEBUG_EXECUTE_ECHO | DEBUG_EXECUTE_NO_REPEAT);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_ValueError, "Failed to execute command '%s'. Error 0x%08x.", command, hr);
-			goto exit;
-		}
+		PyErr_Format(PyExc_OSError, "UtilExecuteCommand failed. Error 0x%08x.", hr);
+		goto exit;
 	}
 
 exit:

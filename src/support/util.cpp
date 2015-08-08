@@ -122,6 +122,65 @@ UtilBufferOutput(
 	assert(hostCtxt->BufPosition <= _countof(hostCtxt->MessageBuf) - 1);
 }
 
+_Check_return_ HRESULT
+UtilExecuteCommand(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_z_ const char* command)
+{
+	HRESULT hr = S_OK;
+	// CONSIDER: adding an option letting user control whether we echo the
+	// command or not.
+	//
+	if (hostCtxt->IsBuffering > 0)
+	{
+		// Capture the output for this scope.
+		//
+		{
+			CAutoSetOutputCallback autoSetCb(
+				hostCtxt,
+				(IDebugOutputCallbacks*)hostCtxt->BufferedOutputCallbacks);
+
+			hr = hostCtxt->DebugControl->Execute(
+				DEBUG_OUTCTL_THIS_CLIENT,
+				command,
+				DEBUG_EXECUTE_NO_REPEAT | DEBUG_OUTCTL_NOT_LOGGED);
+			if (FAILED(hr))
+			{
+				hostCtxt->DebugControl->Output(
+					DEBUG_OUTPUT_ERROR,
+					ERR_EXEC_CMD_FAILED_FMT, command, hr);
+				goto exit;
+			}
+
+			// Dtor will revert the callback.
+			//
+		}
+
+		// Extract the buffered output.
+		//
+		const char* buf = DbgScriptOutCallbacksGetBuffer(
+			hostCtxt->BufferedOutputCallbacks);
+		
+		UtilBufferOutput(hostCtxt, buf, strlen(buf));
+	}
+	else
+	{
+		hr = hostCtxt->DebugControl->Execute(
+			DEBUG_OUTCTL_ALL_CLIENTS,
+			command,
+			DEBUG_EXECUTE_ECHO | DEBUG_EXECUTE_NO_REPEAT);
+		if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				ERR_EXEC_CMD_FAILED_FMT, command, hr);
+			goto exit;
+		}
+	}
+exit:
+	return hr;
+}
+
 CAutoSwitchThread::CAutoSwitchThread(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ const DbgScriptThread* thd)
