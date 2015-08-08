@@ -18,6 +18,11 @@ static const int MAX_LANG_ID = 64;
 
 struct ScriptProviderInfo
 {
+	ScriptProviderInfo()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+
 	ScriptProviderInfo* Next;
 
 	// Path to DLL.
@@ -87,20 +92,23 @@ static void
 unloadScriptProvider(
 	_Inout_ ScriptProviderInfo* info)
 {
-	info->ScriptProvider->Cleanup();
+	if (info->ScriptProvider)
+	{
+		info->ScriptProvider->Cleanup();
+		info->ScriptProvider = nullptr;
 	
-	// Call DLL cleanup routine.
-	//
-	info->CleanupFunc();
+		// Call DLL cleanup routine.
+		//
+		info->CleanupFunc();
 	
-	// Unload the module.
-	//
-	BOOL fOk = FreeLibrary(info->Module);
-	assert(fOk);
-	fOk;
+		// Unload the module.
+		//
+		BOOL fOk = FreeLibrary(info->Module);
+		assert(fOk);
+		fOk;
 
-	info->Module = nullptr;
-	info->ScriptProvider = nullptr;
+		info->Module = nullptr;
+	}
 }
 
 static _Check_return_ HRESULT
