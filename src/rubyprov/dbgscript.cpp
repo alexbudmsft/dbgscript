@@ -38,6 +38,40 @@ DbgScript_read_ptr(
 }
 
 static VALUE
+DbgScript_resolve_enum(
+	_In_ VALUE /* self */,
+	_In_ VALUE type,
+	_In_ VALUE val)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	const char* enumTypeName = StringValuePtr(type);
+	UINT64 value = NUM2ULL(val);
+	char enumElementName[MAX_SYMBOL_NAME_LEN] = {};
+
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(hostCtxt, enumTypeName);
+	if (!typeInfo)
+	{
+		rb_raise(rb_eArgError, "Failed to get type id for type '%s'.", enumTypeName);
+	}
+
+	HRESULT hr = hostCtxt->DebugSymbols->GetConstantName(
+		typeInfo->ModuleBase,
+		typeInfo->TypeId,
+		value,
+		STRING_AND_CCH(enumElementName),
+		nullptr);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eArgError, "Failed to get element name for enum '%s' with value '%llu'. Error 0x%08x.", enumTypeName, value, hr);
+	}
+
+	return rb_str_new2(enumElementName);
+}
+
+
+static VALUE
 DbgScript_current_thread(
 	_In_ VALUE /* self */)
 {
@@ -127,13 +161,16 @@ Init_DbgScript()
 	VALUE module = rb_define_module("DbgScript");
 
 	rb_define_module_function(
-		module, "read_ptr", RUBY_METHOD_FUNC(DbgScript_read_ptr), 1);
+		module, "read_ptr", RUBY_METHOD_FUNC(DbgScript_read_ptr), 1 /* argc */);
 
 	rb_define_module_function(
-		module, "current_thread", RUBY_METHOD_FUNC(DbgScript_current_thread), 0);
+		module, "current_thread", RUBY_METHOD_FUNC(DbgScript_current_thread), 0 /* argc */);
 	
 	rb_define_module_function(
-		module, "create_typed_object", RUBY_METHOD_FUNC(DbgScript_create_typed_object), 2);
+		module, "create_typed_object", RUBY_METHOD_FUNC(DbgScript_create_typed_object), 2 /* argc */);
+	
+	rb_define_module_function(
+		module, "resolve_enum", RUBY_METHOD_FUNC(DbgScript_resolve_enum), 2 /* argc */);
 	
 	// Save off the module.
 	//

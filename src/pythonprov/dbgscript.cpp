@@ -87,7 +87,9 @@ dbgscript_resolve_enum(
 	HRESULT hr = hostCtxt->DebugSymbols->GetConstantName(
 		typeInfo->ModuleBase,
 		typeInfo->TypeId,
-		value, STRING_AND_CCH(enumElementName), nullptr);
+		value,
+		STRING_AND_CCH(enumElementName),
+		nullptr);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_ValueError, "Failed to get element name for enum '%s' with value '%llu'. Error 0x%08x.", enumTypeName, value, hr);
