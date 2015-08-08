@@ -14,6 +14,7 @@
 //******************************************************************************  
 
 #include "common.h"
+#include "typedobject.h"
 
 // Read a pointer from address 'addr'.
 //
@@ -70,6 +71,48 @@ DbgScript_resolve_enum(
 	return rb_str_new2(enumElementName);
 }
 
+static VALUE
+DbgScript_get_global(
+	_In_ VALUE /* self */,
+	_In_ VALUE sym)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	const char* symbol = StringValuePtr(sym);
+	UINT64 addr = 0;
+	char typeName[MAX_SYMBOL_NAME_LEN] = {};
+	HRESULT hr = hostCtxt->DebugSymbols->GetOffsetByName(symbol, &addr);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eArgError, "Failed to get virtual address for symbol '%s'. Error 0x%08x.", symbol, hr);
+	}
+
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(
+		hostCtxt, symbol);
+	if (!typeInfo)
+	{
+		rb_raise(rb_eArgError, "Failed to get type id for type '%s'.", symbol);
+	}
+
+	hr = hostCtxt->DebugSymbols->GetTypeName(
+		typeInfo->ModuleBase,
+		typeInfo->TypeId,
+		STRING_AND_CCH(typeName),
+		nullptr);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eArgError, "Failed to get type name for symbol '%s'. Error 0x%08x.", symbol, hr);
+	}
+	
+	return AllocTypedObject(
+		0 /* size */,
+		symbol /* name */,
+		typeName,
+		typeInfo->TypeId,
+		typeInfo->ModuleBase,
+		addr);
+}
 
 static VALUE
 DbgScript_current_thread(
@@ -129,30 +172,13 @@ DbgScript_create_typed_object(
 		rb_raise(rb_eArgError, "Failed to get type id for type '%s'.", szType);
 	}
 
-	// Allocate a Typed Object.
-	//
-	VALUE typObj = rb_class_new_instance(
-		0, nullptr, GetRubyProvGlobals()->TypedObjectClass);
-
-	DbgScriptTypedObject* obj = nullptr;
-
-	Data_Get_Struct(typObj, DbgScriptTypedObject, obj);
-
-	HRESULT hr = DsInitializeTypedObject(
-		hostCtxt,
+	return AllocTypedObject(
 		0 /* size */,
 		nullptr /* name */,
 		szType,
 		typeInfo->TypeId,
 		typeInfo->ModuleBase,
-		ui64Addr,
-		obj);
-	if (FAILED(hr))
-	{
-		rb_raise(rb_eSystemCallError, "DsInitializeTypedObject failed. Error 0x%08x.", hr);
-	}
-
-	return typObj;
+		ui64Addr);
 }
 
 void
@@ -171,6 +197,9 @@ Init_DbgScript()
 	
 	rb_define_module_function(
 		module, "resolve_enum", RUBY_METHOD_FUNC(DbgScript_resolve_enum), 2 /* argc */);
+	
+	rb_define_module_function(
+		module, "get_global", RUBY_METHOD_FUNC(DbgScript_get_global), 1 /* argc */);
 	
 	// Save off the module.
 	//

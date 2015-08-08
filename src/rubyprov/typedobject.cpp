@@ -296,6 +296,43 @@ allocTypedObjFromTypedData(
 	return newObj;
 }
 
+_Check_return_ VALUE
+AllocTypedObject(
+	_In_ ULONG size,
+	_In_opt_z_ const char* name,
+	_In_z_ const char* type,
+	_In_ ULONG typeId,
+	_In_ UINT64 moduleBase,
+	_In_ UINT64 virtualAddress)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	
+	// Allocate a Typed Object.
+	//
+	VALUE typObj = rb_class_new_instance(
+		0, nullptr, GetRubyProvGlobals()->TypedObjectClass);
+
+	DbgScriptTypedObject* obj = nullptr;
+
+	Data_Get_Struct(typObj, DbgScriptTypedObject, obj);
+
+	HRESULT hr = DsInitializeTypedObject(
+		hostCtxt,
+		size,
+		name,
+		type,
+		typeId,
+		moduleBase,
+		virtualAddress,
+		obj);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "DsInitializeTypedObject failed. Error 0x%08x.", hr);
+	}
+
+	return typObj;
+}
+
 static VALUE
 TypedObject_get_item(
 	_In_ VALUE self,

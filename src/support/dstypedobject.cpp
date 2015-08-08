@@ -39,7 +39,7 @@ DsWrapTypedData(
 	{
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Error: Failed to get type name. Error 0x%08x.", hr);
+			"Error: Failed to get type name. Error 0x%08x.\n", hr);
 		goto exit;
 	}
 exit:
@@ -180,7 +180,7 @@ DsTypedObjectGetField(
 	{
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Error: EXT_TDOP_GET_FIELD operation failed. Error 0x%08x.", hr);
+			"Error: EXT_TDOP_GET_FIELD operation failed. Error 0x%08x.\n", hr);
 		goto exit;
 	}
 
@@ -218,7 +218,7 @@ DsTypedObjectGetArrayElement(
 		//
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Error: Object not a pointer or array.");
+			"Error: Object not a pointer or array.\n");
 		hr = E_INVALIDARG;
 		goto exit;
 	}
@@ -241,7 +241,7 @@ DsTypedObjectGetArrayElement(
 	{
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Error: EXT_TDOP_GET_ARRAY_ELEMENT operation failed. Error 0x%08x.", hr);
+			"Error: EXT_TDOP_GET_ARRAY_ELEMENT operation failed. Error 0x%08x.\n", hr);
 		goto exit;
 	}
 
