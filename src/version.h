@@ -2,5 +2,5 @@
 
 #include "vercommon.h"
 
-#define VER_FILEDESCRIPTION_STR 	"DbgScript extension DLL."
+#define VER_FILEDESCRIPTION_STR 	"DbgScript extension DLL"
 

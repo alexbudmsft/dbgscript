@@ -2,5 +2,5 @@
 
 #include "../vercommon.h"
 
-#define VER_FILEDESCRIPTION_STR 	"Python Script Provider for DbgScript."
+#define VER_FILEDESCRIPTION_STR 	"Python Script Provider for DbgScript"
 
