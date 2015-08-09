@@ -8,7 +8,7 @@ include (common.cmake)
 
 include_directories (${CMAKE_HOME_DIRECTORY}/include)
 
-set (SOURCES src/dllmain.cpp)
+set (SOURCES src/dllmain.cpp src/version.rc)
 
 # Make a DLL.
 #

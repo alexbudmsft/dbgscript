@@ -8,8 +8,16 @@ include_directories (
 
 link_directories(${CMAKE_HOME_DIRECTORY}/deps/python/lib)
 
-set (SOURCES dbgscriptio.cpp dllmain.cpp dbgscript.cpp pythonscriptprovider.cpp
-			 stackframe.cpp thread.cpp typedobject.cpp util.cpp)
+set (SOURCES
+	version.rc
+	dbgscriptio.cpp
+	dllmain.cpp
+	dbgscript.cpp
+	pythonscriptprovider.cpp
+	stackframe.cpp
+	thread.cpp
+	typedobject.cpp
+	util.cpp)
 
 # Make a DLL.
 #
