@@ -1,7 +1,9 @@
-DbgScript: A multi-script debugger extension.
-=============================================
+|logo| DbgScript
+====================================================
 
-DbgScript is a `DbgEng extension <https://msdn.microsoft.com/en-us/library/windows/hardware/ff551059(v=vs.85).aspx>`_ 
+DbgScript is a multi-script debugger extension.
+
+More precisely, it is a `DbgEng extension <https://msdn.microsoft.com/en-us/library/windows/hardware/ff551059(v=vs.85).aspx>`_ 
 that allows the embedding of arbitrary scripting languages into the
 `Debugging Tools for Windows <https://msdn.microsoft.com/en-us/library/windows/hardware/ff551063(v=vs.85).aspx>`_.
 
@@ -33,3 +35,6 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+.. |logo| image:: logo.svg
+    :width: 64px
+    :height: 64px

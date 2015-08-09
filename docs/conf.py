@@ -49,7 +49,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'DbgScript'
-copyright = u'2015, Alex Budovski'
+copyright = u'2015, Microsoft Corporation'
 author = u'Alex Budovski'
 
 # The version info for the project you're documenting, acts as replacement for
