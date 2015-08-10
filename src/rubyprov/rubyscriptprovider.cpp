@@ -244,6 +244,35 @@ CRubyScriptProvider::Run(
 	_In_ WCHAR** argv)
 {
 	HRESULT hr = S_OK;
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	WCHAR fullScriptName[MAX_PATH] = {};
+	
+	if (!argc)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: No arguments given.\n");
+		hr = E_INVALIDARG;
+		goto exit;
+	}
+
+	// To to lookup the script in the registered !scriptpath's.
+	//
+	hr = UtilFindScriptFile(
+		hostCtxt,
+		argv[0],
+		STRING_AND_CCH(fullScriptName));
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
+	// Replace argv[0] with the fully qualified path.
+	//
+	argv[0] = fullScriptName;
+
+	// Convert to ANSI to satisfy Ruby.
+	//
 	char** narrowArgv = nullptr;
 	hr = narrowArgvFromWide(argc, argv, &narrowArgv);
 	if (FAILED(hr))

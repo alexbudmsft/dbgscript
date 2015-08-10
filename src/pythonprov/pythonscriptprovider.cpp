@@ -160,7 +160,7 @@ CPythonScriptProvider::Run(
 	WCHAR** argsForScript = &argv[i];
 	int cArgsForScript = argc - i;
 	assert(cArgsForScript >= 0);
-	WCHAR fullScriptName[MAX_PATH];
+	WCHAR fullScriptName[MAX_PATH] = {};
 	
 	if (cArgsForScript)
 	{
