@@ -113,10 +113,11 @@ CPythonScriptProvider::Run(
 	_In_ int argc,
 	_In_ WCHAR** argv)
 {
-	char ansiScriptName[MAX_PATH];
+	char ansiScriptName[MAX_PATH] = {};
 	WCHAR* moduleToRun = nullptr;
 	HRESULT hr = S_OK;
 	FILE* fp = nullptr;
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 
 	int i = 0;
 
@@ -146,7 +147,7 @@ CPythonScriptProvider::Run(
 			else
 			{
 				hr = E_INVALIDARG;
-				GetPythonProvGlobals()->HostCtxt->DebugControl->Output(
+				hostCtxt->DebugControl->Output(
 					DEBUG_OUTPUT_ERROR,
 					"Error: -m expects a module name.\n");
 				goto exit;
@@ -159,10 +160,23 @@ CPythonScriptProvider::Run(
 	WCHAR** argsForScript = &argv[i];
 	int cArgsForScript = argc - i;
 	assert(cArgsForScript >= 0);
-	WCHAR* scriptName = nullptr;
-
+	WCHAR fullScriptName[MAX_PATH];
+	
 	if (cArgsForScript)
 	{
+		hr = UtilFindScriptFile(
+			hostCtxt,
+			argsForScript[0],
+			STRING_AND_CCH(fullScriptName));
+		if (FAILED(hr))
+		{
+			goto exit;
+		}
+		
+		// Replace first pointer with our final script name.
+		//
+		argsForScript[0] = fullScriptName;
+
 		size_t cConverted = 0;
 
 		// Convert to ANSI.
@@ -177,41 +191,6 @@ CPythonScriptProvider::Run(
 			hr = E_FAIL;
 			goto exit;
 		}
-
-		// Try to find the script in the search locations provided by the extension.
-		//
-		WCHAR fullScriptName[MAX_PATH];
-		scriptName = argsForScript[0];
-		if (!UtilFileExists(scriptName))
-		{
-			// Try to search for the file in the script path list.
-			//
-			ScriptPathElem* elem = GetPythonProvGlobals()->HostCtxt->ScriptPath;
-			while (elem)
-			{
-				StringCchPrintf(STRING_AND_CCH(fullScriptName), L"%ls\\%ls",
-					elem->Path, scriptName);
-				if (UtilFileExists(fullScriptName))
-				{
-					scriptName = fullScriptName;
-					break;
-				}
-				elem = elem->Next;
-			}
-		}
-
-		if (!UtilFileExists(scriptName))
-		{
-			GetPythonProvGlobals()->HostCtxt->DebugControl->Output(
-				DEBUG_OUTPUT_ERROR,
-				"Error: Script file not found in any of the search paths.\n");
-			hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-			goto exit;
-		}
-
-		// Replace first pointer with our final script name.
-		//
-		argsForScript[0] = scriptName;
 
 		if (moduleToRun)
 		{
@@ -247,18 +226,16 @@ CPythonScriptProvider::Run(
 	}
 	else if (cArgsForScript)
 	{
-		assert(scriptName);
-
-		fp = _wfopen(scriptName, L"r");
+		fp = _wfopen(fullScriptName, L"r");
 		if (!fp)
 		{
 			ULONG doserr = 0;
 			_get_doserrno(&doserr);
 
-			GetPythonProvGlobals()->HostCtxt->DebugControl->Output(
+			hostCtxt->DebugControl->Output(
 				DEBUG_OUTPUT_ERROR,
 				"Failed to open file '%ls'. Error %d (%s).\n",
-				scriptName,
+				fullScriptName,
 				doserr,
 				strerror(errno));
 

@@ -1,5 +1,6 @@
 #include "util.h"
 #include <assert.h>
+#include <strsafe.h>
 
 // Read a pointer from the target's memory.
 //
@@ -214,4 +215,53 @@ CAutoSwitchThread::~CAutoSwitchThread()
 		assert(SUCCEEDED(hr));
 		hr;
 	}
+}
+
+_Check_return_ HRESULT
+UtilFindScriptFile(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_z_ const WCHAR* scriptName,
+	_Out_writes_(cchFullPath) WCHAR* fullPath,
+	_In_ int cchFullPath)
+{
+	HRESULT hr = S_OK;
+	
+	// First, initialize 'fullPath' with the input string.
+	//
+	hr = StringCchCopy(fullPath, cchFullPath, scriptName);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+	
+	// Try to find the script in the search locations provided by the extension.
+	//
+	if (!UtilFileExists(fullPath))
+	{
+		// Try to search for the file in the script path list.
+		//
+		ScriptPathElem* elem = hostCtxt->ScriptPath;
+		while (elem)
+		{
+			StringCchPrintf(fullPath, cchFullPath, L"%hs\\%ls",
+				elem->Path, scriptName);
+			if (UtilFileExists(fullPath))
+			{
+				break;
+			}
+			elem = elem->Next;
+		}
+	}
+
+	if (!UtilFileExists(fullPath))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Script file not found in any of the search paths.\n");
+		hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+		goto exit;
+	}
+	
+exit:
+	return hr;
 }

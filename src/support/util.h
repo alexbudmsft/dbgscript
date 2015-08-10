@@ -55,6 +55,13 @@ UtilExecuteCommand(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_z_ const char* command);
 
+_Check_return_ HRESULT
+UtilFindScriptFile(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_z_ const WCHAR* scriptName,
+	_Out_writes_(cchFullPath) WCHAR* fullPath,
+	_In_ int cchFullPath);
+
 // TODO: Move impl. to .cpp and add error handling.
 //
 class CAutoSetOutputCallback
