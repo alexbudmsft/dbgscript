@@ -540,10 +540,11 @@ parseArgs(
 {
 	HRESULT hr = S_OK;
 	int cArgs = 0;
+	DbgScriptHostContext* hostCtxt = GetHostContext();
 	WCHAR* wszArgs = UtilConvertAnsiToWide(args);
 	if (!wszArgs)
 	{
-		GetHostContext()->DebugControl->Output(
+		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
 			"Error: Failed to convert args to wide string.\n");
 		hr = E_FAIL;
@@ -554,7 +555,7 @@ parseArgs(
 	if (!argList)
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
-		GetHostContext()->DebugControl->Output(
+		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
 			"Error: Failed to parse arguments: 0x%08x\n", hr);
 		goto exit;
@@ -563,6 +564,8 @@ parseArgs(
 	int i = 0;
 	for (i = 0; i < cArgs; ++i)
 	{
+		// Encountered switch terminator? '--'
+		//
 		if (!wcscmp(argList[i], L"--"))
 		{
 			// Swallow and break out.
@@ -579,18 +582,26 @@ parseArgs(
 			{
 				parsedArgs->TimeRun = true;
 			}
-			if (!wcscmp(argList[i], L"-l"))
+			else if (!wcscmp(argList[i], L"-l"))
 			{
 				if (i + 1 >= cArgs)
 				{
 					hr = E_INVALIDARG;
-					GetHostContext()->DebugControl->Output(
+					hostCtxt->DebugControl->Output(
 						DEBUG_OUTPUT_ERROR,
 						"Error: -l requires a language ID.\n");
 					goto exit;
 				}
 				++i;
 				parsedArgs->LangId = argList[i];
+			}
+			else
+			{
+				hr = E_INVALIDARG;
+				hostCtxt->DebugControl->Output(
+					DEBUG_OUTPUT_ERROR,
+					"Error: Unknown switch '%ls'.\n", argList[i]);
+				goto exit;
 			}
 		}
 		else

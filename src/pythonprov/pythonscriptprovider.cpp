@@ -153,6 +153,14 @@ CPythonScriptProvider::Run(
 				goto exit;
 			}
 		}
+		else
+		{
+			hr = E_INVALIDARG;
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: Unknown switch '%ls'.\n", argv[i]);
+			goto exit;
+		}		
 	}
 
 	// The left over args go to the script itself.
