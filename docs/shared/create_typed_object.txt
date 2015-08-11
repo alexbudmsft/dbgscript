@@ -1,0 +1,7 @@
+Create a :class:`TypedObject` from an address and type.
+   
+.. note::
+
+   Prefer using the fully-qualfied type name (i.e. including the module prefix)
+   as it will accelerate symbol lookup dramatically. I.e. ``module!Foo``, not
+   ``Foo``.
