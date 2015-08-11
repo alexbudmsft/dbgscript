@@ -1,10 +1,11 @@
 Python Script Provider
 =====================================
 
-.. module:: dbgscript
-
 .. toctree::
    :maxdepth: 2
    
    Python/Tutorial
-   Python/Classes
+   Python/dbgscript
+   Python/Thread
+   Python/TypedObject
+   Python/StackFrame
