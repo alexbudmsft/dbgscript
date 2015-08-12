@@ -246,6 +246,12 @@ registerScriptProviders()
 	LONG ret = RegOpenKey(HKEY_CURRENT_USER, x_ProviderKey, &hKey);
 	if (ret != ERROR_SUCCESS)
 	{
+		if (ret == ERROR_FILE_NOT_FOUND)
+		{
+			GetHostContext()->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: Registry key 'HKCU\\%ls' not found. Did you install the providers?\n", x_ProviderKey);
+		}
 		hr = HRESULT_FROM_WIN32(ret);
 		goto exit;
 	}
