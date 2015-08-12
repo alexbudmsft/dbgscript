@@ -43,4 +43,10 @@
 
 #define ERR_FAILED_INSTALL_OUTPUT_CB \
 	"Error: Failed to install output callback. Error 0x%08x.\n"
+	
+#define ERR_FAILED_GET_NUM_THREADS \
+	"Error: Failed to get number of threads. Error 0x%08x.\n"
+	
+#define ERR_FAILED_GET_THREAD_IDS \
+	"Error: Failed to get thread IDs. Error 0x%08x.\n"
 

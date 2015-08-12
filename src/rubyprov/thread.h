@@ -17,3 +17,9 @@
 
 void
 Init_Thread();
+
+_Check_return_ VALUE
+AllocThreadObj(
+	_In_ ULONG engineId,
+	_In_ ULONG threadId);
+

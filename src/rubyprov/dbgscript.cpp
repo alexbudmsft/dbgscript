@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "typedobject.h"
+#include "thread.h"
 
 // Read a pointer from address 'addr'.
 //
@@ -114,6 +115,19 @@ DbgScript_get_global(
 		addr);
 }
 
+//------------------------------------------------------------------------------
+// Function: DbgScript_current_thread
+//
+// Description:
+//
+//  Get current thread in the process.
+//  
+// Returns:
+//
+//  Thread object as Ruby VALUE.
+//
+// Notes:
+//
 static VALUE
 DbgScript_current_thread(
 	_In_ VALUE /* self */)
@@ -137,19 +151,63 @@ DbgScript_current_thread(
 		rb_raise(rb_eSystemCallError, "Failed to get system thread id. Error 0x%08x.", hr);
 	}
 
-	// Allocate a Thread object.
+	return AllocThreadObj(engineThreadId, systemThreadId);
+}
+
+//------------------------------------------------------------------------------
+// Function: DbgScript_get_threads
+//
+// Description:
+//
+//  Get all threads in the process as a Ruby array.
+//  
+// Returns:
+//
+//  Array of Thread objects.
+//
+// Notes:
+//
+static VALUE
+DbgScript_get_threads(
+	_In_ VALUE /* self */)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	ULONG cThreads = 0;
+	HRESULT hr = UtilCountThreads(hostCtxt, &cThreads);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "UtilCountThreads failed. Error 0x%08x.", hr);
+	}
+
+	// Get list of thread IDs.
 	//
-	VALUE thdObj = rb_class_new_instance(
-		0, nullptr, GetRubyProvGlobals()->ThreadClass);
+	ULONG* engineThreadIds = new ULONG[cThreads];
+	ULONG* sysThreadIds = new ULONG[cThreads];
 
-	DbgScriptThread* thd = nullptr;
+	hr = UtilEnumThreads(hostCtxt, cThreads, engineThreadIds, sysThreadIds);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "UtilEnumThreads failed. Error 0x%08x.", hr);
+	}
 
-	Data_Get_Struct(thdObj, DbgScriptThread, thd);
+	VALUE threadArray = rb_ary_new2(cThreads);
 
-	thd->EngineId = engineThreadId;
-	thd->ThreadId = systemThreadId;
+	// Build a tuple of Thread objects.
+	//
+	for (ULONG i = 0; i < cThreads; ++i)
+	{
+		VALUE thd = AllocThreadObj(engineThreadIds[i], sysThreadIds[i]);
+		rb_ary_store(threadArray, i, thd);
+	}
 
-	return thdObj;
+	// Deleting nullptr is safe.
+	//
+	delete[] engineThreadIds;
+	delete[] sysThreadIds;
+
+	return threadArray;
 }
 
 static VALUE
@@ -250,6 +308,9 @@ Init_DbgScript()
 
 	rb_define_module_function(
 		module, "current_thread", RUBY_METHOD_FUNC(DbgScript_current_thread), 0 /* argc */);
+	
+	rb_define_module_function(
+		module, "get_threads", RUBY_METHOD_FUNC(DbgScript_get_threads), 0 /* argc */);
 	
 	rb_define_module_function(
 		module, "create_typed_object", RUBY_METHOD_FUNC(DbgScript_create_typed_object), 2 /* argc */);

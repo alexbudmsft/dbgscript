@@ -2,10 +2,10 @@ cur_thd = DbgScript.current_thread()
 
 stack = cur_thd.get_stack()
 
-frameidx = 2
+frame_idx = 2
 
-locals = stack[frameidx].get_locals()
-args = stack[frameidx].get_args()
+locals = stack[frame_idx].get_locals()
+args = stack[frame_idx].get_args()
 
 puts "Locals:"
 for v in locals

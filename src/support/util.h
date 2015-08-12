@@ -145,3 +145,15 @@ UtilEnumStackFrameVariables(
 	_In_ ULONG numSym,
 	_In_ EnumStackFrameVarsCb callback,
 	_In_opt_ void* userctxt);
+
+_Check_return_ HRESULT
+UtilCountThreads(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_Out_ ULONG* cThreads);
+
+_Check_return_ HRESULT
+UtilEnumThreads(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ ULONG cThreads,
+	_Out_writes_(cThreads) ULONG* engineThreadIds,
+	_Out_writes_(cThreads) ULONG* sysThreadIds);

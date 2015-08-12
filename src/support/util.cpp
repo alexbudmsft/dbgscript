@@ -809,3 +809,78 @@ exit:
 	return hr;
 }
 
+//------------------------------------------------------------------------------
+// Function: UtilEnumThreads
+//
+// Description:
+//
+//  Count threads in the target process.
+//
+// Parameters:
+//
+// Returns:
+//
+//  HRESULT.
+//
+// Notes:
+//
+_Check_return_ HRESULT
+UtilCountThreads(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_Out_ ULONG* cThreads)
+{
+	IDebugSystemObjects* sysObj = hostCtxt->DebugSysObj;
+	HRESULT hr = sysObj->GetNumberThreads(cThreads);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_NUM_THREADS,
+			hr);
+		goto exit;
+	}
+exit:
+	return hr;
+}
+
+//------------------------------------------------------------------------------
+// Function: UtilEnumThreads
+//
+// Description:
+//
+//  Fetch threads in the target process.
+//
+// Parameters:
+//
+// Returns:
+//
+//  HRESULT.
+//
+// Notes:
+//
+_Check_return_ HRESULT
+UtilEnumThreads(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ ULONG cThreads,
+	_Out_writes_(cThreads) ULONG* engineThreadIds,
+	_Out_writes_(cThreads) ULONG* sysThreadIds)
+{
+	IDebugSystemObjects* sysObj = hostCtxt->DebugSysObj;
+	HRESULT hr = S_OK;
+
+	// Get list of thread IDs.
+	//
+	hr = sysObj->GetThreadIdsByIndex(0, cThreads, engineThreadIds, sysThreadIds);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_THREAD_IDS,
+			hr);
+		goto exit;
+	}
+
+exit:
+	return hr;
+}
+

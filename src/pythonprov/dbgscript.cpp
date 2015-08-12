@@ -194,19 +194,14 @@ dbgscript_get_threads(
 
 	CHECK_ABORT(hostCtxt);
 
-	// TODO: The bulk of this code is not Python-specific. Factor it out when
-	// implementing Ruby provider.
-	//
+	ULONG cThreads = 0;
 	ULONG* engineThreadIds = nullptr;
 	ULONG* sysThreadIds = nullptr;
 	PyObject* tuple = nullptr;
-	IDebugSystemObjects* sysObj = hostCtxt->DebugSysObj;
-
-	ULONG cThreads = 0;
-	HRESULT hr = sysObj->GetNumberThreads(&cThreads);
+	HRESULT hr = UtilCountThreads(hostCtxt, &cThreads);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "Failed to get number of threads. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_OSError, "UtilCountThreads failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 
@@ -215,10 +210,10 @@ dbgscript_get_threads(
 	engineThreadIds = new ULONG[cThreads];
 	sysThreadIds = new ULONG[cThreads];
 
-	hr = sysObj->GetThreadIdsByIndex(0, cThreads, engineThreadIds, sysThreadIds);
+	hr = UtilEnumThreads(hostCtxt, cThreads, engineThreadIds, sysThreadIds);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "Failed to get thread IDs. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_OSError, "UtilEnumThreads failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 

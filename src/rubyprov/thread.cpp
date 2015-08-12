@@ -223,6 +223,26 @@ Thread_alloc(
 	return Data_Wrap_Struct(klass, nullptr /* mark */, Thread_free, thd);
 }
 
+// Allocate a Thread object.
+//
+_Check_return_ VALUE
+AllocThreadObj(
+	_In_ ULONG engineId,
+	_In_ ULONG threadId)
+{
+	VALUE thdObj = rb_class_new_instance(
+		0, nullptr, GetRubyProvGlobals()->ThreadClass);
+
+	DbgScriptThread* thd = nullptr;
+
+	Data_Get_Struct(thdObj, DbgScriptThread, thd);
+
+	thd->EngineId = engineId;
+	thd->ThreadId = threadId;
+
+	return thdObj;
+}
+
 void
 Init_Thread()
 {

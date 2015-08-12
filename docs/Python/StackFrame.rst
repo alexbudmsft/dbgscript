@@ -31,3 +31,7 @@ StackFrame methods
 .. method:: StackFrame.get_args()
 
    Similar to :meth:`.get_locals` except return the arguments only.
+   
+Here's an example showing these methods in action:
+
+.. literalinclude:: ../../samples/py/stack_test.py
