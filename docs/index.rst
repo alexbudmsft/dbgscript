@@ -17,13 +17,15 @@ For example, in the Python Script Provider, a thread is modelled as a
 Thread object with various attributes and methods that can obtain further
 information about it, such as its call stack.
 
-DbgScript ships with two first-party providers: Python and Ruby.
+DbgScript ships with two first-party providers: `Python <https://www.python.org/>`_ 
+and `Ruby <https://www.ruby-lang.org/en/>`_.
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
    
+   Basics
    Python
    Ruby
 
