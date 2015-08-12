@@ -36,8 +36,8 @@ Indices and tables
 * :ref:`search`
 
 .. |logo| image:: logo.svg
-    :width: 64px
-    :height: 64px
+    :width: 80px
+    :height: 80px
 
 .. _`DbgEng extension`: https://msdn.microsoft.com/en-us/library/windows/hardware/ff551059(v=vs.85).aspx
 .. _`Debugging Tools for Windows`: https://msdn.microsoft.com/en-us/library/windows/hardware/ff551063(v=vs.85).aspx
