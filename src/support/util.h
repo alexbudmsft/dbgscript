@@ -68,10 +68,15 @@ public:
 	CAutoSwitchStackFrame(
 		_In_ DbgScriptHostContext* hostCtxt,
 		_In_ ULONG newIdx);
+	
+	_Check_return_ HRESULT
+	Switch();
+	
 	~CAutoSwitchStackFrame();
 	
 private:
 	DbgScriptHostContext* m_HostCtxt;
+	ULONG m_TargetIdx;
 	ULONG m_PrevIdx;
 	bool m_DidSwitch;
 };
@@ -82,11 +87,15 @@ public:
 	CAutoSetOutputCallback(
 		_In_ DbgScriptHostContext* hostCtxt,
 		_In_ IDebugOutputCallbacks* cb);
+
+	_Check_return_ HRESULT
+	Install();
 		
 	~CAutoSetOutputCallback();
 	
  private:
 	DbgScriptHostContext* m_HostCtxt;
+	IDebugOutputCallbacks* m_Target;
 	IDebugOutputCallbacks* m_Prev;
 };
 
@@ -99,10 +108,40 @@ public:
 	CAutoSwitchThread(
 		_In_ DbgScriptHostContext* hostCtxt,
 		_In_ const DbgScriptThread* thd);
+	
+	_Check_return_ HRESULT
+	Switch();
+	
 	~CAutoSwitchThread();
 
 private:
 	DbgScriptHostContext* m_HostCtxt;
+	ULONG m_TargetThreadId;
 	ULONG m_PrevThreadId;
 	bool m_DidSwitch;
 };
+
+typedef _Check_return_ HRESULT
+(*EnumStackFrameVarsCb)(
+	_In_ DEBUG_SYMBOL_ENTRY* entry,
+	_In_z_ const char* symName,
+	_In_z_ const char* typeName,
+	_In_ ULONG idx,
+	_In_opt_ void* ctxt);
+
+_Check_return_ HRESULT
+UtilCountStackFrameVariables(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ const DbgScriptThread* thd,
+	_In_ const DbgScriptStackFrame* stackFrame,
+	_In_ ULONG flags,
+	_Out_ ULONG* numVars,
+	_Out_ IDebugSymbolGroup2** symGrp);
+
+_Check_return_ HRESULT
+UtilEnumStackFrameVariables(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ IDebugSymbolGroup2* symGrp,
+	_In_ ULONG numSym,
+	_In_ EnumStackFrameVarsCb callback,
+	_In_opt_ void* userctxt);

@@ -1,8 +1,34 @@
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: util.cpp
+// @Author: alexbud
+//
+// Purpose:
+//
+//  Utilities provided by the support library.
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************  
+
 #include "util.h"
 #include <assert.h>
 #include <strsafe.h>
 
-// Read a pointer from the target's memory.
+//------------------------------------------------------------------------------
+// Function: UtilReadPointer
+//
+// Description:
+//
+//  Read a pointer from the target's memory.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
 //
 _Check_return_ HRESULT
 UtilReadPointer(
@@ -13,7 +39,18 @@ UtilReadPointer(
 	return hostCtxt->DebugDataSpaces->ReadPointersVirtual(1, addr, ptrVal);
 }
 
-// Checks debugger's abort bit.
+//------------------------------------------------------------------------------
+// Function: UtilCheckAbort
+//
+// Description:
+//
+//  Checks debugger's abort bit.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
 //
 _Check_return_ bool
 UtilCheckAbort(
@@ -26,6 +63,19 @@ UtilCheckAbort(
 	return hr == S_OK;
 }
 
+//------------------------------------------------------------------------------
+// Function: UtilConvertAnsiToWide
+//
+// Description:
+//
+//  Helper to convert an ANSI string to wide.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 _Check_return_ WCHAR*
 UtilConvertAnsiToWide(
 	_In_z_ const char* ansiStr)
@@ -43,6 +93,19 @@ UtilConvertAnsiToWide(
 	}
 }
 
+//------------------------------------------------------------------------------
+// Function: UtilFileExists
+//
+// Description:
+//
+//  Helper to determine if a file exists.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 _Check_return_ bool
 UtilFileExists(
 	_In_z_ const WCHAR* wszPath)
@@ -53,7 +116,21 @@ UtilFileExists(
 		!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
-// Flush any content in the message buffer.
+//------------------------------------------------------------------------------
+// Function: UtilFlushMessageBuffer
+//
+// Description:
+//
+//  Flush remaining content in the message buffer, if any.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+//  Used to avoid WinDbg redrawing the screen too often when flooding it with
+//  a lot of output.
 //
 void
 UtilFlushMessageBuffer(
@@ -81,7 +158,21 @@ UtilFlushMessageBuffer(
 	}
 }
 
-// Buffer the output if it fits, else flush the cache.
+//------------------------------------------------------------------------------
+// Function: UtilBufferOutput
+//
+// Description:
+//
+//  Buffer 'text' in an internal buffer, flushing when the buffer fills.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+//  Used to avoid WinDbg redrawing the screen too often when flooding it with
+//  a lot of output.
 //
 void
 UtilBufferOutput(
@@ -123,12 +214,26 @@ UtilBufferOutput(
 	assert(hostCtxt->BufPosition <= _countof(hostCtxt->MessageBuf) - 1);
 }
 
+//------------------------------------------------------------------------------
+// Function: UtilExecuteCommand
+//
+// Description:
+//
+//  Execute debugger command and output results.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 _Check_return_ HRESULT
 UtilExecuteCommand(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_z_ const char* command)
 {
 	HRESULT hr = S_OK;
+
 	// CONSIDER: adding an option letting user control whether we echo the
 	// command or not.
 	//
@@ -141,6 +246,16 @@ UtilExecuteCommand(
 				hostCtxt,
 				(IDebugOutputCallbacks*)hostCtxt->BufferedOutputCallbacks);
 
+			hr = autoSetCb.Install();
+			if (FAILED(hr))
+			{
+				hostCtxt->DebugControl->Output(
+					DEBUG_OUTPUT_ERROR,
+					ERR_FAILED_INSTALL_OUTPUT_CB,
+					hr);
+				goto exit;
+			}
+
 			hr = hostCtxt->DebugControl->Execute(
 				DEBUG_OUTCTL_THIS_CLIENT,
 				command,
@@ -149,7 +264,9 @@ UtilExecuteCommand(
 			{
 				hostCtxt->DebugControl->Output(
 					DEBUG_OUTPUT_ERROR,
-					ERR_EXEC_CMD_FAILED_FMT, command, hr);
+					ERR_EXEC_CMD_FAILED_FMT,
+					command,
+					hr);
 				goto exit;
 			}
 
@@ -174,7 +291,9 @@ UtilExecuteCommand(
 		{
 			hostCtxt->DebugControl->Output(
 				DEBUG_OUTPUT_ERROR,
-				ERR_EXEC_CMD_FAILED_FMT, command, hr);
+				ERR_EXEC_CMD_FAILED_FMT,
+				command,
+				hr);
 			goto exit;
 		}
 	}
@@ -182,29 +301,84 @@ exit:
 	return hr;
 }
 
+//------------------------------------------------------------------------------
+// Function: CAutoSwitchThread ctor
+//
+// Description:
+//
+//  Capture thread context to switch to in subsequent call to Switch().
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 CAutoSwitchThread::CAutoSwitchThread(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ const DbgScriptThread* thd)
 	:
 	m_HostCtxt(hostCtxt),
+	m_TargetThreadId(thd->EngineId),
+	m_PrevThreadId((ULONG)-1),
 	m_DidSwitch(false)
+{
+}
+
+//------------------------------------------------------------------------------
+// Function: CAutoSwitchThread::Switch
+//
+// Description:
+//
+//  Switch to captured thread context.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+_Check_return_ HRESULT
+CAutoSwitchThread::Switch()
 {
 	// Get current thread id.
 	//
-	IDebugSystemObjects* sysObj = hostCtxt->DebugSysObj;
+	IDebugSystemObjects* sysObj = m_HostCtxt->DebugSysObj;
 	HRESULT hr = sysObj->GetCurrentThreadId(&m_PrevThreadId);
-	assert(SUCCEEDED(hr));
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
 
 	// Don't bother switching if we're already on the desired thread.
 	//
-	if (m_PrevThreadId != thd->EngineId)
+	if (m_PrevThreadId != m_TargetThreadId)
 	{
-		hr = sysObj->SetCurrentThreadId(thd->EngineId);
-		assert(SUCCEEDED(hr));
+		hr = sysObj->SetCurrentThreadId(m_TargetThreadId);
+		if (FAILED(hr))
+		{
+			goto exit;
+		}
+		
 		m_DidSwitch = true;
 	}
+exit:
+	return hr;
 }
 
+//------------------------------------------------------------------------------
+// Function: CAutoSwitchThread dtor
+//
+// Description:
+//
+//  Revert to previous thread context.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 CAutoSwitchThread::~CAutoSwitchThread()
 {
 	// Revert to previous thread.
@@ -217,40 +391,88 @@ CAutoSwitchThread::~CAutoSwitchThread()
 	}
 }
 
+//------------------------------------------------------------------------------
+// Function: CAutoSwitchStackFrame ctor
+//
+// Description:
+//
+//  Capture stack frame index to switch to in a subsequent call to Switch().
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 CAutoSwitchStackFrame::CAutoSwitchStackFrame(
 	_In_ DbgScriptHostContext* hostCtxt,
-	_In_ ULONG newIdx) :
+	_In_ ULONG newIdx) 
+	:
 	m_HostCtxt(hostCtxt),
+	m_TargetIdx(newIdx),
 	m_PrevIdx((ULONG)-1),
 	m_DidSwitch(false)
 {
-	IDebugSymbols3* dbgSymbols = hostCtxt->DebugSymbols;
+}
+
+//------------------------------------------------------------------------------
+// Function: CAutoSwitchStackFrame::Switch
+//
+// Description:
+//
+//  Switch to captured stack frame scope.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+_Check_return_ HRESULT
+CAutoSwitchStackFrame::Switch()
+{
+	IDebugSymbols3* dbgSymbols = m_HostCtxt->DebugSymbols;
 	
 	HRESULT hr = dbgSymbols->GetCurrentScopeFrameIndex(&m_PrevIdx);
 	if (FAILED(hr))
 	{
-		hostCtxt->DebugControl->Output(
+		m_HostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			ERR_FAILED_GET_SYM_SCOPE, hr);
+			ERR_FAILED_GET_SYM_SCOPE,
+			hr);
 		goto exit;
 	}
 
-	if (m_PrevIdx != newIdx)
+	if (m_PrevIdx != m_TargetIdx)
 	{
-		hr = dbgSymbols->SetScopeFrameByIndex(newIdx);
+		hr = dbgSymbols->SetScopeFrameByIndex(m_TargetIdx);
 		if (FAILED(hr))
 		{
-			hostCtxt->DebugControl->Output(
+			m_HostCtxt->DebugControl->Output(
 				DEBUG_OUTPUT_ERROR,
-				ERR_FAILED_SET_SYM_SCOPE, hr);
+				ERR_FAILED_SET_SYM_SCOPE,
+				hr);
 			goto exit;
 		}
 		m_DidSwitch = true;
 	}
 exit:
-	;
+	return hr;
 }
 
+//------------------------------------------------------------------------------
+// Function: CAutoSwitchStackFrame dtor
+//
+// Description:
+//
+//  Revert stack frame to previous scope.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 CAutoSwitchStackFrame::~CAutoSwitchStackFrame()
 {
 	if (m_DidSwitch)
@@ -269,27 +491,100 @@ CAutoSwitchStackFrame::~CAutoSwitchStackFrame()
 	}
 }
 
+//------------------------------------------------------------------------------
+// Function: CAutoSetOutputCallback ctor
+//
+// Description:
+//
+//  Trivial
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 CAutoSetOutputCallback::CAutoSetOutputCallback(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ IDebugOutputCallbacks* cb) :
-	m_HostCtxt(hostCtxt)
+	m_HostCtxt(hostCtxt),
+	m_Target(cb),
+	m_Prev(nullptr)
 {
-	IDebugClient* client = hostCtxt->DebugClient;
-	HRESULT hr = client->GetOutputCallbacks(&m_Prev);
-	assert(SUCCEEDED(hr));
-
-	hr = client->SetOutputCallbacks(cb);
-	assert(SUCCEEDED(hr));
 }
-	
-CAutoSetOutputCallback::~CAutoSetOutputCallback()
+
+//------------------------------------------------------------------------------
+// Function: CAutoSetOutputCallback::Install
+//
+// Description:
+//
+//  Install the captured output callbacks.
+//
+// Parameters:
+//
+// Returns:
+//
+//  HRESULT
+//
+// Notes:
+//
+_Check_return_ HRESULT
+CAutoSetOutputCallback::Install()
 {
 	IDebugClient* client = m_HostCtxt->DebugClient;
-	HRESULT hr = client->SetOutputCallbacks(m_Prev);
-	assert(SUCCEEDED(hr));
-	hr;
+	HRESULT hr = client->GetOutputCallbacks(&m_Prev);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
+	hr = client->SetOutputCallbacks(m_Target);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+exit:
+	return hr;
 }
 
+//------------------------------------------------------------------------------
+// Function: CAutoSetOutputCallback dtor
+//
+// Description:
+//
+//  Revert the installed output callbacks.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+CAutoSetOutputCallback::~CAutoSetOutputCallback()
+{
+	if (m_Prev)
+	{
+		IDebugClient* client = m_HostCtxt->DebugClient;
+		HRESULT hr = client->SetOutputCallbacks(m_Prev);
+		assert(SUCCEEDED(hr));
+		hr;
+	}
+}
+
+
+//------------------------------------------------------------------------------
+// Function: UtilFindScriptFile
+//
+// Description:
+//
+//  Lookup a script file in the registered script paths.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 _Check_return_ HRESULT
 UtilFindScriptFile(
 	_In_ DbgScriptHostContext* hostCtxt,
@@ -330,7 +625,7 @@ UtilFindScriptFile(
 	{
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Error: Script file not found in any of the search paths.\n");
+			ERR_SCRIPT_NOT_FOUND);
 		hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
 		goto exit;
 	}
@@ -338,3 +633,179 @@ UtilFindScriptFile(
 exit:
 	return hr;
 }
+
+//------------------------------------------------------------------------------
+// Function: UtilCountStackFrameVariables
+//
+// Description:
+//
+//  Helper to enumerate locals or arguments in a stack frame.
+//
+// Parameters:
+//
+//  thd - Thread in which stack frame resides.
+//
+//  stackFrame - Stack frame to iterate.
+//
+//  flags - Flags passed to GetScopeSymbolGroup2.
+//    Either DEBUG_SCOPE_GROUP_LOCALS or DEBUG_SCOPE_GROUP_ARGUMENTS.
+//
+//  numVars - On return, indicates the number of variables in the stack frame.
+//
+// Returns:
+//
+//  HRESULT.
+//
+// Notes:
+//
+//  You are expected to call UtilEnumStackFrameVariables after this to free
+//  the symbol group returned to you.
+//
+_Check_return_ HRESULT
+UtilCountStackFrameVariables(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ const DbgScriptThread* thd,
+	_In_ const DbgScriptStackFrame* stackFrame,
+	_In_ ULONG flags,
+	_Out_ ULONG* numVars,
+	_Out_ IDebugSymbolGroup2** symGrp)
+{
+	IDebugSymbols3* dbgSymbols = hostCtxt->DebugSymbols;
+	HRESULT hr = S_OK;
+
+	{
+		CAutoSwitchThread autoSwitchThd(hostCtxt, thd);
+
+		hr = autoSwitchThd.Switch();
+		if (FAILED(hr))
+		{
+			goto exit;
+		}
+		
+		CAutoSwitchStackFrame autoSwitchFrame(hostCtxt, stackFrame->FrameNumber);
+
+		hr = autoSwitchFrame.Switch();
+		if (FAILED(hr))
+		{
+			goto exit;
+		}
+		
+		// Take a snapshot of the current symbols in this frame.
+		//
+		hr = dbgSymbols->GetScopeSymbolGroup2(flags, nullptr, symGrp);
+		if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				ERR_FAILED_CREATE_SYM_GRP,
+				hr);
+			goto exit;
+		}
+	}
+
+	hr = (*symGrp)->GetNumberSymbols(numVars);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_NUM_SYM,
+			hr);
+		goto exit;
+	}
+exit:
+	return hr;
+}
+
+//------------------------------------------------------------------------------
+// Function: UtilEnumStackFrameVariables
+//
+// Description:
+//
+//  Helper to enumerate locals or arguments in a stack frame.
+//
+// Parameters:
+//
+//  symGrp - The symbol group that was returned from 'UtilCountStackFrameVariables'.
+//
+//  callback - User callback to be called for every variable found.
+//
+//  userctxt - Optional user context to be passed to the callback.
+//
+// Returns:
+//
+//  HRESULT.
+//
+// Notes:
+//
+_Check_return_ HRESULT
+UtilEnumStackFrameVariables(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ IDebugSymbolGroup2* symGrp,
+	_In_ ULONG numSym,
+	_In_ EnumStackFrameVarsCb callback,
+	_In_opt_ void* userctxt)
+{
+	assert(symGrp);
+	HRESULT hr = S_OK;
+
+	// Iterate the symbols in the group.
+	//
+	for (ULONG i = 0; i < numSym; ++i)
+	{
+		char symName[MAX_SYMBOL_NAME_LEN];
+		char typeName[MAX_SYMBOL_NAME_LEN];
+		DEBUG_SYMBOL_ENTRY entry = { 0 };
+
+		hr = symGrp->GetSymbolEntryInformation(i, &entry);
+		if (hr == E_NOINTERFACE)
+		{
+			// Sometimes variables are optimized away, which can cause this error.
+			// Just leave the size at 0.
+			//
+		}
+		else if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				ERR_FAILED_GET_SYM_ENTRY_INFO,
+				hr);
+			goto exit;
+		}
+
+		hr = symGrp->GetSymbolName(i, symName, _countof(symName), nullptr);
+		if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				ERR_FAILED_GET_SYM_NAME,
+				hr);
+			goto exit;
+		}
+
+		hr = symGrp->GetSymbolTypeName(i, typeName, _countof(typeName), nullptr);
+		if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				ERR_FAILED_GET_SYM_TYPE_NAME,
+				hr);
+			goto exit;
+		}
+		
+		// Call the user-supplied callback.
+		//
+		hr = callback(&entry, symName, typeName, i, userctxt);
+		if (FAILED(hr))
+		{
+			goto exit;
+		}
+	}
+
+
+exit:
+	symGrp->Release();
+	symGrp = nullptr;
+
+	return hr;
+}
+

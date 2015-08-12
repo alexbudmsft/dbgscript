@@ -22,3 +22,25 @@
 	
 #define ERR_FAILED_SET_SYM_SCOPE \
 	"Error: Failed to set symbol scope. Error 0x%08x.\n"
+
+#define ERR_SCRIPT_NOT_FOUND \
+	"Error: Script file not found in any of the search paths.\n"
+
+#define ERR_FAILED_CREATE_SYM_GRP \
+	"Error: Failed to create symbol group. Error 0x%08x.\n"
+
+#define ERR_FAILED_GET_NUM_SYM \
+	"Error: Failed to get number of symbols. Error 0x%08x.\n"
+	
+#define ERR_FAILED_GET_SYM_ENTRY_INFO \
+	"Error: Failed to get symbol entry information. Error 0x%08x.\n"
+
+#define ERR_FAILED_GET_SYM_NAME \
+	"Error: Failed to get symbol name. Error 0x%08x.\n"
+
+#define ERR_FAILED_GET_SYM_TYPE_NAME \
+	"Error: Failed to get symbol type name. Error 0x%08x.\n"
+
+#define ERR_FAILED_INSTALL_OUTPUT_CB \
+	"Error: Failed to install output callback. Error 0x%08x.\n"
+

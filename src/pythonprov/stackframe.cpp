@@ -18,119 +18,85 @@ struct StackFrameObj
 	const ThreadObj* Thread;
 };
 
+static _Check_return_ HRESULT
+buildTupleFromLocals(
+	_In_ DEBUG_SYMBOL_ENTRY* entry,
+	_In_z_ const char* symName,
+	_In_z_ const char* typeName,
+	_In_ ULONG idx,
+	_In_opt_ void* ctxt)
+{
+	HRESULT hr = S_OK;
+	PyObject* tuple = (PyObject*)ctxt;
+
+	PyObject* typedObj = AllocTypedObject(
+		entry->Size,
+		symName,
+		typeName,
+		entry->TypeId,
+		entry->ModuleBase,
+		entry->Offset);
+	if (!typedObj)
+	{
+		// Exception has already been setup by callee.
+		//
+		hr = E_OUTOFMEMORY;
+		goto exit;
+	}
+
+	if (PyTuple_SetItem(tuple, idx, typedObj) != 0)
+	{
+		// Failed to set the item. Do not decref it. PyTuple_SetItem does
+		// it internally.
+		//
+		hr = E_OUTOFMEMORY;
+		goto exit;
+	}
+exit:
+	return hr;
+}
+
 static PyObject*
 getVariablesHelper(
 	_In_ StackFrameObj* stackFrame,
 	_In_ ULONG flags)
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
-
 	CHECK_ABORT(hostCtxt);
 	
-	// TODO: The bulk of this code is not Python-specific. Factor it out when
-	// implementing Ruby provider.
-	//
 	PyObject* tuple = nullptr;
-	IDebugSymbols3* dbgSymbols = GetPythonProvGlobals()->HostCtxt->DebugSymbols;
-	IDebugSymbolGroup2* symGrp = nullptr;
 	HRESULT hr = S_OK;
 	ULONG numSym = 0;
+	IDebugSymbolGroup2* symGrp = nullptr;
 
-	{
-		CAutoSwitchThread autoSwitchThd(hostCtxt, &stackFrame->Thread->Thread);
-		CAutoSwitchStackFrame autoSwitchFrame(hostCtxt, stackFrame->Frame.FrameNumber);
-		if (PyErr_Occurred())
-		{
-			goto exit;
-		}
-
-		// Take a snapshot of the current symbols in this frame.
-		//
-		hr = dbgSymbols->GetScopeSymbolGroup2(flags, nullptr, &symGrp);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "Failed to create symbol group. Error 0x%08x.", hr);
-			goto exit;
-		}
-	}
-
-	hr = symGrp->GetNumberSymbols(&numSym);
+	hr = UtilCountStackFrameVariables(
+		hostCtxt,
+		&stackFrame->Thread->Thread,
+		&stackFrame->Frame,
+		flags,
+		&numSym,
+		&symGrp);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "Failed to get number of symbols. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_OSError, "UtilCountStackFrameVariables failed. Error: 0x%08x", hr);
 		goto exit;
 	}
-
+	
 	tuple = PyTuple_New(numSym);
-
-	// Build a tuple of Symbol objects.
-	//
-	for (ULONG i = 0; i < numSym; ++i)
+	
+	hr = UtilEnumStackFrameVariables(
+		hostCtxt,
+		symGrp,
+		numSym,
+		buildTupleFromLocals,
+		tuple);
+	if (FAILED(hr))
 	{
-		char symName[MAX_SYMBOL_NAME_LEN];
-		char typeName[MAX_SYMBOL_NAME_LEN];
-		DEBUG_SYMBOL_ENTRY entry = { 0 };
-
-		hr = symGrp->GetSymbolEntryInformation(i, &entry);
-		if (hr == E_NOINTERFACE)
-		{
-			// Sometimes variables are optimized away, which can cause this error.
-			// Just leave the size at 0.
-			//
-		}
-		else if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "Failed to get symbol entry information. Error 0x%08x.", hr);
-			goto exit;
-		}
-
-		hr = symGrp->GetSymbolName(i, symName, _countof(symName), nullptr);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "Failed to get symbol name. Error 0x%08x.", hr);
-			goto exit;
-		}
-
-		hr = symGrp->GetSymbolTypeName(i, typeName, _countof(typeName), nullptr);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "Failed to get symbol type name. Error 0x%08x.", hr);
-			goto exit;
-		}
-
-		PyObject* typedObj = AllocTypedObject(
-			entry.Size,
-			symName,
-			typeName,
-			entry.TypeId,
-			entry.ModuleBase,
-			entry.Offset);
-		if (!typedObj)
-		{
-			// Exception has already been setup by callee.
-			//
-			hr = E_OUTOFMEMORY;
-			goto exit;
-		}
-
-		if (PyTuple_SetItem(tuple, i, typedObj) != 0)
-		{
-			// Failed to set the item. Do not decref it. PyTuple_SetItem does
-			// it internally.
-			//
-			hr = E_OUTOFMEMORY;
-			goto exit;
-		}
+		PyErr_Format(PyExc_OSError, "UtilEnumStackFrameVariables failed. Error: 0x%08x", hr);
+		goto exit;
 	}
-
-
+	
 exit:
-	if (symGrp)
-	{
-		symGrp->Release();
-		symGrp = nullptr;
-	}
-
 	if (FAILED(hr))
 	{
 		// Release the tuple. This will release any held object inside the tuple.
