@@ -18,66 +18,15 @@ struct StackFrameObj
 	const ThreadObj* Thread;
 };
 
-class CAutoSwitchStackFrame
-{
-public:
-	CAutoSwitchStackFrame(
-		_In_ ULONG newIdx);
-	~CAutoSwitchStackFrame();
-private:
-	ULONG m_PrevIdx;
-	bool m_DidSwitch;
-};
-
-CAutoSwitchStackFrame::CAutoSwitchStackFrame(
-	_In_ ULONG newIdx) :
-	m_PrevIdx((ULONG)-1),
-	m_DidSwitch(false)
-{
-	IDebugSymbols3* dbgSymbols = GetPythonProvGlobals()->HostCtxt->DebugSymbols;
-	
-	HRESULT hr = dbgSymbols->GetCurrentScopeFrameIndex(&m_PrevIdx);
-	if (FAILED(hr))
-	{
-		PyErr_Format(PyExc_OSError, "Failed to get symbol scope. Error 0x%08x.", hr);
-		goto exit;
-	}
-
-	if (m_PrevIdx != newIdx)
-	{
-		hr = dbgSymbols->SetScopeFrameByIndex(newIdx);
-		if (FAILED(hr))
-		{
-			PyErr_Format(PyExc_OSError, "Failed to set symbol scope. Error 0x%08x.", hr);
-			goto exit;
-		}
-		m_DidSwitch = true;
-	}
-exit:
-	;
-}
-
-CAutoSwitchStackFrame::~CAutoSwitchStackFrame()
-{
-	if (m_DidSwitch)
-	{
-		IDebugSymbols3* dbgSymbols = GetPythonProvGlobals()->HostCtxt->DebugSymbols;
-		if (m_PrevIdx != (ULONG)-1)
-		{
-			HRESULT hr = dbgSymbols->SetScopeFrameByIndex(m_PrevIdx);
-			if (FAILED(hr))
-			{
-				PyErr_Format(PyExc_OSError, "Failed to set symbol scope. Error 0x%08x.", hr);
-			}
-		}
-	}
-}
-
 static PyObject*
 getVariablesHelper(
 	_In_ StackFrameObj* stackFrame,
 	_In_ ULONG flags)
 {
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+	
 	// TODO: The bulk of this code is not Python-specific. Factor it out when
 	// implementing Ruby provider.
 	//
@@ -88,8 +37,8 @@ getVariablesHelper(
 	ULONG numSym = 0;
 
 	{
-		CAutoSwitchThread autoSwitchThd(GetPythonProvGlobals()->HostCtxt, &stackFrame->Thread->Thread);
-		CAutoSwitchStackFrame autoSwitchFrame(stackFrame->Frame.FrameNumber);
+		CAutoSwitchThread autoSwitchThd(hostCtxt, &stackFrame->Thread->Thread);
+		CAutoSwitchStackFrame autoSwitchFrame(hostCtxt, stackFrame->Frame.FrameNumber);
 		if (PyErr_Occurred())
 		{
 			goto exit;
@@ -198,9 +147,6 @@ StackFrame_get_locals(
 	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
-	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
-
-	CHECK_ABORT(hostCtxt);
 	StackFrameObj* stackFrame = (StackFrameObj*)self;
 	return getVariablesHelper(stackFrame, DEBUG_SCOPE_GROUP_LOCALS);
 }
@@ -210,9 +156,6 @@ StackFrame_get_args(
 	_In_ PyObject* self,
 	_In_ PyObject* /* args */)
 {
-	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
-
-	CHECK_ABORT(hostCtxt);
 	StackFrameObj* stackFrame = (StackFrameObj*)self;
 	return getVariablesHelper(stackFrame, DEBUG_SCOPE_GROUP_ARGUMENTS);
 }

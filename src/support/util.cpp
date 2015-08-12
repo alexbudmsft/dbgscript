@@ -217,6 +217,79 @@ CAutoSwitchThread::~CAutoSwitchThread()
 	}
 }
 
+CAutoSwitchStackFrame::CAutoSwitchStackFrame(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ ULONG newIdx) :
+	m_HostCtxt(hostCtxt),
+	m_PrevIdx((ULONG)-1),
+	m_DidSwitch(false)
+{
+	IDebugSymbols3* dbgSymbols = hostCtxt->DebugSymbols;
+	
+	HRESULT hr = dbgSymbols->GetCurrentScopeFrameIndex(&m_PrevIdx);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_SYM_SCOPE, hr);
+		goto exit;
+	}
+
+	if (m_PrevIdx != newIdx)
+	{
+		hr = dbgSymbols->SetScopeFrameByIndex(newIdx);
+		if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				ERR_FAILED_SET_SYM_SCOPE, hr);
+			goto exit;
+		}
+		m_DidSwitch = true;
+	}
+exit:
+	;
+}
+
+CAutoSwitchStackFrame::~CAutoSwitchStackFrame()
+{
+	if (m_DidSwitch)
+	{
+		IDebugSymbols3* dbgSymbols = m_HostCtxt->DebugSymbols;
+		if (m_PrevIdx != (ULONG)-1)
+		{
+			HRESULT hr = dbgSymbols->SetScopeFrameByIndex(m_PrevIdx);
+			if (FAILED(hr))
+			{
+				m_HostCtxt->DebugControl->Output(
+					DEBUG_OUTPUT_ERROR,
+					ERR_FAILED_SET_SYM_SCOPE, hr);
+			}
+		}
+	}
+}
+
+CAutoSetOutputCallback::CAutoSetOutputCallback(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ IDebugOutputCallbacks* cb) :
+	m_HostCtxt(hostCtxt)
+{
+	IDebugClient* client = hostCtxt->DebugClient;
+	HRESULT hr = client->GetOutputCallbacks(&m_Prev);
+	assert(SUCCEEDED(hr));
+
+	hr = client->SetOutputCallbacks(cb);
+	assert(SUCCEEDED(hr));
+}
+	
+CAutoSetOutputCallback::~CAutoSetOutputCallback()
+{
+	IDebugClient* client = m_HostCtxt->DebugClient;
+	HRESULT hr = client->SetOutputCallbacks(m_Prev);
+	assert(SUCCEEDED(hr));
+	hr;
+}
+
 _Check_return_ HRESULT
 UtilFindScriptFile(
 	_In_ DbgScriptHostContext* hostCtxt,

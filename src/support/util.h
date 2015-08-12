@@ -62,31 +62,30 @@ UtilFindScriptFile(
 	_Out_writes_(cchFullPath) WCHAR* fullPath,
 	_In_ int cchFullPath);
 
-// TODO: Move impl. to .cpp and add error handling.
-//
+class CAutoSwitchStackFrame
+{
+public:
+	CAutoSwitchStackFrame(
+		_In_ DbgScriptHostContext* hostCtxt,
+		_In_ ULONG newIdx);
+	~CAutoSwitchStackFrame();
+	
+private:
+	DbgScriptHostContext* m_HostCtxt;
+	ULONG m_PrevIdx;
+	bool m_DidSwitch;
+};
+
 class CAutoSetOutputCallback
 {
 public:
 	CAutoSetOutputCallback(
 		_In_ DbgScriptHostContext* hostCtxt,
-		_In_ IDebugOutputCallbacks* cb) :
-		m_HostCtxt(hostCtxt)
-	{
-		IDebugClient* client = hostCtxt->DebugClient;
-		HRESULT hr = client->GetOutputCallbacks(&m_Prev);
-		assert(SUCCEEDED(hr));
-
-		hr = client->SetOutputCallbacks(cb);
-		assert(SUCCEEDED(hr));
-	}
-	~CAutoSetOutputCallback()
-	{
-		IDebugClient* client = m_HostCtxt->DebugClient;
-		HRESULT hr = client->SetOutputCallbacks(m_Prev);
-		assert(SUCCEEDED(hr));
-		hr;
-	}
-private:
+		_In_ IDebugOutputCallbacks* cb);
+		
+	~CAutoSetOutputCallback();
+	
+ private:
 	DbgScriptHostContext* m_HostCtxt;
 	IDebugOutputCallbacks* m_Prev;
 };

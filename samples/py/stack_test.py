@@ -1,11 +1,11 @@
-from dbgscript import *
+import dbgscript
 
-cur_thd = Process.current_thread
+cur_thd = dbgscript.current_thread()
 
 print ("Engine Thd ID:", cur_thd.engine_id, "Sys Id:", cur_thd.thread_id)
 stack = cur_thd.get_stack()
 
-frameidx = 0xd
+frameidx = 2
 
 locals = stack[frameidx].get_locals()
 args = stack[frameidx].get_args()
