@@ -11,6 +11,8 @@ set FLAVORS=Debug RelWithDebInfo
 set PYDLISTFILE=pydlist.txt
 dir /s/b deps\python\DLLs\*.pyd > %PYDLISTFILE%
 
+set LUA_VER=5.3.1
+
 for %%f in (%FLAVORS%) do (
     echo Deploying %%f
     echo ---------------------
@@ -20,11 +22,15 @@ for %%f in (%FLAVORS%) do (
     md !OUTDIR!
     md !OUTDIR!\pythonprov
     md !OUTDIR!\rubyprov
+    md !OUTDIR!\luaprov
     
+    set LUA_BIN_DIR=debug
     set INVERSE=
+    
     if /I "%%f" == "debug" (
         set PYTHON_DLL=!PYTHON_DLL!_d
     ) else (
+        set LUA_BIN_DIR=release
 		set INVERSE=/v
     )
     
@@ -51,6 +57,17 @@ for %%f in (%FLAVORS%) do (
     REM Copy all standard native modules
     REM
     for /F %%a in ('findstr !INVERSE! _d %PYDLISTFILE%') do copy %%a deploy\%%f\pythonprov\
+    
+    REM ========================================================================
+    REM Copy Lua provider.
+    REM
+    copy build\src\luaprov\%%f\luaprov.dll deploy\%%f\luaprov\
+    copy build\src\luaprov\%%f\luaprov.pdb deploy\%%f\luaprov\
+    
+    REM Copy the Lua DLLs
+    REM
+    copy deps\lua-%LUA_VER%\bin\!LUA_BIN_DIR!\lua-%LUA_VER%.dll deploy\%%f\luaprov\
+    copy deps\lua-%LUA_VER%\bin\!LUA_BIN_DIR!\lua-%LUA_VER%.pdb deploy\%%f\luaprov\
     
     REM ========================================================================
     REM Copy Ruby provider.

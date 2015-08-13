@@ -107,13 +107,40 @@ _Check_return_ HRESULT
 CLuaScriptProvider::RunString(
 	_In_z_ const char* /* scriptString */)
 {
-	lua_State* L = luaL_newstate();
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	HRESULT hr = S_OK;
+	lua_State* L = nullptr;
+
+	L = luaL_newstate();
 
 	luaL_openlibs(L);
 
-	luaL_loadstring(L, "1");
+	int err = luaL_loadstring(L, "print(1)");
+	if (err)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: luaL_loadstring failed: %d\n", err);
+		hr = E_FAIL;
+		goto exit;
+	}
 
-	lua_close(L);
+	err = lua_pcall(L, 0, 0, 0);
+	if (err)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: lua_pcall failed: %d\n", err);
+		hr = E_FAIL;
+		goto exit;
+	}
+	
+exit:
+	if (L)
+	{
+		lua_close(L);
+		L = nullptr;
+	}
 	return S_OK;
 }
 
