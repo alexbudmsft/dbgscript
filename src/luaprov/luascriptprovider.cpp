@@ -16,6 +16,9 @@
 #include "common.h"
 
 #include <iscriptprovider.h>
+#include <lua.hpp>
+#include <lauxlib.h>
+#include <lualib.h>
 
 // Lua modules and classes.
 //
@@ -104,8 +107,13 @@ _Check_return_ HRESULT
 CLuaScriptProvider::RunString(
 	_In_z_ const char* /* scriptString */)
 {
-	// TODO:
-	//
+	lua_State* L = luaL_newstate();
+
+	luaL_openlibs(L);
+
+	luaL_loadstring(L, "1");
+
+	lua_close(L);
 	return S_OK;
 }
 

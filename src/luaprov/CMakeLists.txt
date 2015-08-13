@@ -22,4 +22,4 @@ add_library(luaprov SHARED ${SOURCES})
 
 # luaprov.dll depends on dbgscriptsupport.lib
 #
-target_link_libraries (luaprov dbgscriptsupport)
+target_link_libraries (luaprov dbgscriptsupport lua5.3.1)
