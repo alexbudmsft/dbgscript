@@ -129,7 +129,14 @@ loadAndCreateScriptProvider(
 	WCHAR dllPath[MAX_PATH] = {};
 	StringCchCopy(STRING_AND_CCH(dllPath), info->DllFileName);
 	WCHAR* lastBackSlash = wcsrchr(dllPath, L'\\');
-	assert(lastBackSlash);
+	if (!lastBackSlash)
+	{
+		GetHostContext()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Invalid DLL Path: %ls\n", info->DllFileName);
+		hr = E_INVALIDARG;
+		goto exit;
+	}
 
 	// Null out the slash to get only the directory path of the DLL.
 	//
