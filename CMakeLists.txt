@@ -20,3 +20,4 @@ target_link_libraries (dbgscript dbgscriptsupport dbgeng.lib)
 #
 add_subdirectory(src/support)
 add_subdirectory(src/pythonprov)
+add_subdirectory(src/luaprov)
