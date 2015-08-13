@@ -1,5 +1,5 @@
 |logo| DbgScript
-====================================================
+****************
 
 DbgScript is a multi-script debugger extension.
 
@@ -18,25 +18,17 @@ information about it, such as its call stack.
 
 DbgScript comes with two first-party providers: `Python`_ and `Ruby`_.
 
-Contents:
-
 .. toctree::
    :maxdepth: 2
-   
+
+   Installation
    Basics
    Python
    Ruby
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
 .. |logo| image:: logo.svg
-    :width: 80px
+    :width: 80 px
     :height: 80px
 
 .. _`DbgEng extension`: https://msdn.microsoft.com/en-us/library/windows/hardware/ff551059(v=vs.85).aspx
