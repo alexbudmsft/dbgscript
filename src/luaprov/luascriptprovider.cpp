@@ -16,6 +16,11 @@
 #include "common.h"
 
 #include <iscriptprovider.h>
+
+// Enable Lua StdIO redirection.
+//
+#define LUA_REDIRECT
+
 #include <lua.hpp>
 #include <lauxlib.h>
 #include <lualib.h>
@@ -30,7 +35,7 @@ class CLuaScriptProvider : public IScriptProvider
 {
 public:
 	CLuaScriptProvider();
-
+	
 	_Check_return_ HRESULT
 	Init() override;
 	
@@ -51,6 +56,10 @@ public:
 
 	void
 	Cleanup() override;
+	
+private:
+	
+	lua_State* LuaState;
 };
 
 CLuaScriptProvider::CLuaScriptProvider()
@@ -64,6 +73,81 @@ CLuaScriptProvider::Init()
 	return StartVM();
 }
 
+void 
+luaOutputCb(
+	__in lua_OutputType out_type,
+	__in const char* buf)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	hostCtxt->DebugControl->Output(
+		out_type == lua_outputNormal ? DEBUG_OUTPUT_NORMAL : DEBUG_OUTPUT_ERROR,
+		buf);
+}
+
+void
+luaInputCb(
+	__out char* buf,
+	__in size_t len)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	hostCtxt->DebugControl->Input(buf, (ULONG)len, nullptr);
+}
+
+// Get one char at a time from stdin. Used by io.read() in lua.
+//
+int
+luaGetCCb()
+{
+	int ret = 0;
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	HRESULT hr = S_OK;
+	if (!GetLuaProvGlobals()->ValidInputChars)
+	{
+		ULONG charsRead = 0;
+
+		// If the input buffer is empty, ask the user for more input.
+		//
+		hr = hostCtxt->DebugControl->Input(
+			GetLuaProvGlobals()->InputBuf,
+			_countof(GetLuaProvGlobals()->InputBuf) - 1,
+			&charsRead);
+		if (FAILED(hr))
+		{
+			ret = EOF;
+			goto exit;
+		}
+
+		// Add a newline at the end to simulate a console-style read line.
+		// We can always do this because we told Input() that our buffer is
+		// smaller than it really is. So we always have at least one extra char
+		// after charsRead. The 'charsRead' index points one-past the NUL char.
+		//
+		// NOTE: NUL termination doesn't even matter here: We're not serving
+		// strings. We're serving characters.
+		//
+		GetLuaProvGlobals()->InputBuf[charsRead - 1] = '\n';
+
+		// NUL terminating just for cleanliness and viewing strings in debugger.
+		// Not actually needed.
+		//
+		GetLuaProvGlobals()->InputBuf[charsRead] = 0;
+
+		// Don't even bother serving back the NUL: The caller is not interested.
+		// I.e. charsRead, not charsRead + 1.
+		//
+		GetLuaProvGlobals()->ValidInputChars = charsRead;
+
+		GetLuaProvGlobals()->NextInputChar = 0;
+	}
+
+	// Otherwise serve our input buffer one char at a time.
+	//
+	ret = GetLuaProvGlobals()->InputBuf[GetLuaProvGlobals()->NextInputChar++];
+	GetLuaProvGlobals()->ValidInputChars--;
+exit:
+	return ret;
+}
+
 _Check_return_ HRESULT
 CLuaScriptProvider::Run(
 	_In_ int argc,
@@ -72,7 +156,8 @@ CLuaScriptProvider::Run(
 	HRESULT hr = S_OK;
 	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
 	WCHAR fullScriptName[MAX_PATH] = {};
-	
+	size_t cConverted = 0;
+	char ansiScriptFileName[MAX_PATH] = {};
 	if (!argc)
 	{
 		hostCtxt->DebugControl->Output(
@@ -97,25 +182,25 @@ CLuaScriptProvider::Run(
 	//
 	argv[0] = fullScriptName;
 
-	// TODO.
+	// Convert to ANSI.
 	//
-exit:
-	return hr;
-}
+	errno_t err = wcstombs_s(
+		&cConverted,
+		ansiScriptFileName,
+		sizeof ansiScriptFileName,
+		fullScriptName,
+		sizeof ansiScriptFileName - 1);
+	if (err)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Failed to convert wide string to ANSI: %d.\n", err);
+		hr = E_FAIL;
+		goto exit;
+	}
 
-_Check_return_ HRESULT
-CLuaScriptProvider::RunString(
-	_In_z_ const char* /* scriptString */)
-{
-	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
-	HRESULT hr = S_OK;
-	lua_State* L = nullptr;
 
-	L = luaL_newstate();
-
-	luaL_openlibs(L);
-
-	int err = luaL_loadstring(L, "print(1)");
+	err = luaL_loadfile(LuaState, ansiScriptFileName);
 	if (err)
 	{
 		hostCtxt->DebugControl->Output(
@@ -125,7 +210,7 @@ CLuaScriptProvider::RunString(
 		goto exit;
 	}
 
-	err = lua_pcall(L, 0, 0, 0);
+	err = lua_pcall(LuaState, 0, 0, 0);
 	if (err)
 	{
 		hostCtxt->DebugControl->Output(
@@ -136,25 +221,56 @@ CLuaScriptProvider::RunString(
 	}
 	
 exit:
-	if (L)
-	{
-		lua_close(L);
-		L = nullptr;
-	}
+	return hr;
+}
+
+_Check_return_ HRESULT
+CLuaScriptProvider::RunString(
+	_In_z_ const char* /* scriptString */)
+{
+	// TODO
 	return S_OK;
 }
 
 _Check_return_ HRESULT
 CLuaScriptProvider::StartVM()
 {
+	HRESULT hr = S_OK;
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	lua_StdioRedir redir = { 0 };
+	LuaState = luaL_newstate();
+	if (!LuaState)
+	{
+		hr = E_OUTOFMEMORY;
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: luaL_newstate failed.\n");
+		goto exit;
+	}
 
-	return S_OK;
+	luaL_openlibs(LuaState);
+
+	redir.cb_output = luaOutputCb;
+	redir.cb_input = luaInputCb;
+	redir.cb_getc = luaGetCCb;
+
+	// This is the only global object. But no different from the global
+	// stdout/in/err that Lua uses already.
+	//
+	lua_set_stdio_callbacks(&redir);
+
+exit:
+	return hr;
 }
 
 void
 CLuaScriptProvider::StopVM()
 {
-
+	if (LuaState)
+	{
+		lua_close(LuaState);
+		LuaState = nullptr;
+	}
 }
 
 void 
