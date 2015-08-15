@@ -17,6 +17,7 @@
 
 #include <iscriptprovider.h>
 #include "dbgscript.h"  // dbgscript module.
+#include "typedobject.h"
 
 // Lua modules and classes.
 //
@@ -342,6 +343,11 @@ CLuaScriptProvider::StartVM()
 	// Open dbgscript module.
 	//
 	luaL_requiref(LuaState, "dbgscript", luaopen_dbgscript, 1 /* set global */);
+
+	// Open TypedObject class.
+	// For now make it global. Later it won't be creatable directly.
+	//
+	luaL_requiref(LuaState, "TypedObject", luaopen_TypedObject, 1 /* set global */);
 
 exit:
 	return hr;

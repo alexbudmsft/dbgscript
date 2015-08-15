@@ -17,6 +17,7 @@ set (SOURCES
 	luascriptprovider.cpp
 	dbgscript.cpp
 	typedobject.cpp
+	classprop.cpp
 	)
 
 # Make a DLL.

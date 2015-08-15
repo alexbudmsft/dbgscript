@@ -1,9 +1,23 @@
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: typedobject.cpp
+// @Author: alexbud
+//
+// Purpose:
+//
+//  TypedObject class for Lua.
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************  
+
 #include "typedobject.h"
+#include "classprop.h"
 #include <strsafe.h>
 
 #define TYPED_OBJECT_METATABLE  "dbgscript.TypedObject"
-
-#define LUA_PROPERTIES_KEY "__properties"
 
 //------------------------------------------------------------------------------
 // Function: TypedObject_new
@@ -55,6 +69,11 @@ TypedObject_new(lua_State* L)
 //
 //  L - pointer to Lua state.
 //
+// Input Stack:
+//
+//  Param 1 is the object.
+//  Param 2 is the key. Key could be an int or string.
+//
 // Returns:
 //
 //  One result: Varies.
@@ -62,9 +81,56 @@ TypedObject_new(lua_State* L)
 // Notes:
 //
 static int
-TypedObject_index(lua_State* /*L*/)
+TypedObject_index(lua_State* L)
 {
-	return 0;
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+
+	if (lua_isinteger(L, 2))
+	{
+		// Attempt array access.
+		//
+		return 0; // TODO
+	}
+	else
+	{
+		// Attempt dbgeng-field or Lua-class property access.
+		//
+		luaL_checktype(L, 2, LUA_TSTRING);
+		
+		//
+		// First check if the key is a Lua-class field.
+		//
+		
+		// Push the C function we're about to call.
+		//
+		lua_pushcfunction(L, LuaClassPropIndexer);
+
+		// Param 1: Get the typed object's metatable and push it on the top.
+		//
+		lua_getmetatable(L, 1);
+
+		// Param 2: Copy the key and push it on top.
+		//
+		lua_pushvalue(L, 2);
+
+		// Call it.
+		//
+		lua_call(L, 2, 1);
+
+		if (!lua_isnil(L, -1))
+		{
+			return 1;
+		}
+		else
+		{
+			// Else fall back to dbg-eng field lookup.
+			//
+			return 0; // TODO
+		}
+	}
 }
 
 // Static (class) methods.
@@ -76,25 +142,6 @@ static const luaL_Reg g_typedObjectFunc[] =
 	{nullptr, nullptr}  // sentinel.
 };
 
-// LuaClassProperty - simulate Python/C# properties with getters/setters.
-//
-struct LuaClassProperty
-{
-	// Name of property.
-	//
-	const char* Name;
-
-	// Getter function. Takes an object, key.
-	//
-	lua_CFunction Get;
-
-	// Setter function. Takes a object, key, value.
-	//
-	// May be NULL, which indicates a read-only property.
-	//
-	lua_CFunction Set;
-};
-
 static const LuaClassProperty x_TypedObjectProps[] =
 {
 	// Name   Getter   Setter
@@ -103,57 +150,6 @@ static const LuaClassProperty x_TypedObjectProps[] =
 	{ "size", nullptr, nullptr },
 	{ "type", nullptr, nullptr },
 };
-
-void
-LuaBuildPropertyTable(
-	_In_ lua_State* L,
-	_In_reads_(count) const LuaClassProperty* props,
-	_In_ int count)
-{
-	lua_createtable(L, 0 /* array elems */, count /* hash elems */);
-	
-	for (int i = 0; i < count; ++i)
-	{
-		// Allocate a new table for the getter/setter.
-		//
-		lua_createtable(L, 0 /* array elems */, 2 /* hash elems */);
-
-		// Insert getter. (maybe NULL)
-		//
-		lua_pushcfunction(L, props[i].Get);
-		
-		lua_setfield(L, -2, "get");
-		
-		// Insert setter. (maybe NULL)
-		//
-		lua_pushcfunction(L, props[i].Set);
-		lua_setfield(L, -2, "set");
-
-		// The get/set table is on the top of the stack. Create a key whose
-		// name is the property name with a value of our get/set table in the
-		// input properties table.
-		//
-		lua_setfield(L, -2, props[i].Name);
-
-		// lua_setfield always pops the key and value on return, so the top of
-		// stack at each point is the properties table.
-		//
-	}
-}
-
-void
-LuaSetProperties(
-	_In_ lua_State* L,
-	_In_reads_(count) const LuaClassProperty* props,
-	_In_ int count)
-{
-	LuaBuildPropertyTable(L, props, count);
-
-	// Now we have a properties table on top of the stack. Set the caller's
-	// top-table properties field to point at this table.
-	//
-	lua_setfield(L, -2, LUA_PROPERTIES_KEY);
-}
 
 // Instance methods.
 //
