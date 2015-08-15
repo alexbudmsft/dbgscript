@@ -68,8 +68,8 @@ CLuaScriptProvider::Init()
 
 void 
 luaOutputCb(
-	__in lua_OutputType out_type,
-	__in const char* buf)
+	_In_ lua_OutputType out_type,
+	_In_ const char* buf)
 {
 	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
 	hostCtxt->DebugControl->Output(
@@ -79,11 +79,21 @@ luaOutputCb(
 
 void
 luaInputCb(
-	__out char* buf,
-	__in size_t len)
+	_Out_writes_(len) char* buf,
+	_In_ size_t len)
 {
+	ULONG cchRead = 0;
 	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
-	hostCtxt->DebugControl->Input(buf, (ULONG)len, nullptr);
+
+	// Pretend the buffer is one smaller than it really is so we can stuff a
+	// newline in there.
+	//
+	hostCtxt->DebugControl->Input(buf, (ULONG)len - 1, &cchRead);
+
+	// Append a newline to simulate fgets.
+	//
+	buf[cchRead - 1] = '\n';
+	buf[cchRead] = 0;
 }
 
 // Get one char at a time from stdin. Used by io.read() in lua.
