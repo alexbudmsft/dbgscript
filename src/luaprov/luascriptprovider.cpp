@@ -161,7 +161,44 @@ CLuaScriptProvider::Run(
 	WCHAR fullScriptName[MAX_PATH] = {};
 	size_t cConverted = 0;
 	char ansiScriptFileName[MAX_PATH] = {};
-	if (!argc)
+
+	int i = 0;
+	bool debug = false;
+
+	// TODO: Generalize arg processing.
+	//
+	for (i = 0; i < argc; ++i)
+	{
+		// Terminate at first non-switch.
+		//
+		if (argv[i][0] != L'-')
+		{
+			break;
+		}
+
+		// We have a switch.
+		//
+		if (!wcscmp(argv[i], L"-d"))
+		{
+			debug = true;
+		}
+		else
+		{
+			hr = E_INVALIDARG;
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: Unknown switch '%ls'.\n", argv[i]);
+			goto exit;
+		}		
+	}
+
+	// The left over args go to the script itself.
+	//
+	WCHAR** argsForScript = &argv[i];
+	int cArgsForScript = argc - i;
+	assert(cArgsForScript >= 0);
+	
+	if (!cArgsForScript)
 	{
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
@@ -169,21 +206,21 @@ CLuaScriptProvider::Run(
 		hr = E_INVALIDARG;
 		goto exit;
 	}
-
+	
 	// To to lookup the script in the registered !scriptpath's.
 	//
 	hr = UtilFindScriptFile(
 		hostCtxt,
-		argv[0],
+		argsForScript[0],
 		STRING_AND_CCH(fullScriptName));
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
 
-	// Replace argv[0] with the fully qualified path.
+	// Replace first arg with the fully qualified path.
 	//
-	argv[0] = fullScriptName;
+	argsForScript[0] = fullScriptName;
 
 	// Convert to ANSI.
 	//
@@ -202,7 +239,6 @@ CLuaScriptProvider::Run(
 		goto exit;
 	}
 
-
 	err = luaL_loadfile(LuaState, ansiScriptFileName);
 	if (err)
 	{
@@ -217,13 +253,18 @@ CLuaScriptProvider::Run(
 		goto exit;
 	}
 
-	// Push 'debug' table on top of stack (-1)
+	// Push 'debug' [module] table on top of stack (-1)
 	//
 	lua_getglobal(LuaState, "debug");
 
-	// Push 'traceback' table on top of stack (-1). 'debug' is -2.
+	// Push 'traceback'/'debug' function on top of stack (-1).
 	//
-	lua_getfield(LuaState, -1, "traceback");
+	// 'debug' [module] is at -2.
+	//
+	// The debug function acts as a JIT debugger if an exception is thrown.
+	// It breaks into a REPL allowing arbitrary lua statements to be executed.
+	//
+	lua_getfield(LuaState, -1, debug ? "debug" : "traceback");
 
 	// Remove 'debug' table.
 	//
@@ -234,6 +275,9 @@ CLuaScriptProvider::Run(
 	// Move 'traceback' below the user function.
 	//
 	lua_insert(LuaState, -2);
+
+	// TODO: Establish 'args' global so script can have params.
+	//
 
 	// Call what's on the top of the stack.
 	//
