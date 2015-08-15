@@ -14,7 +14,11 @@ _Check_return_ HRESULT
 CPythonScriptProvider::StartVM()
 {
 	HRESULT hr = S_OK;
+
+	// Append dbgscript module to builtin table.
+	//
 	PyImport_AppendInittab(x_DbgScriptModuleName, PyInit_dbgscript);
+	
 	WCHAR dllPath[MAX_PATH] = {};
 	GetModuleFileName(GetPythonProvGlobals()->HModule, dllPath, _countof(dllPath));
 	WCHAR* lastBackSlash = wcsrchr(dllPath, L'\\');
@@ -31,9 +35,20 @@ CPythonScriptProvider::StartVM()
 
 	Py_Initialize();
 
-	// Import 'dbgscript' module.
+	// Load 'dbgscript' module.
 	//
-	PyImport_ImportModule(x_DbgScriptModuleName);
+	PyObject* dbgscriptMod = PyImport_ImportModule(x_DbgScriptModuleName);
+
+	// Get a handle to the main module. Return value is a borrowed ref.
+	//
+	PyObject* mainMod = PyImport_AddModule("__main__");
+
+	// Expose 'dbgscript' as a global variable on the __main__ module,
+	// making it usable without an explicit "import dbgscript" statement.
+	//
+	PyObject_SetAttrString(mainMod, x_DbgScriptModuleName, dbgscriptMod);
+
+	Py_XDECREF(dbgscriptMod);
 
 	// Prevent sys.exit.
 	//
