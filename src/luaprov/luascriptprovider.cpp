@@ -16,14 +16,7 @@
 #include "common.h"
 
 #include <iscriptprovider.h>
-
-// Enable Lua StdIO redirection.
-//
-#define LUA_REDIRECT
-
-#include <lua.hpp>
-#include <lauxlib.h>
-#include <lualib.h>
+#include "dbgscript.h"  // dbgscript module.
 
 // Lua modules and classes.
 //
@@ -248,8 +241,8 @@ CLuaScriptProvider::StartVM()
 		goto exit;
 	}
 
-	luaL_openlibs(LuaState);
-
+	// Redirect stdio.
+	//
 	redir.cb_output = luaOutputCb;
 	redir.cb_input = luaInputCb;
 	redir.cb_getc = luaGetCCb;
@@ -258,6 +251,14 @@ CLuaScriptProvider::StartVM()
 	// stdout/in/err that Lua uses already.
 	//
 	lua_set_stdio_callbacks(&redir);
+
+	// Open standard libs.
+	//
+	luaL_openlibs(LuaState);
+
+	// Open dbgscript module.
+	//
+	luaL_requiref(LuaState, "dbgscript", luaopen_dbgscript, 1 /* set global */);
 
 exit:
 	return hr;

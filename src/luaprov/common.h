@@ -1,8 +1,31 @@
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: common.h
+// @Author: alexbud
+//
+// Purpose:
+//
+//  Common header for Lua provider.
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************  
+
 #pragma once
 
 #include <hostcontext.h>
 #include "../common.h"
 #include "../support/util.h"
+
+// Enable Lua StdIO redirection extension.
+//
+#define LUA_REDIRECT
+
+#include <lua.hpp>
+#include <lauxlib.h>
+#include <lualib.h>
 
 struct LuaProvGlobals
 {

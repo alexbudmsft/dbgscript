@@ -15,6 +15,7 @@ set (SOURCES
 	version.rc
 	dllmain.cpp
 	luascriptprovider.cpp
+	dbgscript.cpp
 	)
 
 # Make a DLL.
