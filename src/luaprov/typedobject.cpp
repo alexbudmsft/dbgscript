@@ -78,7 +78,7 @@ AllocTypedObject(
 //
 // Description:
 //
-//  Indexer for typed objects.
+//  Read indexer for typed objects.
 //
 // Parameters:
 //
@@ -86,7 +86,7 @@ AllocTypedObject(
 //
 // Input Stack:
 //
-//  Param 1 is the object.
+//  Param 1 is the user datum (TypedObject).
 //  Param 2 is the key. Key could be an int or string.
 //
 // Returns:
@@ -124,9 +124,9 @@ TypedObject_index(lua_State* L)
 		//
 		lua_pushcfunction(L, LuaClassPropIndexer);
 
-		// Param 1: Get the typed object's metatable and push it on the top.
+		// Param 1: push the typed object on the top.
 		//
-		lua_getmetatable(L, 1);
+		lua_pushvalue(L, 1);
 
 		// Param 2: Copy the key and push it on top.
 		//
@@ -149,6 +149,41 @@ TypedObject_index(lua_State* L)
 	}
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_getname
+//
+// Description:
+//
+//  Get
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the typed object.
+//
+// Returns:
+//
+//  One result: The name of the TypedObject.
+//
+// Notes:
+//
+static int
+TypedObject_getname(lua_State* L)
+{
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+
+	lua_pushstring(L, typObj->Name);
+	
+	return 1;
+}
+
 // Static (class) methods.
 //
 static const luaL_Reg g_typedObjectFunc[] =
@@ -163,7 +198,7 @@ static const LuaClassProperty x_TypedObjectProps[] =
 {
 	// Name   Getter   Setter
 	// -------------------------
-	{ "name", nullptr, nullptr },
+	{ "name", TypedObject_getname, nullptr },
 	{ "size", nullptr, nullptr },
 	{ "type", nullptr, nullptr },
 };

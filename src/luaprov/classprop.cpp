@@ -101,16 +101,22 @@ LuaSetProperties(
 int
 LuaClassPropIndexer(lua_State* L)
 {
-	// First param must be a table.
+	// First param must not be nil.
 	//
-	luaL_checktype(L, 1, LUA_TTABLE);
+	luaL_checkany(L, 1);
 	
 	// Key must be a string. Explictly check for string, not convertible to
 	// string.
 	//
 	luaL_checktype(L, 2, LUA_TSTRING);
-	
-	lua_getfield(L, 1, LUA_PROPERTIES_KEY);
+
+	// First param must have a metatable.
+	//
+	lua_getmetatable(L, 1);
+
+	// Get the properties table from the metatable.
+	//
+	lua_getfield(L, -1, LUA_PROPERTIES_KEY);
 
 	// properties key must be a table.
 	//
@@ -149,7 +155,11 @@ LuaClassPropIndexer(lua_State* L)
 	
 	luaL_checktype(L, -1, LUA_TFUNCTION);
 
-	lua_call(L, 0 /* num args */, 1 /* num results */);
+	// Push the object as the first param.
+	//
+	lua_pushvalue(L, 1);
+
+	lua_call(L, 1 /* num args */, 1 /* num results */);
 
 	// Lua saves this many results, and clears the entire stack.
 	//
