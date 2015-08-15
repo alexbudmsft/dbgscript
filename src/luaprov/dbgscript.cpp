@@ -35,6 +35,7 @@ static int
 dbgscript_teb(lua_State* L)
 {
 	lua_pushinteger(L, 1234);
+
 	return 1;
 }
 

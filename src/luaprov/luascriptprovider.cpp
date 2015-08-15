@@ -198,17 +198,46 @@ CLuaScriptProvider::Run(
 	{
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Error: luaL_loadstring failed: %d\n", err);
+			"Lua compile error %d: %s\n", err, lua_tostring(LuaState, -1));
+		
+		// Pop the error message from the stack.
+		//
+		lua_pop(LuaState, 1);
 		hr = E_FAIL;
 		goto exit;
 	}
 
-	err = lua_pcall(LuaState, 0, 0, 0);
+	// Push 'debug' table on top of stack (-1)
+	//
+	lua_getglobal(LuaState, "debug");
+
+	// Push 'traceback' table on top of stack (-1). 'debug' is -2.
+	//
+	lua_getfield(LuaState, -1, "traceback");
+
+	// Remove 'debug' table.
+	//
+	lua_remove(LuaState, -2);
+
+	// Now -2 is the function we want to call. (The user's compiled script chunk)
+	//
+	// Move 'traceback' below the user function.
+	//
+	lua_insert(LuaState, -2);
+
+	// Call what's on the top of the stack.
+	//
+	err = lua_pcall(LuaState, 0, 0, -2 /* position of debug.traceback */);
+	
 	if (err)
 	{
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Error: lua_pcall failed: %d\n", err);
+			"Lua runtime error %d: %s\n", err, lua_tostring(LuaState, -1));
+
+		// Pop the error message from the stack.
+		//
+		lua_pop(LuaState, 1);
 		hr = E_FAIL;
 		goto exit;
 	}

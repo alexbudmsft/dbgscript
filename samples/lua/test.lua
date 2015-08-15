@@ -13,3 +13,9 @@ for x,y in pairs(dbgscript) do
 end
 
 print (dbgscript.teb())
+
+function foo(a)
+    print (a + 6)
+end
+
+foo('aaa')
