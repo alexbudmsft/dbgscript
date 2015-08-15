@@ -15,16 +15,15 @@
 
 #include "typedobject.h"
 #include "classprop.h"
-#include <strsafe.h>
 
 #define TYPED_OBJECT_METATABLE  "dbgscript.TypedObject"
 
 //------------------------------------------------------------------------------
-// Function: TypedObject_new
+// Function: AllocTypedObject
 //
 // Description:
 //
-//  Allocate a typed object.
+//  Helper to allocate a typed object.
 //
 // Parameters:
 //
@@ -36,8 +35,15 @@
 //
 // Notes:
 //
-static int
-TypedObject_new(lua_State* L)
+void
+AllocTypedObject(
+	_In_ lua_State* L,
+	_In_ ULONG size,
+	_In_opt_z_ const char* name,
+	_In_z_ const char* type,
+	_In_ ULONG typeId,
+	_In_ UINT64 moduleBase,
+	_In_ UINT64 virtualAddress)
 {
 	// Allocate a user datum.
 	//
@@ -48,14 +54,23 @@ TypedObject_new(lua_State* L)
 	//
 	luaL_getmetatable(L, TYPED_OBJECT_METATABLE);
 	lua_setmetatable(L, -2);
-	
-	// Initialize fields, etc.
-	//
-	StringCchCopyA(STRING_AND_CCH(typObj->Name), "abc");
 
-	// One element on the stack: the user datum.
+	// Initialize fields.
 	//
-	return 1;
+	HRESULT hr = DsInitializeTypedObject(
+		GetLuaProvGlobals()->HostCtxt,
+		size,
+		name,
+		type,
+		typeId,
+		moduleBase,
+		virtualAddress,
+		typObj);
+	if (FAILED(hr))
+	{
+		luaL_error(
+			L, "DsInitializeTypedObject failed. Error 0x%08x.", hr);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -96,7 +111,8 @@ TypedObject_index(lua_State* L)
 	}
 	else
 	{
-		// Attempt dbgeng-field or Lua-class property access.
+		// Attempt dbgeng-field or Lua-class property access.  Explictly
+		// check for string, not convertible to string.
 		//
 		luaL_checktype(L, 2, LUA_TSTRING);
 		
@@ -137,7 +153,8 @@ TypedObject_index(lua_State* L)
 //
 static const luaL_Reg g_typedObjectFunc[] =
 {
-	{"new", TypedObject_new},  // TEMP!
+	// None.
+	//
 	
 	{nullptr, nullptr}  // sentinel.
 };

@@ -105,7 +105,8 @@ LuaClassPropIndexer(lua_State* L)
 	//
 	luaL_checktype(L, 1, LUA_TTABLE);
 	
-	// Key must be a string.
+	// Key must be a string. Explictly check for string, not convertible to
+	// string.
 	//
 	luaL_checktype(L, 2, LUA_TSTRING);
 	

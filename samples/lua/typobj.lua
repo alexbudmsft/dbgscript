@@ -1,3 +1,2 @@
-a = TypedObject.new()
-print (a.abc)
-print (a.name)
+a = dbgscript.createTypedObject('hkengtest!StressMgr', 0x00000050599be800)
+print(a)
