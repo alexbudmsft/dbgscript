@@ -62,7 +62,7 @@ dbgscript_createTypedObject(lua_State* L)
 		return luaL_error(L, "Failed to get type id for type '%s'.", typeName);
 	}
 
-	AllocTypedObject(
+	AllocNewTypedObject(
 		L, 0, nullptr, typeName, typeInfo->TypeId, typeInfo->ModuleBase, addr);
 	
 	return 1;

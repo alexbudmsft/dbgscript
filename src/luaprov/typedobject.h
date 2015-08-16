@@ -20,7 +20,7 @@ int
 luaopen_TypedObject(lua_State* L);
 
 void
-AllocTypedObject(
+AllocNewTypedObject(
 	_In_ lua_State* L,
 	_In_ ULONG size,
 	_In_opt_z_ const char* name,

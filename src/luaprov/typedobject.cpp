@@ -35,15 +35,9 @@
 //
 // Notes:
 //
-void
-AllocTypedObject(
-	_In_ lua_State* L,
-	_In_ ULONG size,
-	_In_opt_z_ const char* name,
-	_In_z_ const char* type,
-	_In_ ULONG typeId,
-	_In_ UINT64 moduleBase,
-	_In_ UINT64 virtualAddress)
+static DbgScriptTypedObject*
+allocTypedObject(
+	_In_ lua_State* L)
 {
 	// Allocate a user datum.
 	//
@@ -55,6 +49,72 @@ AllocTypedObject(
 	luaL_getmetatable(L, TYPED_OBJECT_METATABLE);
 	lua_setmetatable(L, -2);
 
+	return typObj;
+}
+
+//------------------------------------------------------------------------------
+// Function: AllocTypedObject
+//
+// Description:
+//
+//  Helper to allocate a typed object.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Returns:
+//
+//  One result: User datum representing the typed object.
+//
+// Notes:
+//
+void
+allocSubTypedObject(
+	_In_ lua_State* L,
+	_In_z_ const char* name,
+	_In_ const DEBUG_TYPED_DATA* typedData)
+{
+	DbgScriptTypedObject* typObj = allocTypedObject(L);
+	
+	HRESULT hr = DsWrapTypedData(
+		GetLuaProvGlobals()->HostCtxt, name, typedData, typObj);
+	if (FAILED(hr))
+	{
+		luaL_error(
+			L, "DsWrapTypedData failed. Error %d.", hr);
+	}
+}
+
+//------------------------------------------------------------------------------
+// Function: AllocTypedObject
+//
+// Description:
+//
+//  Helper to allocate a typed object.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Returns:
+//
+//  One result: User datum representing the typed object.
+//
+// Notes:
+//
+void
+AllocNewTypedObject(
+	_In_ lua_State* L,
+	_In_ ULONG size,
+	_In_opt_z_ const char* name,
+	_In_z_ const char* type,
+	_In_ ULONG typeId,
+	_In_ UINT64 moduleBase,
+	_In_ UINT64 virtualAddress)
+{
+	DbgScriptTypedObject* typObj = allocTypedObject(L);
+	
 	// Initialize fields.
 	//
 	HRESULT hr = DsInitializeTypedObject(
@@ -69,7 +129,7 @@ AllocTypedObject(
 	if (FAILED(hr))
 	{
 		luaL_error(
-			L, "DsInitializeTypedObject failed. Error 0x%08x.", hr);
+			L, "DsInitializeTypedObject failed. Error %d.", hr);
 	}
 }
 
@@ -101,7 +161,8 @@ TypedObject_index(lua_State* L)
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
 	// type. (Having the right metatable).
 	//
-	luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
 
 	if (lua_isinteger(L, 2))
 	{
@@ -144,7 +205,28 @@ TypedObject_index(lua_State* L)
 		{
 			// Else fall back to dbg-eng field lookup.
 			//
-			return 0; // TODO
+			const char* fieldName = lua_tostring(L, 2);
+			
+			DEBUG_TYPED_DATA typedData = {0};
+			HRESULT hr = DsTypedObjectGetField(
+				GetLuaProvGlobals()->HostCtxt,
+				typObj,
+				fieldName,
+				&typedData);
+			if (FAILED(hr))
+			{
+				// Lua string formatting is not very powerful. Consider having
+				// a StringCchPrintf wrapper.
+				//
+				return luaL_error(
+					L, "DsTypedObjectGetField failed. Error %d.", hr);
+			}
+
+			// This will push the new user datum on the stack.
+			//
+			allocSubTypedObject(L, fieldName, &typedData);
+			
+			return 1;
 		}
 	}
 }
