@@ -77,7 +77,7 @@ LuaSetProperties(
 //
 // Description:
 //
-//  Indexer for class properties.
+//  Indexer for class properties and methods.
 //
 // Parameters:
 //
@@ -113,6 +113,25 @@ LuaClassPropIndexer(lua_State* L)
 	// First param must have a metatable.
 	//
 	lua_getmetatable(L, 1);
+
+	// Copy the key to the top of the stack.
+	//
+	lua_pushvalue(L, 2);
+
+	// Check if an element exists with this key name. (Hopefully a method)
+	//
+	lua_gettable(L, -2);
+	
+	if (!lua_isnil(L, -1))
+	{
+		// Return element if present.
+		//
+		return 1;
+	}
+
+	// Pop the nil. Get the metatable back on the top.
+	//
+	lua_pop(L, 1);
 
 	// Get the properties table from the metatable.
 	//

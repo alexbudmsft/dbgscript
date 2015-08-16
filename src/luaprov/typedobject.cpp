@@ -135,6 +135,68 @@ AllocNewTypedObject(
 }
 
 //------------------------------------------------------------------------------
+// Function: getFieldHelper
+//
+// Description:
+//
+//  Helper to get a field from a typed object.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//  typObj - Optional pointer to preinitialized DbgScriptTypedObject.
+//
+// Input Stack:
+//
+//  Param 1 is the user datum (TypedObject).
+//  Param 2 is the key. (string)
+//
+// Returns:
+//
+//  One result: the new typed object representing the field.
+//
+// Notes:
+//
+static int
+getFieldHelper(
+	_In_ lua_State* L,
+	_In_opt_ DbgScriptTypedObject* typObj)
+{
+	if (!typObj)
+	{
+		// Validate that the first param was 'self'. I.e. a Userdatum of the right
+		// type. (Having the right metatable).
+		//
+		typObj = (DbgScriptTypedObject*)
+			luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+	}
+
+	// Only want strings -- not anything convertible to a string (such as an int)
+	//
+	luaL_checktype(L, 2, LUA_TSTRING);
+	
+	const char* fieldName = lua_tostring(L, 2);
+	
+	DEBUG_TYPED_DATA typedData = {0};
+	HRESULT hr = DsTypedObjectGetField(
+		GetLuaProvGlobals()->HostCtxt,
+		typObj,
+		fieldName,
+		&typedData);
+	if (FAILED(hr))
+	{
+		return LuaError(
+			L, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
+	}
+	
+	// This will push the new user datum on the stack.
+	//
+	allocSubTypedObject(L, fieldName, &typedData);
+	
+	return 1;
+}
+
+//------------------------------------------------------------------------------
 // Function: TypedObject_index
 //
 // Description:
@@ -179,7 +241,7 @@ TypedObject_index(lua_State* L)
 		luaL_checktype(L, 2, LUA_TSTRING);
 		
 		//
-		// First check if the key is a Lua-class field.
+		// First check if the key is a Lua class property.
 		//
 		
 		// Push the C function we're about to call.
@@ -194,7 +256,10 @@ TypedObject_index(lua_State* L)
 		//
 		lua_pushvalue(L, 2);
 
-		// Call it.
+		// Call it. The return value could be the result of a getter call.
+		// It could also be an existing field we fetched from the metatable
+		// which lua will try to call (if the scripter attempted method call
+		// syntax)
 		//
 		lua_call(L, 2, 1);
 
@@ -206,25 +271,7 @@ TypedObject_index(lua_State* L)
 		{
 			// Else fall back to dbg-eng field lookup.
 			//
-			const char* fieldName = lua_tostring(L, 2);
-			
-			DEBUG_TYPED_DATA typedData = {0};
-			HRESULT hr = DsTypedObjectGetField(
-				GetLuaProvGlobals()->HostCtxt,
-				typObj,
-				fieldName,
-				&typedData);
-			if (FAILED(hr))
-			{
-				return LuaError(
-					L, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
-			}
-
-			// This will push the new user datum on the stack.
-			//
-			allocSubTypedObject(L, fieldName, &typedData);
-			
-			return 1;
+			return getFieldHelper(L, typObj);
 		}
 	}
 }
@@ -334,6 +381,32 @@ TypedObject_gettype(lua_State* L)
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_getfield
+//
+// Description:
+//
+//  Get
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the typed object.
+//
+// Returns:
+//
+//  One result: The type name of the TypedObject.
+//
+// Notes:
+//
+static int
+TypedObject_getfield(lua_State* L)
+{
+	return getFieldHelper(L, nullptr /* typObj */);
+}
 
 // Static (class) methods.
 //
@@ -359,6 +432,12 @@ static const LuaClassProperty x_TypedObjectProps[] =
 static const luaL_Reg g_typedObjectMethods[] =
 {
 	{"__index", TypedObject_index},  // indexer. Serves array, field and property access.
+
+	// Explicit field access, in case a property hides a field with the same
+	// name. 'f' and 'field' are aliases.
+	//
+	{"f", TypedObject_getfield},
+	{"field", TypedObject_getfield},
 	
 	{nullptr, nullptr}  // sentinel.
 };
