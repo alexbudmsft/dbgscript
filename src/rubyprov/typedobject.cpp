@@ -267,6 +267,78 @@ checkTypedData(
 }
 
 static VALUE
+allocTypedObjFromTypedData(
+_In_z_ const char* name,
+_In_ DEBUG_TYPED_DATA* typedData)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	VALUE newObj = rb_class_new_instance(
+		0, nullptr, GetRubyProvGlobals()->TypedObjectClass);
+
+	DbgScriptTypedObject* obj = nullptr;
+
+	Data_Get_Struct(newObj, DbgScriptTypedObject, obj);
+
+	HRESULT hr = DsWrapTypedData(hostCtxt, name, typedData, obj);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "DsWrapTypedData failed. Error 0x%08x.", hr);
+	}
+
+	return newObj;
+}
+
+//------------------------------------------------------------------------------
+// Function: TypedObject_method_missing
+//
+// Description:
+//
+//  Called when Ruby can't find a method on this object. We use this implement
+//  attempted field-lookup.
+//
+// Parameters:
+//
+//  self - Receiver.
+//  methodId - ID of method that could not be found (symbol). We will consider
+//   this to be the field name of interest.
+//
+// Returns:
+//
+//  One result: Typed Object.
+//
+// Notes:
+//
+static VALUE
+TypedObject_method_missing(
+	_In_ VALUE self,
+	_In_ VALUE methodId)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	DbgScriptTypedObject* typObj = nullptr;
+	CHECK_ABORT(hostCtxt);
+	
+	VALUE methodStr = rb_sym2str(methodId);
+	const char* fieldName = StringValuePtr(methodStr);
+
+	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+
+	checkTypedData(typObj);
+	
+	DEBUG_TYPED_DATA typedData = {0};
+	HRESULT hr = DsTypedObjectGetField(
+		hostCtxt,
+		typObj,
+		fieldName,
+		&typedData);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eSystemCallError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
+	}
+	
+	return allocTypedObjFromTypedData(fieldName, &typedData);
+}
+
+static VALUE
 TypedObject_length(
 	_In_ VALUE self)
 {
@@ -301,28 +373,6 @@ TypedObject_length(
 	const ULONG elemSize = typedData.Size;
 
 	return ULONG2NUM(typObj->TypedData.Size / elemSize);
-}
-
-static VALUE
-allocTypedObjFromTypedData(
-	_In_z_ const char* name,
-	_In_ DEBUG_TYPED_DATA* typedData)
-{
-	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
-	VALUE newObj = rb_class_new_instance(
-		0, nullptr, GetRubyProvGlobals()->TypedObjectClass);
-	
-	DbgScriptTypedObject* obj = nullptr;
-	
-	Data_Get_Struct(newObj, DbgScriptTypedObject, obj);
-	
-	HRESULT hr = DsWrapTypedData(hostCtxt, name, typedData, obj);
-	if (FAILED(hr))
-	{
-		rb_raise(rb_eSystemCallError, "DsWrapTypedData failed. Error 0x%08x.", hr);
-	}
-	
-	return newObj;
 }
 
 _Check_return_ VALUE
@@ -479,6 +529,14 @@ Init_TypedObject()
 		"[]",
 		RUBY_METHOD_FUNC(TypedObject_get_item),
 		1);
+
+	// Implement 'method_missing' so that we can support virtual properties.
+	//
+	rb_define_method(
+		typedObjectClass,
+		"method_missing",
+		RUBY_METHOD_FUNC(TypedObject_method_missing),
+		1 /* argc */);
 	
 	// Prevent scripter from instantiating directly.
 	//
