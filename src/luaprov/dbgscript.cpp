@@ -13,6 +13,7 @@
 // @EndHeader@
 //******************************************************************************  
 #include "dbgscript.h"
+#include "util.h"
 #include "typedobject.h"
 #include "../support/symcache.h"
 
@@ -42,9 +43,7 @@ static int
 dbgscript_createTypedObject(lua_State* L)
 {
 	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
-
-	// TODO:
-	// CHECK_ABORT(hostCtxt);
+	CHECK_ABORT(hostCtxt);
 
 	// Explictly check for string, not convertible to string.
 	//
@@ -68,12 +67,48 @@ dbgscript_createTypedObject(lua_State* L)
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_createTypedObject
+//
+// Description:
+//
+//  Execute a debugger command.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  1 - Command (string)
+//
+// Returns:
+//
+//  No results.
+//
+// Notes:
+//
+static int
+dbgscript_execCommand(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	HRESULT hr = UtilExecuteCommand(hostCtxt, lua_tostring(L, 1));
+	if (FAILED(hr))
+	{
+		return LuaError(L, "UtilExecuteCommand failed. Error 0x%08x.", hr);
+	}
+	
+	return 0;
+}
+
 // Functions in module.
 //
 static const luaL_Reg dbgscript[] =
 {
 	{"createTypedObject", dbgscript_createTypedObject},
-	
+	{"execCommand", dbgscript_execCommand},
 	{nullptr, nullptr}  // sentinel.
 };
 
