@@ -103,12 +103,95 @@ dbgscript_execCommand(lua_State* L)
 	return 0;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_startBuffering
+//
+// Description:
+//
+//  Start buffering output.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  None.
+//
+// Returns:
+//
+//  No results.
+//
+// Notes:
+//
+static int
+dbgscript_startBuffering(lua_State* /*L*/)
+{
+	// Currently this is single-threaded access, but will make it simpler in
+	// case we ever have more than one concurrent client.
+	//
+	InterlockedIncrement(&GetLuaProvGlobals()->HostCtxt->IsBuffering);
+	
+	// No results.
+	//
+	return 0;
+}
+
+//------------------------------------------------------------------------------
+// Function: dbgscript_stopBuffering
+//
+// Description:
+//
+//  Stop buffering output.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  None.
+//
+// Returns:
+//
+//  No results.
+//
+// Notes:
+//
+static int
+dbgscript_stopBuffering(lua_State* L)
+{
+	// Currently this is single-threaded access, but will make it simpler in
+	// case we ever have more than one concurrent client.
+	//
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	const LONG newVal = InterlockedDecrement(&hostCtxt->IsBuffering);
+	if (newVal < 0)
+	{
+		hostCtxt->IsBuffering = 0;
+		return luaL_error(L, "can't stop buffering if it isn't started.");
+	}
+
+	// If the buffer refcount hit zero, flush remaining buffered content, if any.
+	//
+	if (newVal == 0)
+	{
+		UtilFlushMessageBuffer(hostCtxt);
+	}
+	
+	// No results.
+	//
+	return 0;
+}
+
 // Functions in module.
 //
 static const luaL_Reg dbgscript[] =
 {
 	{"createTypedObject", dbgscript_createTypedObject},
 	{"execCommand", dbgscript_execCommand},
+	{"startBuffering", dbgscript_startBuffering},
+	{"stopBuffering", dbgscript_stopBuffering},
 	{nullptr, nullptr}  // sentinel.
 };
 
