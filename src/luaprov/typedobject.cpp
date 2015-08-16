@@ -557,7 +557,7 @@ TypedObject_getvalue(lua_State* L)
 //
 // Description:
 //
-//  Get
+//  Get the name of the typed object.
 //
 // Parameters:
 //
@@ -595,7 +595,7 @@ TypedObject_getname(lua_State* L)
 //
 // Description:
 //
-//  Get
+//  Get the data size of the object.
 //
 // Parameters:
 //
@@ -633,7 +633,7 @@ TypedObject_getsize(lua_State* L)
 //
 // Description:
 //
-//  Get
+//  Get the type of the object.
 //
 // Parameters:
 //
@@ -671,7 +671,7 @@ TypedObject_gettype(lua_State* L)
 //
 // Description:
 //
-//  Get
+//  Get a field in the object.
 //
 // Parameters:
 //

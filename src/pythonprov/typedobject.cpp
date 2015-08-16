@@ -85,7 +85,7 @@ checkTypedData(
 	{
 		// This object has no typed data. It must have been a null ptr.
 		//
-		PyErr_SetString(PyExc_AttributeError, "Object has no typed data. Can't get fields.");
+		PyErr_SetString(PyExc_ValueError, "Object has no typed data. Can't get fields.");
 		return false;
 	}
 	return true;
@@ -290,7 +290,7 @@ pyValueFromCValue(
 			ret = PyFloat_FromDouble(cValue->Value.DoubleVal);
 			break;
 		default:
-			PyErr_Format(PyExc_AttributeError, "Unsupported type id: %d (%s)",
+			PyErr_Format(PyExc_ValueError, "Unsupported type id: %d (%s)",
 				typedData->BaseTypeId,
 				typObj->Data.TypeName);
 			break;
@@ -314,6 +314,91 @@ TypedObject_str(
 	return PyUnicode_FromString("dbgscript.TypedObject");
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_getattro
+//
+// Description:
+//
+//  Virtual attribute getter for Typed Objects. This will work as 
+//
+// Parameters:
+//
+//  self - pointer to Lua state.
+//  attr - pointer to Lua state.
+//
+// Returns:
+//
+//  One result: The name of the TypedObject.
+//
+// Notes:
+//
+static PyObject*
+TypedObject_getattro(
+	_In_ PyObject* self,
+	_In_ PyObject* attr)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	// First, call the generic attribute handler, to handle methods/members/getset.
+	// I.e. the usual Python stuff.
+	//
+	PyObject* ret = PyObject_GenericGetAttr(self, attr);
+	if (ret)
+	{
+		// Success: No special handling, just pass through.
+		//
+		return ret;
+	}
+
+	assert(PyErr_Occurred());
+
+	// If it was something other than an attribute error, pass it through.
+	// We don't want to swallow other error types.
+	//
+	if (!PyErr_ExceptionMatches(PyExc_AttributeError))
+	{
+		assert(!ret);
+		return nullptr;
+	}
+	
+	// We got an attribute error: This means the attribute was not present.
+	// => attempt a struct field lookup.
+	//
+	
+	// Clear the attribute error.
+	//
+	PyErr_Clear();
+
+	// Get the key as an ANSI string.
+	//
+	PyObject* asciiStrAsBytes = PyUnicode_AsASCIIString(attr);
+	if (!asciiStrAsBytes)
+	{
+		return nullptr;
+	}
+
+	const char* fieldName = PyBytes_AsString(asciiStrAsBytes);
+	if (!fieldName)
+	{
+		return nullptr;
+	}
+
+	TypedObject* typedObj = (TypedObject*)self;
+	DEBUG_TYPED_DATA typedData = {0};
+	HRESULT hr = DsTypedObjectGetField(
+		hostCtxt,
+		&typedObj->Data,
+		fieldName,
+		&typedData);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_OSError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
+		return nullptr;
+	}
+
+	return allocSubTypedObject(fieldName, &typedData);
+}
+
 static PyObject*
 TypedObject_get_value(
 	_In_ PyObject* self,
@@ -332,7 +417,7 @@ TypedObject_get_value(
 
 	if (!DsTypedObjectIsPrimitive(&typObj->Data))
 	{
-		PyErr_SetString(PyExc_AttributeError, "Not a primitive type.");
+		PyErr_SetString(PyExc_ValueError, "Not a primitive type.");
 		return nullptr;
 	}
 
@@ -386,7 +471,7 @@ TypedObject_sequence_length(
 	{
 		// Not array.
 		//
-		PyErr_SetString(PyExc_AttributeError, "Object not array.");
+		PyErr_SetString(PyExc_ValueError, "Object not array.");
 		return -1;
 	}
 
@@ -436,6 +521,7 @@ InitTypedObjectType()
 	TypedObjectType.tp_str = TypedObject_str;
 	TypedObjectType.tp_as_mapping = &TypedObject_MappingDef;
 	TypedObjectType.tp_as_sequence = &s_SequenceMethodsDef;
+	TypedObjectType.tp_getattro = TypedObject_getattro;
 
 	// Finalize the type definition.
 	//
