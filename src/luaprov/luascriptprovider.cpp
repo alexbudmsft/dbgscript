@@ -162,6 +162,7 @@ CLuaScriptProvider::Run(
 	WCHAR fullScriptName[MAX_PATH] = {};
 	size_t cConverted = 0;
 	char ansiScriptFileName[MAX_PATH] = {};
+	char ansiBuf[1024];
 
 	int i = 0;
 	bool debug = false;
@@ -240,12 +241,16 @@ CLuaScriptProvider::Run(
 		goto exit;
 	}
 
+	// Compile the script file and push the executable chunk on the stack.
+	//
 	err = luaL_loadfile(LuaState, ansiScriptFileName);
 	if (err)
 	{
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Lua compile error %d: %s\n", err, lua_tostring(LuaState, -1));
+			"Lua compile error %d: %s\n",
+			err,
+			lua_tostring(LuaState, -1));
 		
 		// Pop the error message from the stack.
 		//
@@ -267,7 +272,7 @@ CLuaScriptProvider::Run(
 	//
 	lua_getfield(LuaState, -1, debug ? "debug" : "traceback");
 
-	// Remove 'debug' table.
+	// Remove 'debug' [module] table.
 	//
 	lua_remove(LuaState, -2);
 
@@ -277,8 +282,45 @@ CLuaScriptProvider::Run(
 	//
 	lua_insert(LuaState, -2);
 
-	// TODO: Establish 'args' global so script can have params.
+	// Create table for 'args'. (Script command-line argument vector)
 	//
+	lua_createtable(
+		LuaState,
+		cArgsForScript /* num array elems */,
+		0 /* num hash elems */);
+
+	// Establish 'args' global so script can have params.
+	//
+	for (i = 0; i < cArgsForScript; ++i)
+	{
+		// Convert arg to ANSI.
+		//
+		err = wcstombs_s(
+			&cConverted,
+			ansiBuf,  // dest
+			sizeof ansiBuf,
+			argsForScript[i],  // src
+			sizeof ansiBuf - 1);
+		if (err)
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: Failed to convert wide string to ANSI: %d.\n", err);
+			hr = E_FAIL;
+			goto exit;
+		}
+
+		lua_pushstring(LuaState, ansiBuf);
+
+		// Insert into the table.
+		//
+		lua_rawseti(LuaState, -2, i);
+	}
+
+	// Set the global "arg" to point to the table we just created, popping
+	// both the table and key "args" in the process.
+	//
+	lua_setglobal(LuaState, "arg");
 
 	// Call what's on the top of the stack.
 	//
