@@ -264,6 +264,77 @@ TypedObject_getname(lua_State* L)
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_getsize
+//
+// Description:
+//
+//  Get
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the typed object.
+//
+// Returns:
+//
+//  One result: The size of the TypedObject.
+//
+// Notes:
+//
+static int
+TypedObject_getsize(lua_State* L)
+{
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+
+	lua_pushinteger(L, typObj->TypedData.Size);
+	
+	return 1;
+}
+
+//------------------------------------------------------------------------------
+// Function: TypedObject_gettype
+//
+// Description:
+//
+//  Get
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the typed object.
+//
+// Returns:
+//
+//  One result: The type name of the TypedObject.
+//
+// Notes:
+//
+static int
+TypedObject_gettype(lua_State* L)
+{
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+
+	lua_pushstring(L, typObj->TypeName);
+	
+	return 1;
+}
+
+
 // Static (class) methods.
 //
 static const luaL_Reg g_typedObjectFunc[] =
@@ -276,11 +347,11 @@ static const luaL_Reg g_typedObjectFunc[] =
 
 static const LuaClassProperty x_TypedObjectProps[] =
 {
-	// Name   Getter   Setter
-	// -------------------------
+	// Name   Getter               Setter
+	// -----------------------------------------------------------
 	{ "name", TypedObject_getname, nullptr },
-	{ "size", nullptr, nullptr },
-	{ "type", nullptr, nullptr },
+	{ "size", TypedObject_getsize, nullptr },
+	{ "type", TypedObject_gettype, nullptr },
 };
 
 // Instance methods.
