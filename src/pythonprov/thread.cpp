@@ -5,8 +5,6 @@
 #include "common.h"
 #include <dsthread.h>
 
-struct ProcessObj;
-
 static PyMemberDef Thread_MemberDef [] = 
 {
 	{ "engine_id", T_ULONG, offsetof(ThreadObj, Thread.EngineId), READONLY },

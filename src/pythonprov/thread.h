@@ -3,9 +3,6 @@
 #include "../common.h"
 #include <python.h>
 
-struct ThreadObj;
-struct ProcessObj;
-
 struct ThreadObj
 {
 	PyObject_HEAD

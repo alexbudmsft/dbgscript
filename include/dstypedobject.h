@@ -106,9 +106,11 @@ enum BuiltinType
 	DNTYPE_END_MARKER
 };
 
+// TypedObjectValue - union of all base primitive types supported.
+//
 struct TypedObjectValue
 {
-	// See TypedObject.TypedData.BaseTypeId for type.
+	// See DbgScriptTypedObject.TypedData.BaseTypeId for type.
 	//
 
 	union
@@ -186,3 +188,8 @@ DsTypedObjectGetArrayElement(
 	_In_ DbgScriptTypedObject* typedObj,
 	_In_ UINT64 index,
 	_Out_ DEBUG_TYPED_DATA* outData);
+
+_Check_return_ bool
+DsTypedObjectIsPrimitive(
+	_In_ DbgScriptTypedObject* typObj);
+

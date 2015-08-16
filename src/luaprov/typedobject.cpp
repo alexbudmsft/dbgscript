@@ -76,10 +76,13 @@ allocSubTypedObject(
 	_In_z_ const char* name,
 	_In_ const DEBUG_TYPED_DATA* typedData)
 {
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
 	DbgScriptTypedObject* typObj = allocTypedObject(L);
 	
 	HRESULT hr = DsWrapTypedData(
-		GetLuaProvGlobals()->HostCtxt, name, typedData, typObj);
+		hostCtxt, name, typedData, typObj);
 	if (FAILED(hr))
 	{
 		LuaError(
@@ -114,12 +117,15 @@ AllocNewTypedObject(
 	_In_ UINT64 moduleBase,
 	_In_ UINT64 virtualAddress)
 {
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
 	DbgScriptTypedObject* typObj = allocTypedObject(L);
 	
 	// Initialize fields.
 	//
 	HRESULT hr = DsInitializeTypedObject(
-		GetLuaProvGlobals()->HostCtxt,
+		hostCtxt,
 		size,
 		name,
 		type,
@@ -175,6 +181,9 @@ getFieldHelper(
 	_In_ lua_State* L,
 	_In_opt_ DbgScriptTypedObject* typObj)
 {
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
 	if (!typObj)
 	{
 		// Validate that the first param was 'self'. I.e. a Userdatum of the right
@@ -194,7 +203,7 @@ getFieldHelper(
 	
 	DEBUG_TYPED_DATA typedData = {0};
 	HRESULT hr = DsTypedObjectGetField(
-		GetLuaProvGlobals()->HostCtxt,
+		hostCtxt,
 		typObj,
 		fieldName,
 		&typedData);
@@ -236,6 +245,9 @@ getFieldHelper(
 static int
 TypedObject_index(lua_State* L)
 {
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
 	// type. (Having the right metatable).
 	//
@@ -251,7 +263,7 @@ TypedObject_index(lua_State* L)
 		//
 		DEBUG_TYPED_DATA typedData = {0};
 		hr = DsTypedObjectGetArrayElement(
-			GetLuaProvGlobals()->HostCtxt,
+			hostCtxt,
 			typObj,
 			lua_tointeger(L, 2),
 			&typedData);
@@ -335,6 +347,9 @@ TypedObject_index(lua_State* L)
 static int
 TypedObject_len(lua_State* L)
 {
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
 	// type. (Having the right metatable).
 	//
@@ -353,7 +368,7 @@ TypedObject_len(lua_State* L)
 	
 	DEBUG_TYPED_DATA typedData = {0};
 	hr = DsTypedObjectGetArrayElement(
-		GetLuaProvGlobals()->HostCtxt,
+		hostCtxt,
 		typObj,
 		0,  // index
 		&typedData);
@@ -370,6 +385,171 @@ TypedObject_len(lua_State* L)
 	lua_pushinteger(L, numElems);
 	
 	return 1;
+}
+
+//------------------------------------------------------------------------------
+// Function: luaValueFromCValue
+//
+// Description:
+//
+//  Helper to push the appropriate Lua value onto the stack based on a C value
+//  in the typed object.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the user datum (TypedObject).
+//
+// Returns:
+//
+//  One result: value of primitive.
+//
+// Notes:
+//
+static int
+luaValueFromCValue(
+	_In_ lua_State* L,
+	_In_ DbgScriptTypedObject* typObj)
+{
+	assert(typObj->ValueValid);
+	assert(typObj->TypedDataValid);
+	const TypedObjectValue* cValue = &typObj->Value;
+	DEBUG_TYPED_DATA* typedData = &typObj->TypedData;
+
+	if (typedData->Tag == SymTagPointerType)
+	{
+		lua_pushinteger(L, cValue->Value.UI64Val);
+	}
+	else if (typedData->Tag == SymTagEnum)
+	{
+		// Assume enum is type 'int'. I.e. 4 bytes. Common, but not necessarily
+		// true all the time with advent of C++11.
+		//
+		lua_pushinteger(L, cValue->Value.DwVal);
+	}
+	else
+	{
+		assert(typedData->Tag == SymTagBaseType);
+
+		switch (typedData->BaseTypeId)
+		{
+		case DNTYPE_CHAR:
+		case DNTYPE_INT8:
+		case DNTYPE_UINT8:
+			assert(typedData->Size == 1);
+			lua_pushinteger(L, cValue->Value.ByteVal);
+			break;
+		case DNTYPE_INT16:
+		case DNTYPE_UINT16:
+		case DNTYPE_WCHAR:
+			static_assert(sizeof(WCHAR) == sizeof(WORD), "Assume WCHAR is 2 bytes");
+			assert(typedData->Size == sizeof(WORD));
+			lua_pushinteger(L, cValue->Value.WordVal);
+			break;
+		case DNTYPE_INT32:
+		case DNTYPE_LONG32:
+		case DNTYPE_UINT32:
+		case DNTYPE_ULONG32:
+			assert(typedData->Size == sizeof(DWORD));
+			lua_pushinteger(L, cValue->Value.DwVal);
+			break;
+		case DNTYPE_INT64:
+		case DNTYPE_UINT64:
+			assert(typedData->Size == sizeof(UINT64));
+			lua_pushinteger(L, cValue->Value.UI64Val);
+			break;
+		case DNTYPE_BOOL:  // C++ bool. Not Win32 BOOL.
+			assert(typedData->Size == sizeof(bool));
+			lua_pushboolean(L, cValue->Value.BoolVal);
+			break;
+		case DNTYPE_FLOAT32:
+			assert(typedData->Size == sizeof(float));
+			lua_pushnumber(L, cValue->Value.FloatVal);
+			break;
+		case DNTYPE_FLOAT64:
+			assert(typedData->Size == sizeof(double));
+			lua_pushnumber(L, cValue->Value.DoubleVal);
+			break;
+		default:
+			return luaL_error(L, "Unsupported type id: %d (%s)",
+				typedData->BaseTypeId,
+				typObj->TypeName);
+		}
+	}
+
+	// Number of results.
+	//
+	return 1;
+}
+
+//------------------------------------------------------------------------------
+// Function: TypedObject_getvalue
+//
+// Description:
+//
+//  Value getter for typed object, if object is a primitive type.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the user datum (TypedObject).
+//
+// Returns:
+//
+//  One result: value of primitive type.
+//
+// Notes:
+//
+static int
+TypedObject_getvalue(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	HRESULT hr = S_OK;
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+	
+	checkTypedData(L, typObj);
+
+	if (!DsTypedObjectIsPrimitive(typObj))
+	{
+		return luaL_error(L, "not a primitive type.");
+	}
+
+	// Read the appropriate size from memory.
+	//
+	// What primitive type is bigger than 8 bytes?
+	//
+	ULONG cbRead = 0;
+	assert(typObj->TypedData.Size <= 8);
+	hr = hostCtxt->DebugSymbols->ReadTypedDataVirtual(
+		typObj->TypedData.Offset,
+		typObj->TypedData.ModBase,
+		typObj->TypedData.TypeId,
+		&typObj->Value.Value,
+		sizeof(typObj->Value.Value),
+		&cbRead);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "Failed to read typed data. Error 0x%08x.", hr);
+	}
+	assert(cbRead == typObj->TypedData.Size);
+
+	// Value has been populated.
+	//
+	typObj->ValueValid = true;
+
+	return luaValueFromCValue(L, typObj);
 }
 
 //------------------------------------------------------------------------------
@@ -396,6 +576,9 @@ TypedObject_len(lua_State* L)
 static int
 TypedObject_getname(lua_State* L)
 {
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
 	// type. (Having the right metatable).
 	//
@@ -431,6 +614,9 @@ TypedObject_getname(lua_State* L)
 static int
 TypedObject_getsize(lua_State* L)
 {
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
 	// type. (Having the right metatable).
 	//
@@ -466,6 +652,9 @@ TypedObject_getsize(lua_State* L)
 static int
 TypedObject_gettype(lua_State* L)
 {
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
 	// type. (Having the right metatable).
 	//
@@ -514,6 +703,8 @@ static const luaL_Reg g_typedObjectFunc[] =
 	{nullptr, nullptr}  // sentinel.
 };
 
+// Class Properties.
+//
 static const LuaClassProperty x_TypedObjectProps[] =
 {
 	// Name   Getter               Setter
@@ -521,6 +712,7 @@ static const LuaClassProperty x_TypedObjectProps[] =
 	{ "name", TypedObject_getname, nullptr },
 	{ "size", TypedObject_getsize, nullptr },
 	{ "type", TypedObject_gettype, nullptr },
+	{ "value", TypedObject_getvalue, nullptr },
 };
 
 // Instance methods.

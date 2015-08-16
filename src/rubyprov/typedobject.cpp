@@ -160,18 +160,7 @@ TypedObject_value(
 		rb_raise(rb_eRuntimeError, "No typed data available.");
 	}
 
-	bool primitiveType = false;
-
-	switch (typObj->TypedData.Tag)
-	{
-	case SymTagBaseType:
-	case SymTagPointerType:
-	case SymTagEnum:
-		primitiveType = true;
-		break;
-	}
-
-	if (!primitiveType)
+	if (!DsTypedObjectIsPrimitive(typObj))
 	{
 		rb_raise(rb_eArgError, "Not a primitive type.");
 	}

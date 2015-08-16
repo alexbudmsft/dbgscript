@@ -250,3 +250,21 @@ DsTypedObjectGetArrayElement(
 exit:
 	return hr;
 }
+
+_Check_return_ bool
+DsTypedObjectIsPrimitive(
+	_In_ DbgScriptTypedObject* typObj)
+{
+	bool primitiveType = false;
+
+	switch (typObj->TypedData.Tag)
+	{
+	case SymTagBaseType:
+	case SymTagPointerType:
+	case SymTagEnum:
+		primitiveType = true;
+		break;
+	}
+	
+	return primitiveType;
+}

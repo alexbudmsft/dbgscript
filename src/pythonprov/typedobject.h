@@ -3,8 +3,6 @@
 #include "../common.h"
 #include <python.h>
 
-struct ProcessObj;
-
 _Check_return_ bool
 InitTypedObjectType();
 

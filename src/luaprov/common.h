@@ -45,3 +45,15 @@ struct LuaProvGlobals
 
 _Check_return_ LuaProvGlobals*
 GetLuaProvGlobals();
+
+// Helper macro to call in every Python entry point that checks for abort
+// and raises a KeyboardInterrupt exception.
+//
+#define CHECK_ABORT(ctxt) \
+	do { \
+		if (UtilCheckAbort(ctxt)) \
+		{ \
+			luaL_error(L, "execution interrupted."); \
+		} \
+	} while (0)
+

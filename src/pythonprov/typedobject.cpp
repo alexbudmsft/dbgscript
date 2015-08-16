@@ -7,8 +7,6 @@
 #include "util.h"
 #include "common.h"
 
-struct ProcessObj;
-
 struct TypedObject
 {
 	PyObject_HEAD
@@ -327,24 +325,12 @@ TypedObject_get_value(
 	TypedObject* typObj = (TypedObject*)self;
 	PyObject* ret = nullptr;
 
-	if (!typObj->Data.TypedDataValid)
+	if (!checkTypedData(typObj))
 	{
-		PyErr_SetString(PyExc_AttributeError, "No typed data available.");
 		return nullptr;
 	}
 
-	bool primitiveType = false;
-
-	switch (typObj->Data.TypedData.Tag)
-	{
-	case SymTagBaseType:
-	case SymTagPointerType:
-	case SymTagEnum:
-		primitiveType = true;
-		break;
-	}
-
-	if (!primitiveType)
+	if (!DsTypedObjectIsPrimitive(&typObj->Data))
 	{
 		PyErr_SetString(PyExc_AttributeError, "Not a primitive type.");
 		return nullptr;
@@ -387,6 +373,8 @@ static Py_ssize_t
 TypedObject_sequence_length(
 	_In_ PyObject* self)
 {
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	
 	TypedObject* typObj = (TypedObject*)self;
 
 	if (!checkTypedData(typObj))
@@ -404,21 +392,19 @@ TypedObject_sequence_length(
 
 	// Get the zero'th item in order to get its size.
 	//
-	// TODO: Don't even need to allocate a new PyObject. Can just call
-	// DsTypedObjectGetArrayElement.
-	//
-	TypedObject* tmp = (TypedObject*)TypedObject_sequence_get_item(self, 0);
-	if (!tmp)
+	DEBUG_TYPED_DATA typedData = {0};
+	HRESULT hr = DsTypedObjectGetArrayElement(
+		hostCtxt,
+		&typObj->Data,
+		0,
+		&typedData);
+	if (FAILED(hr))
 	{
+		PyErr_Format(PyExc_OSError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
 		return -1;
 	}
 
-	assert(tmp->Data.TypedDataValid);
-	const ULONG elemSize = tmp->Data.TypedData.Size;
-
-	// Release the temporary object.
-	//
-	Py_DECREF(tmp);
+	const ULONG elemSize = typedData.Size;
 
 	return typObj->Data.TypedData.Size / elemSize;
 }
