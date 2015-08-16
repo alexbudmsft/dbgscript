@@ -134,6 +134,19 @@ AllocNewTypedObject(
 	}
 }
 
+static void
+checkTypedData(
+	_In_ lua_State* L,
+	_In_opt_ DbgScriptTypedObject* typObj)
+{
+	if (!typObj->TypedDataValid)
+	{
+		// This object has no typed data. It must have been a null ptr.
+		//
+		luaL_error(L, "object has no typed data. Can't get fields.");
+	}
+}
+
 //------------------------------------------------------------------------------
 // Function: getFieldHelper
 //
@@ -169,6 +182,8 @@ getFieldHelper(
 		//
 		typObj = (DbgScriptTypedObject*)
 			luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+		
+		checkTypedData(L, typObj);
 	}
 
 	// Only want strings -- not anything convertible to a string (such as an int)
@@ -224,14 +239,32 @@ TypedObject_index(lua_State* L)
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
 	// type. (Having the right metatable).
 	//
+	HRESULT hr = S_OK;
 	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
 		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
 
 	if (lua_isinteger(L, 2))
 	{
+		checkTypedData(L, typObj);
+		
 		// Attempt array access.
 		//
-		return 0; // TODO
+		DEBUG_TYPED_DATA typedData = {0};
+		hr = DsTypedObjectGetArrayElement(
+			GetLuaProvGlobals()->HostCtxt,
+			typObj,
+			lua_tointeger(L, 2),
+			&typedData);
+		if (FAILED(hr))
+		{
+			return LuaError(
+				L, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+		}
+		
+		// Array elements have no name.
+		//
+		allocSubTypedObject(L, ARRAY_ELEM_NAME, &typedData);
+		return 1;
 	}
 	else
 	{
@@ -271,6 +304,8 @@ TypedObject_index(lua_State* L)
 		{
 			// Else fall back to dbg-eng field lookup.
 			//
+			checkTypedData(L, typObj);
+			
 			return getFieldHelper(L, typObj);
 		}
 	}
