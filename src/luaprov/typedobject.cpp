@@ -15,6 +15,7 @@
 
 #include "typedobject.h"
 #include "classprop.h"
+#include "util.h"
 
 #define TYPED_OBJECT_METATABLE  "dbgscript.TypedObject"
 
@@ -81,8 +82,8 @@ allocSubTypedObject(
 		GetLuaProvGlobals()->HostCtxt, name, typedData, typObj);
 	if (FAILED(hr))
 	{
-		luaL_error(
-			L, "DsWrapTypedData failed. Error %d.", hr);
+		LuaError(
+			L, "DsWrapTypedData failed. Error 0x%08x.", hr);
 	}
 }
 
@@ -128,8 +129,8 @@ AllocNewTypedObject(
 		typObj);
 	if (FAILED(hr))
 	{
-		luaL_error(
-			L, "DsInitializeTypedObject failed. Error %d.", hr);
+		LuaError(
+			L, "DsInitializeTypedObject failed. Error 0x%08x.", hr);
 	}
 }
 
@@ -215,11 +216,8 @@ TypedObject_index(lua_State* L)
 				&typedData);
 			if (FAILED(hr))
 			{
-				// Lua string formatting is not very powerful. Consider having
-				// a StringCchPrintf wrapper.
-				//
-				return luaL_error(
-					L, "DsTypedObjectGetField failed. Error %d.", hr);
+				return LuaError(
+					L, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
 			}
 
 			// This will push the new user datum on the stack.

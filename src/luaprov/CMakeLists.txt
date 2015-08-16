@@ -18,6 +18,7 @@ set (SOURCES
 	dbgscript.cpp
 	typedobject.cpp
 	classprop.cpp
+	util.cpp
 	)
 
 # Make a DLL.
