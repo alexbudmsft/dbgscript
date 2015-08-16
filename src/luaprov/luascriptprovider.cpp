@@ -345,10 +345,53 @@ exit:
 
 _Check_return_ HRESULT
 CLuaScriptProvider::RunString(
-	_In_z_ const char* /* scriptString */)
+	_In_z_ const char* scriptString)
 {
-	// TODO
-	return S_OK;
+	HRESULT hr = S_OK;
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+
+	// Host ensures string is not empty.
+	//
+	assert(*scriptString);
+	
+	// Compile the string and push the chunk on the stack.
+	//
+	int err = luaL_loadstring(LuaState, scriptString);
+	if (err)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Lua compile error %d: %s\n",
+			err,
+			lua_tostring(LuaState, -1));
+		
+		// Pop the error message from the stack.
+		//
+		lua_pop(LuaState, 1);
+		hr = E_FAIL;
+		goto exit;
+	}
+	
+	// Call the chunk.
+	//
+	err = lua_pcall(LuaState, 0 /* num args */, 0 /* num results */, 0 /* err handler idx */);
+	
+	if (err)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Lua runtime error %d: %s\n", err, lua_tostring(LuaState, -1));
+
+		// Pop the error message from the stack.
+		//
+		lua_pop(LuaState, 1);
+		hr = E_FAIL;
+		goto exit;
+	}
+	
+exit:
+	
+	return hr;
 }
 
 _Check_return_ HRESULT

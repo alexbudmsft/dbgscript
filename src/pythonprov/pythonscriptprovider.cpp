@@ -286,6 +286,10 @@ CPythonScriptProvider::RunString(
 {
 	HRESULT hr = S_OK;
 
+	// Host ensures string is not empty.
+	//
+	assert(*scriptString);
+	
 	if (PyRun_SimpleString(scriptString) < 0)
 	{
 		hr = E_FAIL;

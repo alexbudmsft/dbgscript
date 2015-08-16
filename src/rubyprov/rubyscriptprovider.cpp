@@ -308,6 +308,10 @@ _Check_return_ HRESULT
 CRubyScriptProvider::RunString(
 	_In_z_ const char* scriptString)
 {
+	// Host ensures string is not empty.
+	//
+	assert(*scriptString);
+	
 	// Invoke the script in a "begin..rescue..end" block. (I.e. try/catch in
 	// other languages).
 	//

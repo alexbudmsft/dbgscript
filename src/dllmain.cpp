@@ -133,7 +133,9 @@ loadAndCreateScriptProvider(
 	{
 		GetHostContext()->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Error: Invalid DLL Path: %ls\n", info->DllFileName);
+			"Error: Invalid DLL Path '%ls' for provider '%ls'\n",
+			info->DllFileName,
+			info->LangId);
 		hr = E_INVALIDARG;
 		goto exit;
 	}
