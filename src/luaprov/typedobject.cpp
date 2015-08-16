@@ -312,6 +312,67 @@ TypedObject_index(lua_State* L)
 }
 
 //------------------------------------------------------------------------------
+// Function: TypedObject_len
+//
+// Description:
+//
+//  __len metamethod (#foo) to obtain length of array, if valid.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the user datum (TypedObject).
+//
+// Returns:
+//
+//  One result: Length, if an array. Error otherwise.
+//
+// Notes:
+//
+static int
+TypedObject_len(lua_State* L)
+{
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	HRESULT hr = S_OK;
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+	
+	checkTypedData(L, typObj);
+
+	if (typObj->TypedData.Tag != SymTagArrayType)
+	{
+		// Not array.
+		//
+		return luaL_error(L, "object not array.");
+	}
+	
+	DEBUG_TYPED_DATA typedData = {0};
+	hr = DsTypedObjectGetArrayElement(
+		GetLuaProvGlobals()->HostCtxt,
+		typObj,
+		0,  // index
+		&typedData);
+	if (FAILED(hr))
+	{
+		return LuaError(
+			L, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+	}
+	
+	const ULONG elemSize = typedData.Size;
+	
+	const ULONG numElems = typObj->TypedData.Size / elemSize;
+	
+	lua_pushinteger(L, numElems);
+	
+	return 1;
+}
+
+//------------------------------------------------------------------------------
 // Function: TypedObject_getname
 //
 // Description:
@@ -467,7 +528,7 @@ static const LuaClassProperty x_TypedObjectProps[] =
 static const luaL_Reg g_typedObjectMethods[] =
 {
 	{"__index", TypedObject_index},  // indexer. Serves array, field and property access.
-
+	{"__len", TypedObject_len},  // Length of array, if valid.
 	// Explicit field access, in case a property hides a field with the same
 	// name. 'f' and 'field' are aliases.
 	//

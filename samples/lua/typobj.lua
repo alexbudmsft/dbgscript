@@ -9,3 +9,4 @@ b = a.Runtime.Threads
 print(b.name, b.type, b.size)
 
 print (b[0].ThreadId)
+print (#a.Runtime.LogLocation)
