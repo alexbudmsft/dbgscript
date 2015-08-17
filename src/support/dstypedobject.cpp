@@ -39,7 +39,8 @@ DsWrapTypedData(
 	{
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			"Error: Failed to get type name. Error 0x%08x.\n", hr);
+			ERR_FAILED_GET_SYM_TYPE_NAME,
+			hr);
 		goto exit;
 	}
 exit:

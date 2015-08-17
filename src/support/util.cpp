@@ -762,6 +762,21 @@ UtilEnumStackFrameVariables(
 			// Sometimes variables are optimized away, which can cause this error.
 			// Just leave the size at 0.
 			//
+			// Get the type using the fallback route since we don't have a
+			// DEBUG_SYMBOL_ENTRY.
+			//
+			hr = symGrp->GetSymbolTypeName(
+				i,
+				STRING_AND_CCH(typeName),
+				nullptr);
+			if (FAILED(hr))
+			{
+				hostCtxt->DebugControl->Output(
+					DEBUG_OUTPUT_ERROR,
+					ERR_FAILED_GET_SYM_TYPE_NAME,
+					hr);
+				goto exit;
+			}
 		}
 		else if (FAILED(hr))
 		{
@@ -771,6 +786,24 @@ UtilEnumStackFrameVariables(
 				hr);
 			goto exit;
 		}
+		else
+		{
+			// Get the type via the module base and type id.
+			//
+			hr = hostCtxt->DebugSymbols->GetTypeName(
+				entry.ModuleBase,
+				entry.TypeId,
+				STRING_AND_CCH(typeName),
+				nullptr);
+			if (FAILED(hr))
+			{
+				hostCtxt->DebugControl->Output(
+					DEBUG_OUTPUT_ERROR,
+					ERR_FAILED_GET_SYM_TYPE_NAME,
+					hr);
+				goto exit;
+			}
+		}
 
 		hr = symGrp->GetSymbolName(i, symName, _countof(symName), nullptr);
 		if (FAILED(hr))
@@ -778,16 +811,6 @@ UtilEnumStackFrameVariables(
 			hostCtxt->DebugControl->Output(
 				DEBUG_OUTPUT_ERROR,
 				ERR_FAILED_GET_SYM_NAME,
-				hr);
-			goto exit;
-		}
-
-		hr = symGrp->GetSymbolTypeName(i, typeName, _countof(typeName), nullptr);
-		if (FAILED(hr))
-		{
-			hostCtxt->DebugControl->Output(
-				DEBUG_OUTPUT_ERROR,
-				ERR_FAILED_GET_SYM_TYPE_NAME,
 				hr);
 			goto exit;
 		}

@@ -12,8 +12,10 @@ for i = 1, #b do
     print "---------------------"
     local loc = b[i]:getLocals()
     for j = 1, #loc do
-        print(string.format('Name: %s, Addr: 0x%x',
-            loc[j].name, loc[j].address))
+        print(string.format('Name: %s, Type: %s, Addr: 0x%x',
+            loc[j].name,
+            loc[j].type,
+            loc[j].address))
     end
     
     print "\nArgs"
