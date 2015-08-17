@@ -197,3 +197,9 @@ _Check_return_ bool
 DsTypedObjectIsPrimitive(
 	_In_ DbgScriptTypedObject* typObj);
 
+_Check_return_ HRESULT
+DsTypedObjectGetRuntimeType(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ const DbgScriptTypedObject* typObj,
+	_Out_ DbgScriptTypedObject* newTypObj);
+

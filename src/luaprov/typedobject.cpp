@@ -741,6 +741,50 @@ TypedObject_getmodule(lua_State* L)
 }
 
 //------------------------------------------------------------------------------
+// Function: TypedObject_getRuntimeObject
+//
+// Description:
+//
+//  Get the runtime type of the object.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the typed object.
+//
+// Returns:
+//
+//  One result: A new typed object representing the runtime type of the object.
+//
+// Notes:
+//
+static int
+TypedObject_getRuntimeObject(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+	
+	DbgScriptTypedObject* newTypObj = allocTypedObject(L);
+	
+	HRESULT hr = DsTypedObjectGetRuntimeType(hostCtxt, typObj, newTypObj);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "DsTypedObjectGetRuntimeType failed. Error 0x%08x.", hr);
+	}
+	
+	return 1;
+}
+
+//------------------------------------------------------------------------------
 // Function: TypedObject_getfield
 //
 // Description:
@@ -797,12 +841,16 @@ static const luaL_Reg g_typedObjectMethods[] =
 {
 	{"__index", TypedObject_index},  // indexer. Serves array, field and property access.
 	{"__len", TypedObject_len},  // Length of array, if valid.
+	
 	// Explicit field access, in case a property hides a field with the same
 	// name. 'f' and 'field' are aliases.
 	//
 	{"f", TypedObject_getfield},
 	{"field", TypedObject_getfield},
-	
+
+	// Downcasts an object to its real type based on its vtable.
+	//
+	{"getRuntimeObject", TypedObject_getRuntimeObject},
 	{nullptr, nullptr}  // sentinel.
 };
 

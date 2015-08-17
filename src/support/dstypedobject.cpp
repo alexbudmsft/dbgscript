@@ -15,6 +15,7 @@
 
 #include "../common.h"
 #include "util.h"
+#include "symcache.h"
 #include <strsafe.h>
 
 _Check_return_ HRESULT
@@ -324,3 +325,98 @@ DsTypedObjectIsPrimitive(
 	
 	return primitiveType;
 }
+
+//------------------------------------------------------------------------------
+// Function: DsTypedObjectGetRuntimeType
+//
+// Description:
+//
+//  Get runtime type of an object by inspecting its vtable.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+_Check_return_ HRESULT
+DsTypedObjectGetRuntimeType(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ const DbgScriptTypedObject* typObj,
+	_Out_ DbgScriptTypedObject* newTypObj)
+{
+	HRESULT hr = S_OK;
+	UINT64 ptrVal = 0;
+	char name[MAX_SYMBOL_NAME_LEN] = {};
+
+	// Read the vptr.
+	//
+	UtilReadPointer(hostCtxt, typObj->TypedData.Offset, &ptrVal);
+
+	hr = hostCtxt->DebugSymbols->GetNameByOffset(
+		ptrVal, STRING_AND_CCH(name), nullptr, nullptr);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_NAME_BY_OFFSET,
+			ptrVal,
+			hr);
+		goto exit;
+	}
+
+	// If the object has a vptr, it points to a vtable with a symbol like:
+	//
+	//   hkengine!HkLogImpl::`vftable'
+	//
+	char* found = strstr(name, "::`vftable'");
+	if (!found)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_NO_VTABLE,
+			ptrVal);
+		goto exit;
+	}
+
+	// Null out the colon.
+	//
+	*found = 0;
+	
+	// Lookup typeid/moduleBase from type name.
+	//
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(hostCtxt, name);
+	if (!typeInfo)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_TYPE_ID,
+			name,
+			hr);
+		goto exit;
+	}
+
+	// Initialize a new typed object based on this one.
+	//
+	hr = DsInitializeTypedObject(
+		hostCtxt,
+		typObj->TypedData.Size,
+		typObj->Name,
+		typeInfo->TypeId,
+		typeInfo->ModuleBase,
+		typObj->TypedData.Offset,
+		newTypObj);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"DsInitializeTypedObject failed. Error 0x%08x.",
+			hr);
+		goto exit;
+	}
+	
+exit:
+	return hr;
+}
+
+

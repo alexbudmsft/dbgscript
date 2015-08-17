@@ -41,6 +41,9 @@
 #define ERR_FAILED_GET_TYPE_NAME \
 	"Error: Failed to get type name. Error 0x%08x.\n"
 
+#define ERR_FAILED_GET_TYPE_ID \
+	"Error: Failed to get type id for type '%s'. Error 0x%08x.\n"
+
 #define ERR_FAILED_INSTALL_OUTPUT_CB \
 	"Error: Failed to install output callback. Error 0x%08x.\n"
 	
@@ -52,3 +55,10 @@
 
 #define ERR_FAILED_GET_MODULE_NAME \
 	"Error: Failed to get module name. Error 0x%08x.\n"
+	
+#define ERR_FAILED_GET_NAME_BY_OFFSET \
+	"Error: Failed to get name from offset %p. Error 0x%08x.\n"
+
+#define ERR_NO_VTABLE \
+	"Error: Object at %p has no vtable.\n"
+
