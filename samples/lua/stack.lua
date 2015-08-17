@@ -8,11 +8,12 @@ a=nil -- Lose ref to thread, allowing GC to clean it up.
 for i = 1, #b do
     print (b[i].frameNumber, b[i].instructionOffset)
     
-    print "Lcoals"
+    print "Locals"
     print "---------------------"
     local loc = b[i]:getLocals()
     for j = 1, #loc do
-        print (loc[j].name, loc[j].address)
+        print(string.format('Name: %s, Addr: 0x%x',
+            loc[j].name, loc[j].address))
     end
     
     print "\nArgs"

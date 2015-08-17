@@ -107,7 +107,8 @@ DsInitializeTypedObject(
 	}
 	else
 	{
-		typObj->TypedData.Size = size;
+		typObj->TypedData.Size = size; // 0
+		typObj->TypedData.Offset = virtualAddress; // 0
 	}
 
 exit:
