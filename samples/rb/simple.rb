@@ -17,7 +17,7 @@ stack.each do |frame|
     puts "#{frame.frame_number}: Instruction offset: 0x#{frame.instruction_offset.to_s(16)}"
     args = frame.get_args
     for a in args do
-        puts a.name, a.type
+        puts "Name: #{a.name}, Type: #{a.type}, Module: #{a.module}, Addr: #{a.address}"
     end
 end
 =begin

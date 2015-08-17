@@ -240,6 +240,21 @@ TypedObject_type(
 }
 
 static VALUE
+TypedObject_module(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+	
+	DbgScriptTypedObject* typObj = nullptr;
+
+	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+	
+	return rb_str_new2(typObj->ModuleName);
+}
+
+static VALUE
 TypedObject_address(
 	_In_ VALUE self)
 {
@@ -517,7 +532,13 @@ Init_TypedObject()
 		"type",
 		RUBY_METHOD_FUNC(TypedObject_type),
 		0 /* argc */);
-
+	
+	rb_define_method(
+		typedObjectClass,
+		"module",
+		RUBY_METHOD_FUNC(TypedObject_module),
+		0 /* argc */);
+	
 	rb_define_method(
 		typedObjectClass,
 		"name",
