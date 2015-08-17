@@ -358,6 +358,61 @@ dbgscript_getGlobal(lua_State* L)
 	return 1;
 }
 
+
+//------------------------------------------------------------------------------
+// Function: dbgscript_resolveEnum
+//
+// Description:
+//
+//  Resolve an enum against a value.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  1 - Name of enum (string).
+//  2 - Value (int).
+//
+// Returns:
+//
+//  The global typed object.
+//
+// Notes:
+//
+static int
+dbgscript_resolveEnum(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	const char* enumTypeName = lua_tostring(L, 1);
+	const UINT64 value = lua_tointeger(L, 2);
+	
+	char enumElementName[MAX_SYMBOL_NAME_LEN] = {};
+
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(hostCtxt, enumTypeName);
+	if (!typeInfo)
+	{
+		return LuaError(L, "Failed to get type id for type '%s'.", enumTypeName);
+	}
+
+	HRESULT hr = hostCtxt->DebugSymbols->GetConstantName(
+		typeInfo->ModuleBase,
+		typeInfo->TypeId,
+		value,
+		STRING_AND_CCH(enumElementName),
+		nullptr);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "Failed to get element name for enum '%s' with value '%llu'. Error 0x%08x.", enumTypeName, value, hr);
+	}
+
+	lua_pushstring(L, enumElementName);
+	return 1;
+}
+
 // Functions in module.
 //
 static const luaL_Reg dbgscript[] =
@@ -369,6 +424,7 @@ static const luaL_Reg dbgscript[] =
 	{"currentThread", dbgscript_currentThread},
 	{"getThreads", dbgscript_getThreads},
 	{"getGlobal", dbgscript_getGlobal},
+	{"resolveEnum", dbgscript_resolveEnum},
 	{nullptr, nullptr}  // sentinel.
 };
 
