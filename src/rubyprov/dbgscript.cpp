@@ -130,13 +130,13 @@ DbgScript_current_thread(
 	HRESULT hr = hostCtxt->DebugSysObj->GetCurrentThreadId(&engineThreadId);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "Failed to get engine thread id. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "Failed to get engine thread id. Error 0x%08x.", hr);
 	}
 
 	hr = hostCtxt->DebugSysObj->GetCurrentThreadSystemId(&systemThreadId);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "Failed to get system thread id. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "Failed to get system thread id. Error 0x%08x.", hr);
 	}
 
 	return AllocThreadObj(engineThreadId, systemThreadId);
@@ -166,7 +166,7 @@ DbgScript_get_threads(
 	HRESULT hr = UtilCountThreads(hostCtxt, &cThreads);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "UtilCountThreads failed. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "UtilCountThreads failed. Error 0x%08x.", hr);
 	}
 
 	// Get list of thread IDs.
@@ -177,7 +177,7 @@ DbgScript_get_threads(
 	hr = UtilEnumThreads(hostCtxt, cThreads, engineThreadIds, sysThreadIds);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "UtilEnumThreads failed. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "UtilEnumThreads failed. Error 0x%08x.", hr);
 	}
 
 	VALUE threadArray = rb_ary_new2(cThreads);
@@ -251,7 +251,7 @@ DbgScript_execute_command(
 	hr = UtilExecuteCommand(hostCtxt, command);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "UtilExecuteCommand failed. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "UtilExecuteCommand failed. Error 0x%08x.", hr);
 	}
 
 	return Qnil;

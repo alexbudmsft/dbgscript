@@ -99,7 +99,7 @@ Thread_get_stack(
 		&framesFilled);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "DsGetStackTrace failed. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "DsGetStackTrace failed. Error 0x%08x.", hr);
 	}
 
 	VALUE framesArray = rb_ary_new2(framesFilled);
@@ -108,14 +108,6 @@ Thread_get_stack(
 	//
 	for (ULONG i = 0; i < framesFilled; ++i)
 	{
-		DbgScriptStackFrame frm;
-
-		// TODO: Could add a utility to convert a DEBUG_STACK_FRAME to
-		// DbgScriptStackFrame in the future.
-		//
-		frm.FrameNumber = frames[i].FrameNumber;
-		frm.InstructionOffset = frames[i].InstructionOffset;
-		
 		// Allocate a StackFrame object.
 		//
 		VALUE frameObj = rb_class_new_instance(
@@ -127,8 +119,8 @@ Thread_get_stack(
 		
 		// Copy over the fields.
 		//
-		frame->Frame = frm;
-		
+		frame->Frame.FrameNumber = frames[i].FrameNumber;
+		frame->Frame.InstructionOffset = frames[i].InstructionOffset;
 		frame->Thread = self;
 
 		rb_ary_store(framesArray, i, frameObj);
@@ -162,7 +154,7 @@ Thread_current_frame(
 	HRESULT hr = DsGetCurrentStackFrame(hostCtxt, &dsframe);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "DsGetCurrentStackFrame failed. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "DsGetCurrentStackFrame failed. Error 0x%08x.", hr);
 	}
 
 	// Allocate a StackFrame object.

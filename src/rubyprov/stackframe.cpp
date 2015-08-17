@@ -132,7 +132,7 @@ getVariablesHelper(
 		&symGrp);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "UtilCountStackFrameVariables failed. Error: 0x%08x", hr);
+		rb_raise(rb_eRuntimeError, "UtilCountStackFrameVariables failed. Error: 0x%08x", hr);
 	}
 	
 	stackArray = rb_ary_new2(numSym);
@@ -145,7 +145,7 @@ getVariablesHelper(
 		(void*)stackArray);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "UtilEnumStackFrameVariables failed. Error: 0x%08x", hr);
+		rb_raise(rb_eRuntimeError, "UtilEnumStackFrameVariables failed. Error: 0x%08x", hr);
 	}
 	
 	return stackArray;

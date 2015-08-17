@@ -55,6 +55,27 @@ TypedObject_alloc(
 	return Data_Wrap_Struct(klass, nullptr /* mark */, TypedObject_free, obj);
 }
 
+static bool
+checkTypedData(
+	_In_ DbgScriptTypedObject* typedObj,
+	_In_ bool fRaise)
+{
+	if (!typedObj->TypedDataValid)
+	{
+		if (fRaise)
+		{
+			// This object has no typed data. It must have been a null or bad ptr.
+			//
+			rb_raise(rb_eArgError, "Object has no typed data.");
+		}
+		else
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 //------------------------------------------------------------------------------
 // Function: rbValueFromCValue
 //
@@ -144,6 +165,34 @@ rbValueFromCValue(
 }
 
 static VALUE
+TypedObject_get_runtime_obj(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	HRESULT hr = S_OK;
+	CHECK_ABORT(hostCtxt);
+	
+	DbgScriptTypedObject* typObj = nullptr;
+	DbgScriptTypedObject* newTypObj = nullptr;
+	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+
+	// Alloc a new typed object.
+	//
+	VALUE newObj = rb_class_new_instance(
+		0, nullptr, GetRubyProvGlobals()->TypedObjectClass);
+
+	Data_Get_Struct(newObj, DbgScriptTypedObject, newTypObj);
+	
+	hr = DsTypedObjectGetRuntimeType(hostCtxt, typObj, newTypObj);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eRuntimeError, "DsTypedObjectGetRuntimeType failed. Error: 0x%08x", hr);
+	}
+	
+	return newObj;
+}
+
+static VALUE
 TypedObject_value(
 	_In_ VALUE self)
 {
@@ -155,10 +204,7 @@ TypedObject_value(
 
 	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
 	
-	if (!typObj->TypedDataValid)
-	{
-		rb_raise(rb_eRuntimeError, "No typed data available.");
-	}
+	checkTypedData(typObj, true /* fRaise */);
 
 	if (!DsTypedObjectIsPrimitive(typObj))
 	{
@@ -180,7 +226,7 @@ TypedObject_value(
 		&cbRead);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "Failed to read typed data. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "Failed to read typed data. Error 0x%08x.", hr);
 	}
 	assert(cbRead == typObj->TypedData.Size);
 	
@@ -269,31 +315,10 @@ TypedObject_address(
 	return ULL2NUM(typObj->TypedData.Offset);
 }
 
-static bool
-checkTypedData(
-	_In_ DbgScriptTypedObject* typedObj,
-	_In_ bool fRaise)
-{
-	if (!typedObj->TypedDataValid)
-	{
-		if (fRaise)
-		{
-			// This object has no typed data. It must have been a null ptr.
-			//
-			rb_raise(rb_eArgError, "Object has no typed data. Can't get fields.");
-		}
-		else
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
 static VALUE
 allocTypedObjFromTypedData(
-_In_z_ const char* name,
-_In_ DEBUG_TYPED_DATA* typedData)
+	_In_z_ const char* name,
+	_In_ DEBUG_TYPED_DATA* typedData)
 {
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
 	VALUE newObj = rb_class_new_instance(
@@ -306,7 +331,7 @@ _In_ DEBUG_TYPED_DATA* typedData)
 	HRESULT hr = DsWrapTypedData(hostCtxt, name, typedData, obj);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "DsWrapTypedData failed. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "DsWrapTypedData failed. Error 0x%08x.", hr);
 	}
 
 	return newObj;
@@ -404,7 +429,7 @@ TypedObject_length(
 		&typedData);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
 	}
 
 	const ULONG elemSize = typedData.Size;
@@ -441,7 +466,7 @@ AllocTypedObject(
 		obj);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "DsInitializeTypedObject failed. Error 0x%08x.", hr);
+		rb_raise(rb_eRuntimeError, "DsInitializeTypedObject failed. Error 0x%08x.", hr);
 	}
 
 	return typObj;
@@ -478,7 +503,7 @@ TypedObject_get_item(
 			&typedData);
 		if (FAILED(hr))
 		{
-			rb_raise(rb_eSystemCallError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
+			rb_raise(rb_eRuntimeError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
 		}
 		return allocTypedObjFromTypedData(field, &typedData);
 	}
@@ -499,7 +524,7 @@ TypedObject_get_item(
 			&typedData);
 		if (FAILED(hr))
 		{
-			rb_raise(rb_eSystemCallError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+			rb_raise(rb_eRuntimeError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
 		}
 		return allocTypedObjFromTypedData(ARRAY_ELEM_NAME, &typedData);
 	}
@@ -550,7 +575,13 @@ Init_TypedObject()
 		"address",
 		RUBY_METHOD_FUNC(TypedObject_address),
 		0 /* argc */);
-
+	
+	rb_define_method(
+		typedObjectClass,
+		"get_runtime_obj",
+		RUBY_METHOD_FUNC(TypedObject_get_runtime_obj),
+		0 /* argc */);
+	
 	// Length, if object is an array.
 	//
 	rb_define_method(
