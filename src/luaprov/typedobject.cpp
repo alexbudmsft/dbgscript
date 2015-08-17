@@ -204,6 +204,7 @@ getFieldHelper(
 		hostCtxt,
 		typObj,
 		fieldName,
+		true,
 		&typedData);
 	if (FAILED(hr))
 	{

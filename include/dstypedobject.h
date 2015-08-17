@@ -183,6 +183,7 @@ DsTypedObjectGetField(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ DbgScriptTypedObject* typedObj,
 	_In_z_ const char* fieldName,
+	_In_ bool fPrintMissing,
 	_Out_ DEBUG_TYPED_DATA* outData);
 
 _Check_return_ HRESULT

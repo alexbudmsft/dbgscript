@@ -191,6 +191,7 @@ TypedObject_mapping_subscript(
 		hostCtxt,
 		&typedObj->Data,
 		fieldName,
+		true,
 		&typedData);
 	if (FAILED(hr))
 	{
@@ -389,6 +390,7 @@ TypedObject_getattro(
 		hostCtxt,
 		&typedObj->Data,
 		fieldName,
+		true,
 		&typedData);
 	if (FAILED(hr))
 	{

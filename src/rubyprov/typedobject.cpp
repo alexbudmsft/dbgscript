@@ -254,16 +254,25 @@ TypedObject_address(
 	return ULL2NUM(typObj->TypedData.Offset);
 }
 
-static void
+static bool
 checkTypedData(
-	_In_ DbgScriptTypedObject* typedObj)
+	_In_ DbgScriptTypedObject* typedObj,
+	_In_ bool fRaise)
 {
 	if (!typedObj->TypedDataValid)
 	{
-		// This object has no typed data. It must have been a null ptr.
-		//
-		rb_raise(rb_eArgError, "Object has no typed data. Can't get fields.");
+		if (fRaise)
+		{
+			// This object has no typed data. It must have been a null ptr.
+			//
+			rb_raise(rb_eArgError, "Object has no typed data. Can't get fields.");
+		}
+		else
+		{
+			return false;
+		}
 	}
+	return true;
 }
 
 static VALUE
@@ -310,29 +319,42 @@ _In_ DEBUG_TYPED_DATA* typedData)
 //
 static VALUE
 TypedObject_method_missing(
-	_In_ VALUE self,
-	_In_ VALUE methodId)
+	_In_ int argc,
+	_In_reads_(argc) VALUE *argv,
+	_In_ VALUE self)
 {
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
 	DbgScriptTypedObject* typObj = nullptr;
 	CHECK_ABORT(hostCtxt);
-	
-	VALUE methodStr = rb_sym2str(methodId);
+
+	VALUE methodStr = rb_sym2str(argv[0]);
 	const char* fieldName = StringValuePtr(methodStr);
 
 	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+	const ID methodMissing = rb_intern("method_missing");
 
-	checkTypedData(typObj);
+	bool fOk = checkTypedData(typObj, false);
+	if (!fOk)
+	{
+		// Call super class.
+		//
+		VALUE super = rb_class_superclass(CLASS_OF(self));
+		return rb_funcallv(super, methodMissing, argc, argv);
+	}
 	
 	DEBUG_TYPED_DATA typedData = {0};
 	HRESULT hr = DsTypedObjectGetField(
 		hostCtxt,
 		typObj,
 		fieldName,
+		false,
 		&typedData);
 	if (FAILED(hr))
 	{
-		rb_raise(rb_eSystemCallError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
+		// Call super class.
+		//
+		VALUE super = rb_class_superclass(CLASS_OF(self));
+		return rb_funcallv(super, methodMissing, argc, argv);
 	}
 	
 	return allocTypedObjFromTypedData(fieldName, &typedData);
@@ -348,7 +370,7 @@ TypedObject_length(
 
 	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
 
-	checkTypedData(typObj);
+	checkTypedData(typObj, true);
 	
 	if (typObj->TypedData.Tag != SymTagArrayType)
 	{
@@ -424,7 +446,7 @@ TypedObject_get_item(
 
 	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
 	
-	checkTypedData(typObj);
+	checkTypedData(typObj, true);
 	
 	if (TYPE(key) == T_STRING)
 	{
@@ -437,6 +459,7 @@ TypedObject_get_item(
 			hostCtxt,
 			typObj,
 			field,
+			true,
 			&typedData);
 		if (FAILED(hr))
 		{
@@ -534,7 +557,7 @@ Init_TypedObject()
 		typedObjectClass,
 		"method_missing",
 		RUBY_METHOD_FUNC(TypedObject_method_missing),
-		1 /* argc */);
+		-1 /* argc */);
 	
 	// Prevent scripter from instantiating directly.
 	//

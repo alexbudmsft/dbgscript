@@ -171,6 +171,7 @@ DsTypedObjectGetField(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ DbgScriptTypedObject* typedObj,
 	_In_z_ const char* fieldName,
+	_In_ bool fPrintMissing,
 	_Out_ DEBUG_TYPED_DATA* outData)
 {
 	HRESULT hr = S_OK;
@@ -223,9 +224,12 @@ DsTypedObjectGetField(
 	{
 		// This means there was no such member.
 		//
-		hostCtxt->DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			"Error: No such field '%s'.\n", fieldName);
+		if (fPrintMissing)
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: No such field '%s'.\n", fieldName);
+		}
 		goto exit;
 	}
 	else if (FAILED(hr))
