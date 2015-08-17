@@ -20,6 +20,7 @@ set (SOURCES
 	classprop.cpp
 	util.cpp
 	thread.cpp
+	stackframe.cpp
 	)
 
 # Make a DLL.

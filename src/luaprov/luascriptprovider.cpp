@@ -19,6 +19,7 @@
 #include "dbgscript.h"  // dbgscript module.
 #include "typedobject.h"
 #include "thread.h"
+#include "stackframe.h"
 
 // Lua modules and classes.
 //
@@ -437,7 +438,10 @@ CLuaScriptProvider::StartVM()
 	// Open Thread class.
 	//
 	luaL_requiref(LuaState, "Thread", luaopen_Thread, 0 /* set global */);
-
+	
+	// Open StackFrame class.
+	//
+	luaL_requiref(LuaState, "StackFrame", luaopen_StackFrame, 0 /* set global */);
 exit:
 	return hr;
 }
