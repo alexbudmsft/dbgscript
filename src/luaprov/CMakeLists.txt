@@ -19,6 +19,7 @@ set (SOURCES
 	typedobject.cpp
 	classprop.cpp
 	util.cpp
+	thread.cpp
 	)
 
 # Make a DLL.

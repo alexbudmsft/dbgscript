@@ -15,6 +15,7 @@
 #include "dbgscript.h"
 #include "util.h"
 #include "typedobject.h"
+#include "thread.h"
 #include "../support/symcache.h"
 
 //------------------------------------------------------------------------------
@@ -184,6 +185,57 @@ dbgscript_stopBuffering(lua_State* L)
 	return 0;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_currentThread
+//
+// Description:
+//
+//  Get current thread.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  None.
+//
+// Returns:
+//
+//  No results.
+//
+// Notes:
+//
+static int
+dbgscript_currentThread(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	// Get TEB from debug client.
+	//
+	ULONG engineThreadId = 0;
+	ULONG systemThreadId = 0;
+	HRESULT hr = hostCtxt->DebugSysObj->GetCurrentThreadId(&engineThreadId);
+	if (FAILED(hr))
+	{
+		return LuaError(
+			L, "Failed to get engine thread id. Error 0x%08x.", hr);
+	}
+
+	hr = hostCtxt->DebugSysObj->GetCurrentThreadSystemId(&systemThreadId);
+	if (FAILED(hr))
+	{
+		return LuaError(
+			L, "Failed to get system thread id. Error 0x%08x.", hr);
+	}
+	
+	DbgScriptThread* thd = AllocThreadObject(L);
+	thd->EngineId = engineThreadId;
+	thd->ThreadId = systemThreadId;
+	return 1;
+}
+
 // Functions in module.
 //
 static const luaL_Reg dbgscript[] =
@@ -192,6 +244,7 @@ static const luaL_Reg dbgscript[] =
 	{"execCommand", dbgscript_execCommand},
 	{"startBuffering", dbgscript_startBuffering},
 	{"stopBuffering", dbgscript_stopBuffering},
+	{"currentThread", dbgscript_currentThread},
 	{nullptr, nullptr}  // sentinel.
 };
 

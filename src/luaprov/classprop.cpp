@@ -58,6 +58,29 @@ LuaBuildPropertyTable(
 	}
 }
 
+//------------------------------------------------------------------------------
+// Function: LuaSetProperties
+//
+// Description:
+//
+//  Set class-style properties for a table.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//  props - Property descriptors.
+//  count - length of 'props' array.
+//
+// Input Stack:
+//
+//  1 - Table to set properties on.
+//
+// Returns:
+//
+//  void.
+//
+// Notes:
+//
 void
 LuaSetProperties(
 	_In_ lua_State* L,
