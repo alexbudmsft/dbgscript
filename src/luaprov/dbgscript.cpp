@@ -358,7 +358,6 @@ dbgscript_getGlobal(lua_State* L)
 	return 1;
 }
 
-
 //------------------------------------------------------------------------------
 // Function: dbgscript_resolveEnum
 //
@@ -413,6 +412,46 @@ dbgscript_resolveEnum(lua_State* L)
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_readPtr
+//
+// Description:
+//
+//  Resolve a pointer from the target's address space.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  1 - Address to read from (int)
+//
+// Returns:
+//
+//  The pointer value.
+//
+// Notes:
+//
+static int
+dbgscript_readPtr(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	const UINT64 addr = lua_tointeger(L, 1);
+	UINT64 ptrVal = 0;
+
+	HRESULT hr = UtilReadPointer(hostCtxt, addr, &ptrVal);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "Failed to read pointer value from address '%p'. Error 0x%08x.", addr, hr);
+	}
+
+	lua_pushinteger(L, ptrVal);
+	return 1;
+}
+
 // Functions in module.
 //
 static const luaL_Reg dbgscript[] =
@@ -425,6 +464,7 @@ static const luaL_Reg dbgscript[] =
 	{"getThreads", dbgscript_getThreads},
 	{"getGlobal", dbgscript_getGlobal},
 	{"resolveEnum", dbgscript_resolveEnum},
+	{"readPtr", dbgscript_readPtr},
 	{nullptr, nullptr}  // sentinel.
 };
 
