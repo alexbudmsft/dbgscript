@@ -13,7 +13,8 @@ args = stack[frame_idx].get_args()
 
 print ("Locals:")
 for v in locals:
-	print ("Name:", v.name, "Size:", v.size)
+	print ("Name:", v.name, "Size:", v.size, "Type:", v.type, "Module:",
+        v.module, "Addr:", v.address)
 	
 print ("Args:")
 for v in args:

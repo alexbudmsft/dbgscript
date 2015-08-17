@@ -19,6 +19,7 @@ static PyMemberDef TypedObject_MemberDef[] =
 	{ "size", T_ULONG, offsetof(TypedObject, Data.TypedData.Size), READONLY },
 	{ "name", T_STRING_INPLACE, offsetof(TypedObject, Data.Name), READONLY },
 	{ "type", T_STRING_INPLACE, offsetof(TypedObject, Data.TypeName), READONLY },
+	{ "module", T_STRING_INPLACE, offsetof(TypedObject, Data.ModuleName), READONLY },
 	{ "address", T_ULONGLONG, offsetof(TypedObject, Data.TypedData.Offset), READONLY },
 	{ NULL }
 };
