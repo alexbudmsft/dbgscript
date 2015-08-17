@@ -183,7 +183,7 @@ Thread_getStack(lua_State* L)
 	//
 	for (ULONG i = 0; i < framesFilled; ++i)
 	{
-		DbgScriptStackFrame* frame = AllocStackFrameObject(L);
+		DbgScriptStackFrame* frame = AllocStackFrameObject(L, 1);
 		frame->FrameNumber = frames[i].FrameNumber;
 		frame->InstructionOffset = frames[i].InstructionOffset;
 

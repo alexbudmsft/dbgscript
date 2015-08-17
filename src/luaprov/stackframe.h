@@ -21,4 +21,6 @@ luaopen_StackFrame(lua_State* L);
 
 DbgScriptStackFrame*
 AllocStackFrameObject(
-	_In_ lua_State* L);
+	_In_ lua_State* L,
+	_In_ int thdIdx);
+
