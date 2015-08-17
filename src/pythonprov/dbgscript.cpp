@@ -53,8 +53,12 @@ dbgscript_create_typed_object(
 		goto exit;
 	}
 
+	// Consider normalizing the type here via DebugSymbols->GetTypeName
+	// and storing that. Then having a fulltypename property which concats the
+	// module name and type together.
+	//
 	ret = AllocTypedObject(
-		0, nullptr, typeName, typeInfo->TypeId, typeInfo->ModuleBase, addr);
+		0, nullptr, typeInfo->TypeId, typeInfo->ModuleBase, addr);
 exit:
 	return ret;
 }
@@ -113,7 +117,6 @@ dbgscript_get_global(
 	PyObject *ret = nullptr;
 	const char* symbol = nullptr;
 	UINT64 addr = 0;
-	char typeName[MAX_SYMBOL_NAME_LEN] = {};
 	if (!PyArg_ParseTuple(args, "s:get_global", &symbol))
 	{
 		return nullptr;
@@ -133,21 +136,9 @@ dbgscript_get_global(
 		goto exit;
 	}
 
-	hr = hostCtxt->DebugSymbols->GetTypeName(
-		typeInfo->ModuleBase,
-		typeInfo->TypeId,
-		STRING_AND_CCH(typeName),
-		nullptr);
-	if (FAILED(hr))
-	{
-		PyErr_Format(PyExc_ValueError, "Failed to get type name for symbol '%s'. Error 0x%08x.", symbol, hr);
-		goto exit;
-	}
-
 	ret = AllocTypedObject(
 		0,
 		symbol,
-		typeName,
 		typeInfo->TypeId,
 		typeInfo->ModuleBase,
 		addr);

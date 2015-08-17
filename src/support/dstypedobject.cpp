@@ -39,7 +39,7 @@ DsWrapTypedData(
 	{
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			ERR_FAILED_GET_SYM_TYPE_NAME,
+			ERR_FAILED_GET_TYPE_NAME,
 			hr);
 		goto exit;
 	}
@@ -52,7 +52,6 @@ DsInitializeTypedObject(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ ULONG size,
 	_In_opt_z_ const char* name,
-	_In_z_ const char* type,
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
 	_In_ UINT64 virtualAddress,
@@ -71,8 +70,59 @@ DsInitializeTypedObject(
 		assert(SUCCEEDED(hr));
 	}
 
-	hr = StringCchCopyA(STRING_AND_CCH(typObj->TypeName), type);
-	assert(SUCCEEDED(hr));
+	// Locals enumeration sometimes finds optimized-away locals. Those
+	// don't have a real DEBUG_SYMBOL_ENTRY so we just pass a zero-filled one
+	// through.
+	//
+	if (moduleBase)
+	{
+		// Get type name.
+		//
+		hr = hostCtxt->DebugSymbols->GetTypeName(
+			moduleBase,
+			typeId,
+			STRING_AND_CCH(typObj->TypeName),
+			nullptr);
+		if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				ERR_FAILED_GET_TYPE_NAME,
+				hr);
+			
+			goto exit;
+		}
+
+		// Get module name.
+		//
+		hr = hostCtxt->DebugSymbols->GetModuleNames(
+			DEBUG_ANY_ID,
+			moduleBase,
+			nullptr,  // imageNameBuffer
+			0,		  // imageNameBufferSize
+			nullptr,  // imageNameSize
+			STRING_AND_CCH(typObj->ModuleName),
+			nullptr,  // moduleNameSize
+			nullptr,
+			0,
+			nullptr);
+		if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				ERR_FAILED_GET_MODULE_NAME,
+				hr);
+			
+			goto exit;
+		}
+	}
+	else
+	{
+		hr = StringCchCopyA(STRING_AND_CCH(typObj->TypeName), "<invalid>");
+		assert(SUCCEEDED(hr));
+		hr = StringCchCopyA(STRING_AND_CCH(typObj->ModuleName), "<invalid>");
+		assert(SUCCEEDED(hr));
+	}
 
 	// Can't generate typed data for null pointers. Then again, doesn't matter
 	// much since can't traverse a null pointer anyway.

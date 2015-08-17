@@ -63,7 +63,7 @@ dbgscript_createTypedObject(lua_State* L)
 	}
 
 	AllocNewTypedObject(
-		L, 0, nullptr, typeName, typeInfo->TypeId, typeInfo->ModuleBase, addr);
+		L, 0, nullptr, typeInfo->TypeId, typeInfo->ModuleBase, addr);
 	
 	return 1;
 }

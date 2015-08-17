@@ -112,7 +112,6 @@ AllocNewTypedObject(
 	_In_ lua_State* L,
 	_In_ ULONG size,
 	_In_opt_z_ const char* name,
-	_In_z_ const char* type,
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
 	_In_ UINT64 virtualAddress)
@@ -128,7 +127,6 @@ AllocNewTypedObject(
 		hostCtxt,
 		size,
 		name,
-		type,
 		typeId,
 		moduleBase,
 		virtualAddress,
@@ -704,6 +702,44 @@ TypedObject_gettype(lua_State* L)
 }
 
 //------------------------------------------------------------------------------
+// Function: TypedObject_getmodule
+//
+// Description:
+//
+//  Get the module of the object.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the typed object.
+//
+// Returns:
+//
+//  One result: The module name of the TypedObject.
+//
+// Notes:
+//
+static int
+TypedObject_getmodule(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+
+	lua_pushstring(L, typObj->ModuleName);
+	
+	return 1;
+}
+
+//------------------------------------------------------------------------------
 // Function: TypedObject_getfield
 //
 // Description:
@@ -749,6 +785,7 @@ static const LuaClassProperty x_TypedObjectProps[] =
 	{ "name", TypedObject_getname, nullptr },
 	{ "size", TypedObject_getsize, nullptr },
 	{ "type", TypedObject_gettype, nullptr },
+	{ "module", TypedObject_getmodule, nullptr },
 	{ "value", TypedObject_getvalue, nullptr },
 	{ "address", TypedObject_getaddress, nullptr },
 };

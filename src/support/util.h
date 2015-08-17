@@ -125,7 +125,6 @@ typedef _Check_return_ HRESULT
 (*EnumStackFrameVarsCb)(
 	_In_ DEBUG_SYMBOL_ENTRY* entry,
 	_In_z_ const char* symName,
-	_In_z_ const char* typeName,
 	_In_ ULONG idx,
 	_In_opt_ void* ctxt);
 

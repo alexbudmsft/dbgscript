@@ -82,7 +82,6 @@ DbgScript_get_global(
 
 	const char* symbol = StringValuePtr(sym);
 	UINT64 addr = 0;
-	char typeName[MAX_SYMBOL_NAME_LEN] = {};
 	HRESULT hr = hostCtxt->DebugSymbols->GetOffsetByName(symbol, &addr);
 	if (FAILED(hr))
 	{
@@ -96,20 +95,9 @@ DbgScript_get_global(
 		rb_raise(rb_eArgError, "Failed to get type id for type '%s'.", symbol);
 	}
 
-	hr = hostCtxt->DebugSymbols->GetTypeName(
-		typeInfo->ModuleBase,
-		typeInfo->TypeId,
-		STRING_AND_CCH(typeName),
-		nullptr);
-	if (FAILED(hr))
-	{
-		rb_raise(rb_eArgError, "Failed to get type name for symbol '%s'. Error 0x%08x.", symbol, hr);
-	}
-	
 	return AllocTypedObject(
 		0 /* size */,
 		symbol /* name */,
-		typeName,
 		typeInfo->TypeId,
 		typeInfo->ModuleBase,
 		addr);
@@ -292,7 +280,6 @@ DbgScript_create_typed_object(
 	return AllocTypedObject(
 		0 /* size */,
 		nullptr /* name */,
-		szType,
 		typeInfo->TypeId,
 		typeInfo->ModuleBase,
 		ui64Addr);

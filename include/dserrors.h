@@ -38,8 +38,8 @@
 #define ERR_FAILED_GET_SYM_NAME \
 	"Error: Failed to get symbol name. Error 0x%08x.\n"
 
-#define ERR_FAILED_GET_SYM_TYPE_NAME \
-	"Error: Failed to get symbol type name. Error 0x%08x.\n"
+#define ERR_FAILED_GET_TYPE_NAME \
+	"Error: Failed to get type name. Error 0x%08x.\n"
 
 #define ERR_FAILED_INSTALL_OUTPUT_CB \
 	"Error: Failed to install output callback. Error 0x%08x.\n"
@@ -50,3 +50,5 @@
 #define ERR_FAILED_GET_THREAD_IDS \
 	"Error: Failed to get thread IDs. Error 0x%08x.\n"
 
+#define ERR_FAILED_GET_MODULE_NAME \
+	"Error: Failed to get module name. Error 0x%08x.\n"

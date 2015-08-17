@@ -139,6 +139,10 @@ struct DbgScriptTypedObject
 	//
 	char TypeName[MAX_SYMBOL_NAME_LEN];
 
+	// Module name.
+	//
+	char ModuleName[MAX_MODULE_NAME_LEN];
+
 	// DbgEng typed-data information used for walking object hierarchies.
 	//
 	DEBUG_TYPED_DATA TypedData;
@@ -162,7 +166,6 @@ DsInitializeTypedObject(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ ULONG size,
 	_In_opt_z_ const char* name,
-	_In_z_ const char* type,
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
 	_In_ UINT64 virtualAddress,
