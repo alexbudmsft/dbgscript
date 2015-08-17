@@ -553,6 +553,43 @@ TypedObject_getvalue(lua_State* L)
 }
 
 //------------------------------------------------------------------------------
+// Function: TypedObject_getaddress
+//
+// Description:
+//
+//  Get address of typed object.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the user datum (TypedObject).
+//
+// Returns:
+//
+//  One result: Virtual address of object.
+//
+// Notes:
+//
+static int
+TypedObject_getaddress(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+
+	lua_pushinteger(L, typObj->TypedData.Offset);
+	return 1;
+}
+
+//------------------------------------------------------------------------------
 // Function: TypedObject_getname
 //
 // Description:
@@ -713,6 +750,7 @@ static const LuaClassProperty x_TypedObjectProps[] =
 	{ "size", TypedObject_getsize, nullptr },
 	{ "type", TypedObject_gettype, nullptr },
 	{ "value", TypedObject_getvalue, nullptr },
+	{ "address", TypedObject_getaddress, nullptr },
 };
 
 // Instance methods.
