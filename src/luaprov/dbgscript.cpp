@@ -236,6 +236,77 @@ dbgscript_currentThread(lua_State* L)
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_getThreads
+//
+// Description:
+//
+//  Get current thread.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  None.
+//
+// Returns:
+//
+//  An array of thread objects (table)
+//
+// Notes:
+//
+static int
+dbgscript_getThreads(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	ULONG cThreads = 0;
+	ULONG* engineThreadIds = nullptr;
+	ULONG* sysThreadIds = nullptr;
+	HRESULT hr = UtilCountThreads(hostCtxt, &cThreads);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "UtilCountThreads failed. Error 0x%08x.", hr);
+	}
+
+	// Get list of thread IDs.
+	//
+	engineThreadIds = new ULONG[cThreads];
+	sysThreadIds = new ULONG[cThreads];
+
+	hr = UtilEnumThreads(hostCtxt, cThreads, engineThreadIds, sysThreadIds);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "UtilEnumThreads failed. Error 0x%08x.", hr);
+	}
+
+	lua_createtable(L, cThreads /* array elems */, 0 /* hash elems */);
+
+	// Build a tuple of Thread objects.
+	//
+	for (ULONG i = 0; i < cThreads; ++i)
+	{
+		DbgScriptThread* thd = AllocThreadObject(L);
+		thd->EngineId = engineThreadIds[i];
+		thd->ThreadId = sysThreadIds[i];
+
+		// Insert into i'th index. In Lua, it is customary to start arrays
+		// at index 1, not 0.
+		//
+		lua_rawseti(L, -2, i + 1);
+	}
+
+	delete[] engineThreadIds;
+	delete[] sysThreadIds;
+
+	// Return the table.
+	//
+	return 1;
+}
+
 // Functions in module.
 //
 static const luaL_Reg dbgscript[] =
@@ -245,6 +316,7 @@ static const luaL_Reg dbgscript[] =
 	{"startBuffering", dbgscript_startBuffering},
 	{"stopBuffering", dbgscript_stopBuffering},
 	{"currentThread", dbgscript_currentThread},
+	{"getThreads", dbgscript_getThreads},
 	{nullptr, nullptr}  // sentinel.
 };
 
