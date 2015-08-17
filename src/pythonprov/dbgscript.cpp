@@ -53,10 +53,6 @@ dbgscript_create_typed_object(
 		goto exit;
 	}
 
-	// Consider normalizing the type here via DebugSymbols->GetTypeName
-	// and storing that. Then having a fulltypename property which concats the
-	// module name and type together.
-	//
 	ret = AllocTypedObject(
 		0, nullptr, typeInfo->TypeId, typeInfo->ModuleBase, addr);
 exit:

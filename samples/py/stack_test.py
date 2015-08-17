@@ -1,5 +1,3 @@
-import dbgscript
-
 cur_thd = dbgscript.current_thread()
 
 print ("Engine Thd ID:", cur_thd.engine_id, "Sys Id:", cur_thd.thread_id)

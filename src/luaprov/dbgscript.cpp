@@ -307,6 +307,57 @@ dbgscript_getThreads(lua_State* L)
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_getGlobal
+//
+// Description:
+//
+//  Get global object.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  1 - Name of object (string).
+//
+// Returns:
+//
+//  The global typed object.
+//
+// Notes:
+//
+static int
+dbgscript_getGlobal(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	const char* symbol = lua_tostring(L, 1);
+	UINT64 addr = 0;
+	HRESULT hr = hostCtxt->DebugSymbols->GetOffsetByName(symbol, &addr);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "Failed to get virtual address for symbol '%s'. Error 0x%08x.", symbol, hr);
+	}
+
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(hostCtxt, symbol);
+	if (!typeInfo)
+	{
+		return LuaError(L, "Failed to get type id for type '%s'.", symbol);
+	}
+
+	AllocNewTypedObject(
+		L,
+		0,
+		symbol,
+		typeInfo->TypeId,
+		typeInfo->ModuleBase,
+		addr);
+	
+	return 1;
+}
+
 // Functions in module.
 //
 static const luaL_Reg dbgscript[] =
@@ -317,6 +368,7 @@ static const luaL_Reg dbgscript[] =
 	{"stopBuffering", dbgscript_stopBuffering},
 	{"currentThread", dbgscript_currentThread},
 	{"getThreads", dbgscript_getThreads},
+	{"getGlobal", dbgscript_getGlobal},
 	{nullptr, nullptr}  // sentinel.
 };
 
