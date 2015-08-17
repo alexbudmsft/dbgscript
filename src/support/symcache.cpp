@@ -1,3 +1,18 @@
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: symcache.cpp
+// @Author: alexbud
+//
+// Purpose:
+//
+//  Symbol caching layer.
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************
+
 #include "symcache.h"
 #include <map>
 

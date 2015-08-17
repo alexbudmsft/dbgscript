@@ -1,6 +1,20 @@
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: symcache.h
+// @Author: alexbud
+//
+// Purpose:
+//
+//  Symbol caching layer.
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************
 #pragma once
 
-#include "windows.h"
+#include <windows.h>
 #include <hostcontext.h>
 
 struct ModuleAndTypeId
