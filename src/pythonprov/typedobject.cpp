@@ -497,6 +497,47 @@ TypedObject_sequence_length(
 	return typObj->Data.TypedData.Size / elemSize;
 }
 
+static PyObject*
+TypedObject_get_runtime_obj(
+	_In_ PyObject* self,
+	_In_ PyObject* /* args */)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	TypedObject* typObj = (TypedObject*)self;
+	TypedObject* newTypObj = nullptr;
+	PyObject* ret = nullptr;
+	HRESULT hr = S_OK;
+	CHECK_ABORT(hostCtxt);
+	
+	PyObject* newObj = TypedObjectType.tp_new(
+		&TypedObjectType,
+		nullptr,
+		nullptr);
+	if (!newObj)
+	{
+		return nullptr;
+	}
+
+	newTypObj = (TypedObject*)newObj;
+	
+	hr = DsTypedObjectGetRuntimeType(hostCtxt, &typObj->Data, &newTypObj->Data);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_OSError, "DsTypedObjectGetRuntimeType failed. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	ret = newObj;
+	
+exit:
+	if (FAILED(hr))
+	{
+		Py_XDECREF(newObj);
+	}
+	
+	return ret;
+}
+
 static PyGetSetDef TypedObject_GetSetDef[] =
 {
 	{
@@ -505,6 +546,17 @@ static PyGetSetDef TypedObject_GetSetDef[] =
 		SetReadOnlyProperty,
 		PyDoc_STR("Value of field if primitive type."),
 		NULL
+	},
+	{ NULL }  /* Sentinel */
+};
+
+static PyMethodDef TypedObject_MethodDef[] =
+{
+	{
+		"get_runtime_obj",
+		TypedObject_get_runtime_obj,
+		METH_NOARGS,
+		PyDoc_STR("Return the runtime type of this object as a new typed object.")
 	},
 	{ NULL }  /* Sentinel */
 };
@@ -519,6 +571,7 @@ InitTypedObjectType()
 	TypedObjectType.tp_flags = Py_TPFLAGS_DEFAULT;
 	TypedObjectType.tp_doc = PyDoc_STR("dbgscript.TypedObject objects");
 	TypedObjectType.tp_members = TypedObject_MemberDef;
+	TypedObjectType.tp_methods = TypedObject_MethodDef;
 	TypedObjectType.tp_getset = TypedObject_GetSetDef;
 	TypedObjectType.tp_new = PyType_GenericNew;
 	TypedObjectType.tp_str = TypedObject_str;
