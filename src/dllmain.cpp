@@ -2,6 +2,7 @@
 #include <strsafe.h>
 #include <assert.h>
 #include "support/util.h"
+#include <crtdbg.h>
 
 static DbgScriptHostContext g_HostCtxt;
 
@@ -48,6 +49,12 @@ struct ScriptProviderInfo
 	IScriptProvider* ScriptProvider;
 
 	WCHAR LangId[MAX_LANG_ID]; // -l <lang>
+
+	_CrtMemState MemStateBefore;
+
+	_CrtMemState MemStateAfter;
+
+	_CrtMemState MemStateDiff;
 };
 
 struct ScriptProvCallbackBinding
@@ -102,7 +109,19 @@ unloadScriptProvider(
 		// Call DLL cleanup routine.
 		//
 		info->CleanupFunc();
-	
+		
+		// Snapshot the CRT memory state just before unloading the DLL so
+		// we get a good stack.
+		//
+		_CrtMemCheckpoint(&info->MemStateAfter);
+
+		_CrtMemDifference(
+			&info->MemStateDiff,
+			&info->MemStateBefore,
+			&info->MemStateAfter);
+
+		_CrtMemDumpAllObjectsSince(&info->MemStateBefore);
+		
 		// Unload the module.
 		//
 		BOOL fOk = FreeLibrary(info->Module);
@@ -151,6 +170,10 @@ loadAndCreateScriptProvider(
 		goto exit;
 	}
 
+	// Snapshot the CRT memory state before loading the DLL.
+	//
+	_CrtMemCheckpoint(&info->MemStateBefore);
+	
 	info->Module = LoadLibrary(info->DllFileName);
 	if (!info->Module)
 	{
