@@ -18,6 +18,73 @@
 #include "symcache.h"
 #include <strsafe.h>
 
+//------------------------------------------------------------------------------
+// Function: fillTypeAndModuleName
+//
+// Description:
+//
+//  Utility to fetch and populate the type and module names of a typed object.
+//
+// Parameters:
+//
+// Returns:
+//
+//  HRESULT.
+//
+// Notes:
+//
+static _Check_return_ HRESULT
+fillTypeAndModuleName(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ ULONG typeId,
+	_In_ UINT64 moduleBase,
+	_Out_ DbgScriptTypedObject* typObj)
+{
+	HRESULT hr = S_OK;
+	
+	// Get type name.
+	//
+	hr = hostCtxt->DebugSymbols->GetTypeName(
+		moduleBase,
+		typeId,
+		STRING_AND_CCH(typObj->TypeName),
+		nullptr);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_TYPE_NAME,
+			hr);
+		
+		goto exit;
+	}
+	
+	// Get module name.
+	//
+	hr = hostCtxt->DebugSymbols->GetModuleNames(
+		DEBUG_ANY_ID,
+		moduleBase,
+		nullptr,  // imageNameBuffer
+		0,		  // imageNameBufferSize
+		nullptr,  // imageNameSize
+		STRING_AND_CCH(typObj->ModuleName),
+		nullptr,  // moduleNameSize
+		nullptr,
+		0,
+		nullptr);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_MODULE_NAME,
+			hr);
+		
+		goto exit;
+	}
+exit:
+	return hr;
+}
+
 _Check_return_ HRESULT
 DsWrapTypedData(
 	_In_ DbgScriptHostContext* hostCtxt,
@@ -31,17 +98,13 @@ DsWrapTypedData(
 	typObj->TypedData = *typedData;
 	typObj->TypedDataValid = true;
 
-	hr = hostCtxt->DebugSymbols->GetTypeName(
-		typObj->TypedData.ModBase,
+	hr = fillTypeAndModuleName(
+		hostCtxt,
 		typObj->TypedData.TypeId,
-		STRING_AND_CCH(typObj->TypeName),
-		nullptr);
+		typObj->TypedData.ModBase,
+		typObj);
 	if (FAILED(hr))
 	{
-		hostCtxt->DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			ERR_FAILED_GET_TYPE_NAME,
-			hr);
 		goto exit;
 	}
 exit:
@@ -77,43 +140,13 @@ DsInitializeTypedObject(
 	//
 	if (moduleBase)
 	{
-		// Get type name.
-		//
-		hr = hostCtxt->DebugSymbols->GetTypeName(
-			moduleBase,
+		hr = fillTypeAndModuleName(
+			hostCtxt,
 			typeId,
-			STRING_AND_CCH(typObj->TypeName),
-			nullptr);
-		if (FAILED(hr))
-		{
-			hostCtxt->DebugControl->Output(
-				DEBUG_OUTPUT_ERROR,
-				ERR_FAILED_GET_TYPE_NAME,
-				hr);
-			
-			goto exit;
-		}
-
-		// Get module name.
-		//
-		hr = hostCtxt->DebugSymbols->GetModuleNames(
-			DEBUG_ANY_ID,
 			moduleBase,
-			nullptr,  // imageNameBuffer
-			0,		  // imageNameBufferSize
-			nullptr,  // imageNameSize
-			STRING_AND_CCH(typObj->ModuleName),
-			nullptr,  // moduleNameSize
-			nullptr,
-			0,
-			nullptr);
+			typObj);
 		if (FAILED(hr))
 		{
-			hostCtxt->DebugControl->Output(
-				DEBUG_OUTPUT_ERROR,
-				ERR_FAILED_GET_MODULE_NAME,
-				hr);
-			
 			goto exit;
 		}
 	}
