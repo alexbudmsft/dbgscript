@@ -15,6 +15,11 @@ CPythonScriptProvider::StartVM()
 {
 	HRESULT hr = S_OK;
 
+	// PyImport_AppendInittab allocates memory, so create the global heap before
+	// it.
+	//
+	PyMem_CreateGlobalHeap();
+	
 	// Append dbgscript module to builtin table.
 	//
 	PyImport_AppendInittab(x_DbgScriptModuleName, PyInit_dbgscript);
@@ -61,6 +66,7 @@ void
 CPythonScriptProvider::StopVM()
 {
 	Py_Finalize();
+	PyMem_DestroyGlobalHeap();
 }
 
 _Check_return_ HRESULT
