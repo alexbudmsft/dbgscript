@@ -329,13 +329,13 @@ dbgscript_execute_command(
 {
 	const char* command = nullptr;
 	HRESULT hr = S_OK;
-
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
 	if (!PyArg_ParseTuple(args, "s:execute_command", &command))
 	{
 		return nullptr;
 	}
-
-	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 
 	hr = UtilExecuteCommand(hostCtxt, command);
 	if (FAILED(hr))
