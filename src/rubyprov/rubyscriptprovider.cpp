@@ -14,7 +14,7 @@
 //******************************************************************************  
 
 #include "common.h"
-
+#include <crtdbg.h>
 #include <iscriptprovider.h>
 
 // Ruby modules and classes.
@@ -49,6 +49,14 @@ public:
 
 	void
 	Cleanup() override;
+	
+private:
+
+	_CrtMemState MemStateBefore;
+
+	_CrtMemState MemStateAfter;
+
+	_CrtMemState MemStateDiff;
 };
 
 CRubyScriptProvider::CRubyScriptProvider()
@@ -339,6 +347,8 @@ CRubyScriptProvider::StartVM()
 
 	HRESULT hr = S_OK;
 
+	_CrtMemCheckpoint(&MemStateBefore);
+	
 	// Ruby does command line parsing for us. We're not going to use its output
 	// though.
 	//
@@ -407,7 +417,15 @@ CRubyScriptProvider::StopVM()
 			DEBUG_OUTPUT_WARNING,
 			"Warning: Ruby failed to cleanup: %d.\n", status);
 	}
-
+	
+	_CrtMemCheckpoint(&MemStateAfter);
+	
+	_CrtMemDifference(
+		&MemStateDiff,
+		&MemStateBefore,
+		&MemStateAfter);
+	
+	_CrtMemDumpAllObjectsSince(&MemStateBefore);
 }
 
 void 
