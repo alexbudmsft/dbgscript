@@ -579,7 +579,9 @@ parseArgs(
 	HRESULT hr = S_OK;
 	int cArgs = 0;
 	DbgScriptHostContext* hostCtxt = GetHostContext();
-	WCHAR* wszArgs = UtilConvertAnsiToWide(args);
+	WCHAR* wszArgs = nullptr;
+
+	wszArgs = UtilConvertAnsiToWide(args);
 	if (!wszArgs)
 	{
 		hostCtxt->DebugControl->Output(
@@ -654,6 +656,7 @@ parseArgs(
 	parsedArgs->RemainingArgc = cArgs - i;
 	assert(parsedArgs->RemainingArgc >= 0);
 exit:
+	delete [] wszArgs;
 	return hr;
 }
 

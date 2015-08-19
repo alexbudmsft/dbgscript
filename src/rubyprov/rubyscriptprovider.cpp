@@ -348,6 +348,8 @@ CRubyScriptProvider::StartVM()
 	HRESULT hr = S_OK;
 
 	_CrtMemCheckpoint(&MemStateBefore);
+
+	rb_init_global_heap();
 	
 	// Ruby does command line parsing for us. We're not going to use its output
 	// though.
@@ -417,6 +419,8 @@ CRubyScriptProvider::StopVM()
 			DEBUG_OUTPUT_WARNING,
 			"Warning: Ruby failed to cleanup: %d.\n", status);
 	}
+
+	rb_cleanup_global_heap();
 	
 	_CrtMemCheckpoint(&MemStateAfter);
 	
