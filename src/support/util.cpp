@@ -562,13 +562,10 @@ exit:
 //
 CAutoSetOutputCallback::~CAutoSetOutputCallback()
 {
-	if (m_Prev)
-	{
-		IDebugClient* client = m_HostCtxt->DebugClient;
-		HRESULT hr = client->SetOutputCallbacks(m_Prev);
-		assert(SUCCEEDED(hr));
-		hr;
-	}
+	IDebugClient* client = m_HostCtxt->DebugClient;
+	HRESULT hr = client->SetOutputCallbacks(m_Prev);
+	assert(SUCCEEDED(hr));
+	hr;
 }
 
 
