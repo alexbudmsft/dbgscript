@@ -41,46 +41,45 @@ fillTypeAndModuleName(
 	_Out_ DbgScriptTypedObject* typObj)
 {
 	HRESULT hr = S_OK;
-	
+	const char* cachedTypeName = nullptr;
+	const char* cachedModName = nullptr;
+
 	// Get type name.
 	//
-	hr = hostCtxt->DebugSymbols->GetTypeName(
-		moduleBase,
-		typeId,
-		STRING_AND_CCH(typObj->TypeName),
-		nullptr);
-	if (FAILED(hr))
+	const ModuleAndTypeId modAndTypeId = { typeId, moduleBase };
+	cachedTypeName = GetCachedTypeName(
+		hostCtxt,
+		modAndTypeId);
+	if (!cachedTypeName)
 	{
+		hr = E_FAIL;
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			ERR_FAILED_GET_TYPE_NAME,
-			hr);
+			ERR_FAILED_GET_TYPE_NAME);
 		
 		goto exit;
 	}
+	hr = StringCchCopyA(STRING_AND_CCH(typObj->TypeName), cachedTypeName);
+	assert(SUCCEEDED(hr));
 	
 	// Get module name.
 	//
-	hr = hostCtxt->DebugSymbols->GetModuleNames(
-		DEBUG_ANY_ID,
-		moduleBase,
-		nullptr,  // imageNameBuffer
-		0,		  // imageNameBufferSize
-		nullptr,  // imageNameSize
-		STRING_AND_CCH(typObj->ModuleName),
-		nullptr,  // moduleNameSize
-		nullptr,
-		0,
-		nullptr);
-	if (FAILED(hr))
+	cachedModName = GetCachedModuleName(
+		hostCtxt,
+		moduleBase);
+	if (!cachedModName)
 	{
+		hr = E_FAIL;
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
-			ERR_FAILED_GET_MODULE_NAME,
-			hr);
+			ERR_FAILED_GET_MODULE_NAME);
 		
 		goto exit;
 	}
+
+	hr = StringCchCopyA(STRING_AND_CCH(typObj->ModuleName), cachedModName);
+	assert(SUCCEEDED(hr));
+	
 exit:
 	return hr;
 }

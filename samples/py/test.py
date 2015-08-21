@@ -1,15 +1,14 @@
 import sys
-from dbgscript import *
 from pprint import pprint
 
 #pprint (sys.modules)
 #pprint (dir(dbgscript))
 #pprint (vars(dbgscript))
 
-#pprint (dir(Process))
+#pprint (dir(dbgscript))
 
-threads = Process.get_threads()
-cur_thd = Process.current_thread;
+threads = dbgscript.get_threads()
+cur_thd = dbgscript.current_thread();
 
 print ("Cur thread:", cur_thd, "Id:", cur_thd.thread_id)
 
