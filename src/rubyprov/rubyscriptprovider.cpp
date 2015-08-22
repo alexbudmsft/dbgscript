@@ -342,6 +342,9 @@ CRubyScriptProvider::RunString(
 	return S_OK;
 }
 
+extern "C" void Init_ext(void);
+extern "C" void Init_enc(void);
+
 _Check_return_ HRESULT
 CRubyScriptProvider::StartVM()
 {
@@ -366,6 +369,10 @@ CRubyScriptProvider::StartVM()
 		hr = E_FAIL;  // TODO: Better error.
 		goto exit;
 	}
+
+	ruby_init_loadpath();
+	Init_enc();
+	Init_ext();
 
 	// Redirect all writes/prints/readlines to our custom routines.
 	//

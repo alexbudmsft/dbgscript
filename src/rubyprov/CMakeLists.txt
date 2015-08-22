@@ -62,6 +62,8 @@ set (RB_LIBS
 	strscan
 	thread
 	win32ole
+	libenc
+	libtrans
 )
 
 # Generate the list of files to link, per flavor.
@@ -88,5 +90,13 @@ target_link_libraries (rubyprov
 	debug x64-msvcr120-ruby230_d-static.lib
 	optimized x64-msvcr120-ruby230-static.lib
 	)
+
+# TODO Factor out for both retail and dbg
+#
+SET_TARGET_PROPERTIES(rubyprov
+	PROPERTIES LINK_FLAGS_DEBUG "debug/extinit.obj debug/encinit.obj")
+	
+SET_TARGET_PROPERTIES(rubyprov
+	PROPERTIES LINK_FLAGS_RELWITHDEBINFO "release/extinit.obj release/encinit.obj")
 	
 add_subdirectory(../support ${CMAKE_CURRENT_BINARY_DIR}/support)
