@@ -142,7 +142,8 @@ topLevelExceptionHandler(
 	_In_ VALUE /*args*/,
 	_In_ VALUE exc)
 {
-	IDebugControl* ctrl = GetRubyProvGlobals()->HostCtxt->DebugControl;
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	IDebugControl* ctrl = hostCtxt->DebugControl;
 
 	NoArgMethodInfo info = { exc, rb_intern("message") };
 
@@ -155,6 +156,10 @@ topLevelExceptionHandler(
 			status);
 		goto exit;
 	}
+
+	// First, flush any remaining buffer so the traceback follows it.
+	//
+	UtilFlushMessageBuffer(hostCtxt);
 
 	// Assumes a 'simple' null-terminated string.
 	//
@@ -361,8 +366,6 @@ CRubyScriptProvider::StartVM()
 		hr = E_FAIL;  // TODO: Better error.
 		goto exit;
 	}
-
-	ruby_init_loadpath();
 
 	// Redirect all writes/prints/readlines to our custom routines.
 	//

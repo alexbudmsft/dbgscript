@@ -29,28 +29,64 @@ set (SOURCES
 	typedobject.cpp
 )
 
+set (RB_LIBS
+	bigdecimal
+	bubblebabble
+	complex
+	console
+	continuation
+	coverage
+	cparse
+	date_core
+	digest
+	etc
+	fcntl
+	fiber
+	generator
+	md5
+	nkf
+	nonblock
+	objspace
+	parser
+	pathname
+	psych
+	rational
+	ripper
+	rmd160
+	sdbm
+	sha1
+	sha2
+	sizeof
+	socket
+	stringio
+	strscan
+	thread
+	win32ole
+)
+
+# Generate the list of files to link, per flavor.
+#
+set (LINK_LIST "")
+foreach(x ${RB_LIBS})
+	list (APPEND LINK_LIST debug debug/${x} optimized release/${x})
+endforeach()
+
 # Make a DLL.
 #
 add_library(rubyprov SHARED ${SOURCES})
 
 # rubyprov.dll depends on dbgscriptsupport.lib
 #
-target_link_libraries (
-	rubyprov
+target_link_libraries (rubyprov
 	dbgscriptsupport
 	dbgeng.lib
 	dbghelp.lib
 	ws2_32.lib
 	iphlpapi.lib
 	shlwapi.lib
+	${LINK_LIST}
+	debug x64-msvcr120-ruby230_d-static.lib
+	optimized x64-msvcr120-ruby230-static.lib
 	)
-	
-target_link_libraries (
-	rubyprov debug
-	x64-msvcr120-ruby230_d-static.lib)
-
-target_link_libraries (
-	rubyprov optimized
-	x64-msvcr120-ruby230-static.lib)
 	
 add_subdirectory(../support ${CMAKE_CURRENT_BINARY_DIR}/support)
