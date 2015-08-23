@@ -14,7 +14,7 @@
 //******************************************************************************  
 
 #include "common.h"
-
+#include <strsafe.h>
 #include <iscriptprovider.h>
 #include "dbgscript.h"  // dbgscript module.
 #include "typedobject.h"
@@ -166,6 +166,50 @@ luaGetCCb()
 	GetLuaProvGlobals()->ValidInputChars--;
 exit:
 	return ret;
+}
+
+static void
+appendScriptPathToPackagePath(
+	_In_ lua_State* L,
+	_In_z_ const char* fullScriptPath)
+{
+	const char* backSlash = strrchr(fullScriptPath, '\\');
+	char newPath[MAX_PATH+1] = {};
+
+	// We're dealing with a fully-qualified path, so we better have a backslash.
+	//
+	assert(backSlash);
+
+	// Generate a path template.
+	//
+	StringCchPrintfA(STRING_AND_CCH(newPath), ";%.*s\\?.lua",
+		backSlash - fullScriptPath,
+		fullScriptPath);
+	
+	// Add the script's directory to the package.path string to allow
+	// require 'foo' to work more naturally.
+	//
+	lua_getglobal(L, "package");
+
+	// Push the current value of 'path'...
+	//
+	lua_getfield(L, -1, "path");
+
+	// ...and the new value we want to append.
+	//
+	lua_pushstring(L, newPath);
+
+	// Concat the top two stack elements and push the result.
+	//
+	lua_concat(L, 2);
+
+	// Replace the field in the package table.
+	//
+	lua_setfield(L, -2, "path");
+
+	// Pop the package table.
+	//
+	lua_pop(L, 1);
 }
 
 _Check_return_ HRESULT
@@ -338,6 +382,8 @@ CLuaScriptProvider::Run(
 	//
 	lua_setglobal(LuaState, "arg");
 
+	appendScriptPathToPackagePath(LuaState, ansiScriptFileName);
+	
 	// Call what's on the top of the stack.
 	//
 	err = lua_pcall(LuaState, 0, 0, -2 /* position of debug.traceback */);
