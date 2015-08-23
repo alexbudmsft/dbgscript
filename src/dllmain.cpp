@@ -128,6 +128,10 @@ unloadScriptProvider(
 		assert(fOk);
 		fOk;  // reference in retail.
 
+		// Again after freeing the library.
+		//
+		_CrtMemDumpAllObjectsSince(&info->MemStateBefore);
+
 		info->Module = nullptr;
 		
 		info->CreateFunc = nullptr;
@@ -580,6 +584,7 @@ parseArgs(
 	int cArgs = 0;
 	DbgScriptHostContext* hostCtxt = GetHostContext();
 	WCHAR* wszArgs = nullptr;
+	WCHAR** argList = nullptr;
 
 	wszArgs = UtilConvertAnsiToWide(args);
 	if (!wszArgs)
@@ -591,7 +596,7 @@ parseArgs(
 		goto exit;
 	}
 
-	WCHAR** argList = CommandLineToArgvW(wszArgs, &cArgs);
+	argList = CommandLineToArgvW(wszArgs, &cArgs);
 	if (!argList)
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
@@ -649,14 +654,17 @@ parseArgs(
 			break;
 		}
 	}
+	
 	// Rebase the arguments from the script to after what we consumed for the
 	// host.
 	//
 	parsedArgs->RemainingArgv = &argList[i];
 	parsedArgs->RemainingArgc = cArgs - i;
 	assert(parsedArgs->RemainingArgc >= 0);
+	
 exit:
-	delete [] wszArgs;
+	parsedArgs->WideArgsToFree = wszArgs;
+	parsedArgs->ArgListToFree = argList;
 	return hr;
 }
 
@@ -933,23 +941,10 @@ exit:
 DLLEXPORT HRESULT CALLBACK
 startvm(
 	_In_     IDebugClient* /*client*/,
-	_In_opt_ PCSTR         args)
+	_In_opt_ PCSTR         /*args*/)
 {
 	HRESULT hr = S_OK;
-	ParsedArgs parsedArgs = {};
-	ScriptProviderInfo* scriptProv = nullptr;
-	hr = parseArgs(args, &parsedArgs);
-	if (FAILED(hr))
-	{
-		goto exit;
-	}
 
-	hr = findScriptProvider(parsedArgs.LangId, &scriptProv);
-	if (FAILED(hr))
-	{
-		goto exit;
-	}
-	
 	if (GetHostContext()->StartVMEnabled)
 	{
 		g_HostCtxt.DebugControl->Output(
@@ -969,22 +964,9 @@ exit:
 DLLEXPORT HRESULT CALLBACK
 stopvm(
 	_In_     IDebugClient* /*client*/,
-	_In_opt_ PCSTR         args)
+	_In_opt_ PCSTR         /*args*/)
 {
 	HRESULT hr = S_OK;
-	ParsedArgs parsedArgs = {};
-	ScriptProviderInfo* scriptProv = nullptr;
-	hr = parseArgs(args, &parsedArgs);
-	if (FAILED(hr))
-	{
-		goto exit;
-	}
-
-	hr = findScriptProvider(parsedArgs.LangId, &scriptProv);
-	if (FAILED(hr))
-	{
-		goto exit;
-	}
 	
 	if (!GetHostContext()->StartVMEnabled)
 	{
