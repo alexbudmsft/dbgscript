@@ -1,0 +1,26 @@
+* This is the script that will run in the debugger.
+* NOTE: Don't have empty lines, as they will repeat the last command!
+*
+*
+.echo Running Python Tests
+* Load the extension DLL.
+*
+*
+.load C:\Program Files\DbgScript\dbgscript.dll
+* Try simple string evals.
+*
+!evalstring -l py 1
+!evalstring -l py {}
+!evalstring -l py print(1)
+*
+* Try VM persistence
+*
+!startvm
+!evalstring -l py a = 5
+!evalstring -l py print(a)
+!stopvm
+*
+*
+* All done
+*
+q
