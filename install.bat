@@ -34,4 +34,11 @@ reg add %PROVKEY% /f /t REG_SZ /v rb /d "%INSTALLDIR%\rubyprov\rubyprov.dll" > N
 reg add %PROVKEY% /f /t REG_SZ /v lua /d "%INSTALLDIR%\luaprov\luaprov.dll" > NUL
 
 echo.
+echo *********
 echo All done^^! Use ".load %INSTALLDIR%\dbgscript.dll" to load extension.
+echo *********
+echo.
+echo NOTE: Ensure you have the VS 2015 and 2013 x64 Redists installed!
+echo.
+echo VS 2015: https://www.microsoft.com/en-us/download/details.aspx?id=48145
+echo VS 2013: https://www.microsoft.com/en-us/download/details.aspx?id=40784
