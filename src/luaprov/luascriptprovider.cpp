@@ -69,15 +69,29 @@ CLuaScriptProvider::Init()
 	return StartVM();
 }
 
+// Called for both stdout and stderr.
+//
 void 
 luaOutputCb(
 	_In_ lua_OutputType out_type,
 	_In_ const char* buf)
 {
 	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
-	hostCtxt->DebugControl->Output(
-		out_type == lua_outputNormal ? DEBUG_OUTPUT_NORMAL : DEBUG_OUTPUT_ERROR,
-		buf);
+
+	const size_t len = strlen(buf);
+	if (hostCtxt->IsBuffering > 0)
+	{
+		UtilBufferOutput(hostCtxt, buf, len);
+	}
+	else
+	{
+		// Unbuffered case.
+		//
+		hostCtxt->DebugControl->Output(
+			out_type == lua_outputNormal ? DEBUG_OUTPUT_NORMAL : DEBUG_OUTPUT_ERROR,
+			"%s",
+			buf);
+	}
 }
 
 void
