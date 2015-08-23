@@ -1,0 +1,37 @@
+@echo off
+setlocal EnableDelayedExpansion
+
+REM This script should reside in the deployment directory beside the payload.
+REM
+set BASEDIR=%~dp0
+set INSTALLDIR=%ProgramFiles%\DbgScript
+if exist "%INSTALLDIR%" (
+	set /P REPLACE="%INSTALLDIR% already exists. Replace? [y/N]: "
+	if /I "!REPLACE!" == "y" (
+		rd /q/s "%INSTALLDIR%"
+		goto install
+	) else (
+		echo Exiting...
+		exit /b
+	)
+)
+
+:install
+REM Copy over the bits.
+REM
+echo Copying files...
+robocopy "%BASEDIR%\DbgScript" "%INSTALLDIR%" /MIR /njh /njs /ndl /nc /ns /nfl /np
+
+REM Setup registry.
+REM
+set BASEREGKEY=HKCU\Software\Microsoft\DbgScript
+set PROVKEY=%BASEREGKEY%\Providers
+
+echo Registering script providers (%PROVKEY%)...
+
+reg add %PROVKEY% /f /t REG_SZ /v py /d "%INSTALLDIR%\pythonprov\pythonprov.dll" > NUL
+reg add %PROVKEY% /f /t REG_SZ /v rb /d "%INSTALLDIR%\rubyprov\rubyprov.dll" > NUL
+reg add %PROVKEY% /f /t REG_SZ /v lua /d "%INSTALLDIR%\luaprov\luaprov.dll" > NUL
+
+echo.
+echo All done^^! Use ".load %INSTALLDIR%\dbgscript.dll" to load extension.
