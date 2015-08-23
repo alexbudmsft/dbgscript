@@ -52,7 +52,7 @@ dbgscript_createTypedObject(lua_State* L)
 	luaL_checkinteger(L, 2);
 
 	const char *typeName = lua_tostring(L, 1);
-	UINT64 addr = lua_tointeger(L, 2);
+	UINT64 addr = luaL_checkinteger(L, 2);
 	
 	// Lookup typeid/moduleBase from type name.
 	//
@@ -387,7 +387,7 @@ dbgscript_resolveEnum(lua_State* L)
 	CHECK_ABORT(hostCtxt);
 
 	const char* enumTypeName = lua_tostring(L, 1);
-	const UINT64 value = lua_tointeger(L, 2);
+	const UINT64 value = luaL_checkinteger(L, 2);
 	
 	char enumElementName[MAX_SYMBOL_NAME_LEN] = {};
 
@@ -439,7 +439,7 @@ dbgscript_readPtr(lua_State* L)
 	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
 	CHECK_ABORT(hostCtxt);
 	
-	const UINT64 addr = lua_tointeger(L, 1);
+	const UINT64 addr = luaL_checkinteger(L, 1);
 	UINT64 ptrVal = 0;
 
 	HRESULT hr = UtilReadPointer(hostCtxt, addr, &ptrVal);
