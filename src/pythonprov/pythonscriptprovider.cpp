@@ -291,18 +291,70 @@ CPythonScriptProvider::RunString(
 	_In_z_ const char* scriptString)
 {
 	HRESULT hr = S_OK;
-
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	
 	// Host ensures string is not empty.
 	//
 	assert(*scriptString);
-	
-	if (PyRun_SimpleString(scriptString) < 0)
-	{
-		hr = E_FAIL;
+
+	// Mimick PyRun_SimpleStringFlags.
+	//
+    PyObject *m = nullptr;
+	PyObject *d = nullptr;
+	PyObject *v = nullptr;
+
+	// Returns borrowed ref.
+	//
+    m = PyImport_AddModule("__main__");
+    if (!m)
+    {
+        hr = E_FAIL;
 		goto exit;
-	}
+    }
+
+	// Returns borrowed ref.
+	//
+    d = PyModule_GetDict(m);
+
+	// Returns a new ref.
+	//
+    v = PyRun_StringFlags(scriptString, Py_file_input, d, d, nullptr /* flags */);
+	
+    if (!v)
+	{
+		if (PyErr_ExceptionMatches(PyExc_SystemExit))
+		{
+			// Don't bother printing anything for a system exit, just exit
+			// successfully. Log a verbose stream message
+			// (Ctrl-V in cdb or Ctrl-Alt-V in Windbg).
+			//
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_VERBOSE,
+				"Exiting due to SystemExit exception.\n");
+			hr = S_OK;
+		}
+		else
+		{
+			PyObject* exc = nullptr;
+			PyObject* val = nullptr;
+			PyObject* traceback = nullptr;
+			
+			// Display traceback and exception.
+			//
+			PyErr_Fetch(&exc, &val, &traceback);
+			PyErr_NormalizeException(&exc, &val, &traceback);
+			PyErr_Display(exc, val, traceback);
+			
+			hr = E_FAIL;
+		}
+		goto exit;
+    }
+	
 
 exit:
+	// X is the checked version.
+	//
+    Py_XDECREF(v);
 	return hr;
 }
 

@@ -58,6 +58,35 @@ DbgScriptIO_readline(PyObject* /* self */, PyObject* args)
 		min(maxToRead, _countof(buf)),
 		&actualLen);
 
+	// Translate Ctrl-Z (ASCII "Substitute" character [1]) 0x1A into EOF
+	// to mimick the regular Python REPL.
+	//
+	// [1] https://en.wikipedia.org/wiki/Substitute_character
+	//
+	// actualLen is always at least 1 due to the NUL termination, so empty string
+	// yield actualLen == 1.
+	//
+	if (actualLen > 1 && *buf == 0x1A)
+	{
+		// Overwrite it with NUL to yield an empty string which will indicate
+		// EOF to Python.
+		// 
+		*buf = 0;
+	}
+	else if (actualLen == 1)
+	{
+		// Translate empty strings into a single newline so that Python doesn't
+		// think it's EOF. Otherwise you can't have multi-line evaluations
+		// in the REPL.
+		//
+		assert(!*buf);  // The only character must be NUL.
+		*buf = '\n';
+
+		// The whole buffer is NUL filled so we don't need to worry about
+		// NUL termination.
+		//
+	}
+
 	return PyUnicode_FromString(buf);
 }
 
