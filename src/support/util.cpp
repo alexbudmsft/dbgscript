@@ -104,6 +104,68 @@ exit:
 }
 
 //------------------------------------------------------------------------------
+// Function: UtilReadAnsiString
+//
+// Description:
+//
+//  Read an optionally counted ANSI string from the target's memory.
+//
+// Parameters:
+//
+//  cchCount - if -1, then assumes string is NUL-terminated, otherwise indicates
+//   how many characters to read.
+//
+// Returns:
+//
+// Notes:
+//
+_Check_return_ HRESULT
+UtilReadAnsiString(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ UINT64 addr,
+	_Out_writes_to_(cbBuf, cbCount) char* buf,
+	_In_ ULONG cbBuf,
+	_In_ int cbCount,
+	_Out_ ULONG* cbActualLen)
+{
+	HRESULT hr = S_OK;
+	if (cbCount < 0)
+	{
+		// ReadMultiByteStringVirtual looks for a NULL-terminator and fails
+		// if it doesn't find one within 'maxBytes' bytes.
+		//
+		hr = hostCtxt->DebugDataSpaces->ReadMultiByteStringVirtual(
+			addr,
+			cbBuf,  // maxBytes
+			buf,
+			cbBuf,
+			cbActualLen);
+	}
+	else
+	{
+		// ReadVirtual just reads arbitrary content up to a given size.
+		// We add 1 to cchCount so that the caller gets 'cchCount' non-NUL
+		// characters. Otherwise if the caller were to pass '1', we would read
+		// no characters because we are telling 'ReadVirtual' our buffer has
+		// space only for a NUL.
+		//
+		hr = hostCtxt->DebugDataSpaces->ReadVirtual(
+			addr,
+			buf,
+			min(cbBuf, (ULONG)cbCount + 1),
+			cbActualLen);
+	}
+
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+	
+exit:
+	return hr;
+}
+
+//------------------------------------------------------------------------------
 // Function: UtilCheckAbort
 //
 // Description:

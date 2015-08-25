@@ -561,6 +561,70 @@ exit:
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_read_string
+//
+// Description:
+//
+//  Read an, optionally counted, ANSI string from the target process.
+//
+// Parameters:
+//
+//  obj.read_wide_string([count]) -> str
+//
+//  count - Number of characters to read. -1 means read up to NUL.
+//
+// Returns:
+//
+//  str object.
+//
+// Notes:
+//
+static PyObject*
+TypedObject_read_string(
+	_In_ PyObject* self,
+	_In_ PyObject* args)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	PyObject* ret = nullptr;
+	HRESULT hr = S_OK;
+	CHECK_ABORT(hostCtxt);
+	char buf[MAX_READ_STRING_LEN];
+	UINT64 addr = 0;
+	ULONG cbActualLen = 0;
+	
+	// Initialize to default value. -1 means 
+	//
+	int count = -1;
+	
+	TypedObject* typObj = (TypedObject*)self;
+
+	if (!checkTypedData(typObj))
+	{
+		goto exit;
+	}
+
+	addr = typObj->Data.TypedData.Offset;
+	
+	if (!PyArg_ParseTuple(args, "|i:read_string", &count))
+	{
+		goto exit;
+	}
+
+	hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cbActualLen);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_RuntimeError, "UtilReadAnsiString failed. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	// Don't include the NUL terminator.
+	//
+	ret = PyUnicode_FromStringAndSize(buf, cbActualLen - 1);
+exit:
+	return ret;
+}
+
 static PyObject*
 TypedObject_get_runtime_obj(
 	_In_ PyObject* self,
@@ -628,7 +692,12 @@ static PyMethodDef TypedObject_MethodDef[] =
 		METH_VARARGS,
 		PyDoc_STR("Read a wide string from the target into a str.")
 	},
-	
+	{
+		"read_string",
+		TypedObject_read_string,
+		METH_VARARGS,
+		PyDoc_STR("Read an ANSI string from the target into a str.")
+	},
 	{ NULL }  /* Sentinel */
 };
 

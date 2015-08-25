@@ -41,6 +41,15 @@ UtilReadWideString(
 	_In_ int cchCount,
 	_Out_ ULONG* cchActualLen);
 
+_Check_return_ HRESULT
+UtilReadAnsiString(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ UINT64 addr,
+	_Out_writes_to_(cbBuf, cbCount) char* buf,
+	_In_ ULONG cbBuf,
+	_In_ int cbCount,
+	_Out_ ULONG* cbActualLen);
+
 _Check_return_ bool
 UtilCheckAbort(
 	_In_ DbgScriptHostContext* hostCtxt);
