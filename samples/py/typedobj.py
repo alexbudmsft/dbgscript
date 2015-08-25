@@ -6,3 +6,4 @@ print(b.name, b.type, b.size)
 
 print (b[0].ThreadId.value)
 print (len(a.Runtime.LogLocation))
+print (a.Runtime.LogLocation.read_wide_string())

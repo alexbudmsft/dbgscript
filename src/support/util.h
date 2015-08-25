@@ -22,11 +22,24 @@
 #include <dsthread.h>
 #include <dserrors.h>
 
+// Max length of string we support in read{wide}string APIs.
+//
+const int MAX_READ_STRING_LEN = 2048;
+
 _Check_return_ HRESULT
 UtilReadPointer(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ UINT64 addr,
 	_Out_ UINT64* ptrVal);
+
+_Check_return_ HRESULT
+UtilReadWideString(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ UINT64 addr,
+	_Out_writes_to_(cchBuf, count) WCHAR* buf,
+	_In_ ULONG cchBuf,
+	_In_ int cchCount,
+	_Out_ ULONG* cchActualLen);
 
 _Check_return_ bool
 UtilCheckAbort(

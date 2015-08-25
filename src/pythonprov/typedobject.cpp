@@ -59,7 +59,7 @@ allocSubTypedObject(
 	HRESULT hr = DsWrapTypedData(hostCtxt, name, typedData, &typObj->Data);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "DsWrapTypedData failed. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_RuntimeError, "DsWrapTypedData failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 	
@@ -119,7 +119,7 @@ TypedObject_sequence_get_item(
 		&typedData);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_RuntimeError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 
@@ -196,7 +196,7 @@ TypedObject_mapping_subscript(
 		&typedData);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_RuntimeError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 
@@ -395,7 +395,7 @@ TypedObject_getattro(
 		&typedData);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_RuntimeError, "DsTypedObjectGetField failed. Error 0x%08x.", hr);
 		return nullptr;
 	}
 
@@ -439,7 +439,7 @@ TypedObject_get_value(
 		&cbRead);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "Failed to read typed data. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_RuntimeError, "Failed to read typed data. Error 0x%08x.", hr);
 		goto exit;
 	}
 	assert(cbRead == typObj->Data.TypedData.Size);
@@ -488,13 +488,77 @@ TypedObject_sequence_length(
 		&typedData);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_RuntimeError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
 		return -1;
 	}
 
 	const ULONG elemSize = typedData.Size;
 
 	return typObj->Data.TypedData.Size / elemSize;
+}
+
+//------------------------------------------------------------------------------
+// Function: TypedObject_read_wide_string
+//
+// Description:
+//
+//  Read an, optionally counted, wide string from the target process.
+//
+// Parameters:
+//
+//  obj.read_wide_string([count]) -> str
+//
+//  count - Number of characters to read. -1 means read up to NUL.
+//
+// Returns:
+//
+//  str object.
+//
+// Notes:
+//
+static PyObject*
+TypedObject_read_wide_string(
+	_In_ PyObject* self,
+	_In_ PyObject* args)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	PyObject* ret = nullptr;
+	HRESULT hr = S_OK;
+	CHECK_ABORT(hostCtxt);
+	WCHAR buf[MAX_READ_STRING_LEN];
+	UINT64 addr = 0;
+	ULONG cchActualLen = 0;
+	
+	// Initialize to default value. -1 means 
+	//
+	int count = -1;
+	
+	TypedObject* typObj = (TypedObject*)self;
+
+	if (!checkTypedData(typObj))
+	{
+		goto exit;
+	}
+
+	addr = typObj->Data.TypedData.Offset;
+	
+	if (!PyArg_ParseTuple(args, "|i:read_wide_string", &count))
+	{
+		goto exit;
+	}
+
+	hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cchActualLen);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_RuntimeError, "UtilReadWideString failed. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	// Don't include the NUL terminator.
+	//
+	ret = PyUnicode_FromWideChar(buf, cchActualLen - 1);
+exit:
+	return ret;
 }
 
 static PyObject*
@@ -523,7 +587,7 @@ TypedObject_get_runtime_obj(
 	hr = DsTypedObjectGetRuntimeType(hostCtxt, &typObj->Data, &newTypObj->Data);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "DsTypedObjectGetRuntimeType failed. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_RuntimeError, "DsTypedObjectGetRuntimeType failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 
@@ -558,6 +622,13 @@ static PyMethodDef TypedObject_MethodDef[] =
 		METH_NOARGS,
 		PyDoc_STR("Return the runtime type of this object as a new typed object.")
 	},
+	{
+		"read_wide_string",
+		TypedObject_read_wide_string,
+		METH_VARARGS,
+		PyDoc_STR("Read a wide string from the target into a str.")
+	},
+	
 	{ NULL }  /* Sentinel */
 };
 
@@ -629,7 +700,7 @@ AllocTypedObject(
 		&typObj->Data);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "DsInitializeTypedObject failed. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_RuntimeError, "DsInitializeTypedObject failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 	

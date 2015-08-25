@@ -40,6 +40,70 @@ UtilReadPointer(
 }
 
 //------------------------------------------------------------------------------
+// Function: UtilReadWideString
+//
+// Description:
+//
+//  Read an optionally counted wide string from the target's memory.
+//
+// Parameters:
+//
+//  cchCount - if -1, then assumes string is NUL-terminated, otherwise indicates
+//   how many characters to read.
+//
+// Returns:
+//
+// Notes:
+//
+_Check_return_ HRESULT
+UtilReadWideString(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ UINT64 addr,
+	_Out_writes_to_(cchBuf, cchCount) WCHAR* buf,
+	_In_ ULONG cchBuf,
+	_In_ int cchCount,
+	_Out_ ULONG* cchActualLen)
+{
+	ULONG cbActual = 0;
+	HRESULT hr = S_OK;
+	if (cchCount < 0)
+	{
+		// ReadUnicodeStringVirtualWide looks for a NULL-terminator and fails
+		// if it doesn't find one within 'maxBytes' bytes.
+		//
+		hr = hostCtxt->DebugDataSpaces->ReadUnicodeStringVirtualWide(
+			addr,
+			cchBuf * sizeof(WCHAR),  // maxBytes
+			buf,
+			cchBuf,
+			&cbActual);
+	}
+	else
+	{
+		// ReadVirtual just reads arbitrary content up to a given size.
+		// We add 1 to cchCount so that the caller gets 'cchCount' non-NUL
+		// characters. Otherwise if the caller were to pass '1', we would read
+		// no characters because we are telling 'ReadVirtual' our buffer has
+		// space only for a NUL.
+		//
+		hr = hostCtxt->DebugDataSpaces->ReadVirtual(
+			addr,
+			buf,
+			min(cchBuf, (ULONG)cchCount + 1) * sizeof(WCHAR),
+			&cbActual);
+	}
+
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+	
+	*cchActualLen = cbActual / sizeof(WCHAR);
+exit:
+	return hr;
+}
+
+//------------------------------------------------------------------------------
 // Function: UtilCheckAbort
 //
 // Description:
