@@ -59,6 +59,9 @@
 #define ERR_FAILED_GET_NAME_BY_OFFSET \
 	"Error: Failed to get name from offset %p. Error 0x%08x.\n"
 
+#define ERR_FAILED_READ_PTR \
+	"Error: Failed to read pointer from offset %p. Error 0x%08x.\n"
+
 #define ERR_NO_VTABLE \
 	"Error: Object at %p has no vtable.\n"
 

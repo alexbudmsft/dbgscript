@@ -383,8 +383,37 @@ DsTypedObjectGetRuntimeType(
 
 	// Read the vptr.
 	//
-	UtilReadPointer(hostCtxt, typObj->TypedData.Offset, &ptrVal);
+	hr = UtilReadPointer(hostCtxt, typObj->TypedData.Offset, &ptrVal);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_READ_PTR,
+			typObj->TypedData.Offset,
+			hr);
+		goto exit;
+	}
 
+	// If we have a pointer to an interface, then we need one more level of
+	// indirection before we can lookup the vtable.
+	//
+	if (typObj->TypedData.Tag == SymTagPointerType)
+	{
+		UINT64 newPtrVal = 0;
+		hr = UtilReadPointer(hostCtxt, ptrVal, &newPtrVal);
+		if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				ERR_FAILED_READ_PTR,
+				ptrVal,
+				hr);
+			goto exit;
+		}
+
+		ptrVal = newPtrVal;
+	}
+	
 	hr = hostCtxt->DebugSymbols->GetNameByOffset(
 		ptrVal, STRING_AND_CCH(name), nullptr, nullptr);
 	if (FAILED(hr))
