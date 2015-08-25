@@ -546,7 +546,13 @@ TypedObject_read_wide_string(
 	{
 		goto exit;
 	}
-
+	
+	if (count > MAX_READ_STRING_LEN - 1)
+	{
+		PyErr_Format(PyExc_ValueError, "count supports at most %d", MAX_READ_STRING_LEN - 1);
+		goto exit;
+	}
+	
 	hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cchActualLen);
 	if (FAILED(hr))
 	{
@@ -608,6 +614,12 @@ TypedObject_read_string(
 	
 	if (!PyArg_ParseTuple(args, "|i:read_string", &count))
 	{
+		goto exit;
+	}
+
+	if (count > MAX_READ_STRING_LEN - 1)
+	{
+		PyErr_Format(PyExc_ValueError, "count supports at most %d", MAX_READ_STRING_LEN - 1);
 		goto exit;
 	}
 
