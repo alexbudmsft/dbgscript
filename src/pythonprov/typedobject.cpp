@@ -92,6 +92,46 @@ checkTypedData(
 	return true;
 }
 
+// Dereference the pointer.
+//
+static PyObject*
+TypedObject_deref(
+	_In_ PyObject* self,
+	_In_opt_ void* /* closure */)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	HRESULT hr = S_OK;
+	CHECK_ABORT(hostCtxt);
+
+	TypedObject* typObj = (TypedObject*)self;
+	PyObject* ret = nullptr;
+
+	if (!checkTypedData(typObj))
+	{
+		return nullptr;
+	}
+
+	// Dereferencing a pointer is the same as getting the zero'th element.
+	//
+	DEBUG_TYPED_DATA typedData = {0};
+	hr = DsTypedObjectGetArrayElement(
+		hostCtxt,
+		&typObj->Data,
+		0,
+		&typedData);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_OSError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	// Inherit the same name as the parent.
+	//
+	ret = allocSubTypedObject(typObj->Data.Name, &typedData);
+exit:
+	return ret;
+}
+
 // Get an array element. I.e. object[i], where i is int in Python.
 //
 static PyObject*
@@ -545,6 +585,13 @@ static PyGetSetDef TypedObject_GetSetDef[] =
 		TypedObject_get_value,
 		SetReadOnlyProperty,
 		PyDoc_STR("Value of field if primitive type."),
+		NULL
+	},
+	{
+		"deref",
+		TypedObject_deref,
+		SetReadOnlyProperty,
+		PyDoc_STR("Dereference pointer."),
 		NULL
 	},
 	{ NULL }  /* Sentinel */
