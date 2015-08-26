@@ -379,6 +379,7 @@ DsTypedObjectGetRuntimeType(
 {
 	HRESULT hr = S_OK;
 	UINT64 ptrVal = 0;
+	UINT64 objAddr = typObj->TypedData.Offset;
 	char name[MAX_SYMBOL_NAME_LEN] = {};
 
 	// Read the vptr.
@@ -410,7 +411,7 @@ DsTypedObjectGetRuntimeType(
 				hr);
 			goto exit;
 		}
-
+		objAddr = ptrVal;
 		ptrVal = newPtrVal;
 	}
 	
@@ -465,7 +466,7 @@ DsTypedObjectGetRuntimeType(
 		typObj->Name,
 		typeInfo->TypeId,
 		typeInfo->ModuleBase,
-		typObj->TypedData.Offset,
+		objAddr,
 		newTypObj);
 	if (FAILED(hr))
 	{
