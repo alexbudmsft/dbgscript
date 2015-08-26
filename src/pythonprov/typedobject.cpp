@@ -547,9 +547,9 @@ TypedObject_read_wide_string(
 		goto exit;
 	}
 	
-	if (count > MAX_READ_STRING_LEN - 1)
+	if (!count || count > MAX_READ_STRING_LEN - 1)
 	{
-		PyErr_Format(PyExc_ValueError, "count supports at most %d", MAX_READ_STRING_LEN - 1);
+		PyErr_Format(PyExc_ValueError, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
 		goto exit;
 	}
 	
@@ -576,7 +576,7 @@ exit:
 //
 // Parameters:
 //
-//  obj.read_wide_string([count]) -> str
+//  obj.read_string([count]) -> str
 //
 //  count - Number of characters to read. -1 means read up to NUL.
 //
@@ -617,9 +617,9 @@ TypedObject_read_string(
 		goto exit;
 	}
 
-	if (count > MAX_READ_STRING_LEN - 1)
+	if (!count || count > MAX_READ_STRING_LEN - 1)
 	{
-		PyErr_Format(PyExc_ValueError, "count supports at most %d", MAX_READ_STRING_LEN - 1);
+		PyErr_Format(PyExc_ValueError, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
 		goto exit;
 	}
 

@@ -22,7 +22,7 @@
 #include <dsthread.h>
 #include <dserrors.h>
 
-// Max length of string we support in read{wide}string APIs.
+// Max length of string we support in read{wide}string APIs in characters.
 //
 const int MAX_READ_STRING_LEN = 2048;
 
