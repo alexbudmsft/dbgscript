@@ -19,13 +19,13 @@
 //------------------------------------------------------------------------------
 // Function: StackFrame_frame_number
 //
+// Synopsis:
+//
+//  obj.frame_number -> Integer
+//
 // Description:
 //
-//  Attribute-style getter method for the StackFrame's frame number.
-//  
-// Returns:
-//
-// Notes:
+//  Return the frame number.
 //
 static VALUE
 StackFrame_frame_number(
@@ -39,15 +39,15 @@ StackFrame_frame_number(
 }
 
 //------------------------------------------------------------------------------
-// Function: StackFrame_frame_number
+// Function: StackFrame_instruction_offset
+//
+// Synopsis:
+//
+//  obj.instruction_offset -> Integer
 //
 // Description:
 //
-//  Attribute-style getter method for the StackFrame's instruction offset.
-//  
-// Returns:
-//
-// Notes:
+//  Return the instruction offset.
 //
 static VALUE
 StackFrame_instruction_offset(
@@ -154,13 +154,13 @@ getVariablesHelper(
 //------------------------------------------------------------------------------
 // Function: StackFrame_get_locals
 //
+// Synopsis:
+//
+//  obj.get_locals -> array of TypedObject
+//
 // Description:
 //
 //  Get local variables in 'self'. This includes arguments.
-//  
-// Returns:
-//
-// Notes:
 //
 static VALUE
 StackFrame_get_locals(
@@ -175,13 +175,13 @@ StackFrame_get_locals(
 //------------------------------------------------------------------------------
 // Function: StackFrame_get_args
 //
+// Synopsis:
+//
+//  obj.get_args -> array of TypedObject
+//
 // Description:
 //
-//  Get arguments in 'self'.
-//  
-// Returns:
-//
-// Notes:
+//  Get arguments only in 'self'.
 //
 static VALUE
 StackFrame_get_args(
@@ -253,6 +253,17 @@ StackFrame_alloc(
 	return Data_Wrap_Struct(klass, StackFrame_mark, StackFrame_free, frame);
 }
 
+//------------------------------------------------------------------------------
+// Function: Init_StackFrame
+//
+// Description:
+//
+//  Initialize the StackFrame class.
+//  
+// Returns:
+//
+// Notes:
+//
 void
 Init_StackFrame()
 {

@@ -18,13 +18,15 @@
 //------------------------------------------------------------------------------
 // Function: Thread_engine_id
 //
+// Synopsis:
+//
+//  obj.engine_id -> Integer
+//
 // Description:
 //
-//  Attribute-style getter method for the thread's engine id.
-//  
-// Returns:
+//  Return the thread's engine id. This is a dbgeng-assigned value for the
+//  thread. Not to be confused with the [system] thread id.
 //
-// Notes:
 //
 static VALUE
 Thread_engine_id(
@@ -43,13 +45,13 @@ Thread_engine_id(
 //------------------------------------------------------------------------------
 // Function: Thread_thread_id
 //
+// Synopsis:
+//
+//  obj.thread_id -> Integer
+//
 // Description:
 //
-//  Attribute-style getter method for the thread's OS id.
-//  
-// Returns:
-//
-// Notes:
+//  Return the thread's system thread id.
 //
 static VALUE
 Thread_thread_id(
@@ -68,13 +70,13 @@ Thread_thread_id(
 //------------------------------------------------------------------------------
 // Function: Thread_get_stack
 //
+// Synopsis:
+//
+//  obj.get_stack -> array of StackFrame
+//
 // Description:
 //
-//  Attribute-style getter method for the thread's current stack frame.
-//  
-// Returns:
-//
-// Notes:
+//  Return the call stack as an array of StackFrame objects.
 //
 static VALUE
 Thread_get_stack(
@@ -132,13 +134,16 @@ Thread_get_stack(
 //------------------------------------------------------------------------------
 // Function: Thread_current_frame
 //
+// Synopsis:
+//
+//  obj.current_frame -> StackFrame
+//
 // Description:
 //
-//  Attribute-style getter method for the thread's current stack frame.
-//  
-// Returns:
+//  Return the current stack frame.
 //
-// Notes:
+// TODO: Consider switching to the thread identified by 'self' before getting
+// the current frame.
 //
 static VALUE
 Thread_current_frame(
