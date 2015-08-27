@@ -164,6 +164,19 @@ rbValueFromCValue(
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_get_runtime_obj
+//
+// Synopsis:
+// 
+//  obj.get_runtime_obj -> TypedObject
+//
+// Description:
+//
+//  Discovers the runtime type of an object or pointer-to an object by checking
+//  its vtable. Creates a new object of this type. Throws if 'obj' does not 
+//  have a vtable.
+//  
 static VALUE
 TypedObject_get_runtime_obj(
 	_In_ VALUE self)
@@ -195,21 +208,16 @@ TypedObject_get_runtime_obj(
 //------------------------------------------------------------------------------
 // Function: TypedObject_read_string
 //
+// Synopsis:
+//
+//  obj.read_string([count]) -> String
+//
 // Description:
 //
 //  Read an, optionally counted, ANSI string from the target process.
 //
-// Parameters:
-//
-//  obj.read_string([count]) -> String
-//
-//  count - Number of characters to read. -1 means read up to NUL.
-//
-// Returns:
-//
-//  String.
-//
-// Notes:
+//  count is the (int) number of characters to read. -1 means read up to the
+//  first NUL.
 //
 static VALUE
 TypedObject_read_string(
@@ -262,21 +270,16 @@ TypedObject_read_string(
 //------------------------------------------------------------------------------
 // Function: TypedObject_read_wide_string
 //
+// Synopsis:
+//
+//  obj.read_wide_string([count]) -> String
+//
 // Description:
 //
 //  Read an, optionally counted, wide string from the target process.
 //
-// Parameters:
-//
-//  obj.read_wide_string([count]) -> String
-//
-//  count - Number of characters to read. -1 means read up to NUL.
-//
-// Returns:
-//
-//  String.
-//
-// Notes:
+//  count is the (int) number of characters to read. -1 means read up to the
+//  first NUL.
 //
 static VALUE
 TypedObject_read_wide_string(
@@ -337,6 +340,18 @@ TypedObject_read_wide_string(
 	return rb_utf8_str_new(utf8buf, cbWritten);
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_value
+//
+// Synopsis:
+//
+//  obj.value -> varies
+//
+// Description:
+//
+//  Return the value of a primitive type. Throws if object is not of a primitive
+//  type.
+//
 static VALUE
 TypedObject_value(
 	_In_ VALUE self)
@@ -382,8 +397,21 @@ TypedObject_value(
 	return rbValueFromCValue(typObj);
 }
 
-// Don't want to call it 'size' because 'size' is a builtin method on arrays
-// in Ruby which is an alias for 'length'.
+//------------------------------------------------------------------------------
+// Function: TypedObject_data_size
+//
+// Synopsis:
+// 
+//  obj.data_size -> Integer
+//
+// Description:
+//
+//  Return the size of the object in bytes.
+//
+// Notes:
+//
+//  Don't want to call it 'size' because 'size' is a built-in method on arrays
+//  in Ruby which is an alias for 'length'.
 //
 static VALUE
 TypedObject_data_size(
@@ -400,6 +428,17 @@ TypedObject_data_size(
 	return ULONG2NUM(typObj->TypedData.Size);
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_name
+//
+// Synopsis:
+// 
+//  obj.name -> String
+//
+// Description:
+//
+//  Return the name of the object.
+//
 static VALUE
 TypedObject_name(
 	_In_ VALUE self)
@@ -415,6 +454,17 @@ TypedObject_name(
 	return rb_str_new2(typObj->Name);
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_type
+//
+// Synopsis:
+// 
+//  obj.type -> String
+//
+// Description:
+//
+//  Return the type name of the object. This does not include the module prefix.
+//
 static VALUE
 TypedObject_type(
 	_In_ VALUE self)
@@ -430,6 +480,17 @@ TypedObject_type(
 	return rb_str_new2(typObj->TypeName);
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_module
+//
+// Synopsis:
+// 
+//  obj.module -> String
+//
+// Description:
+//
+//  Return the module name of the object's type.
+//
 static VALUE
 TypedObject_module(
 	_In_ VALUE self)
@@ -445,6 +506,17 @@ TypedObject_module(
 	return rb_str_new2(typObj->ModuleName);
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_address
+//
+// Synopsis:
+// 
+//  obj.address -> Integer
+//
+// Description:
+//
+//  Return the address of the object.
+//
 static VALUE
 TypedObject_address(
 	_In_ VALUE self)
@@ -545,6 +617,17 @@ TypedObject_method_missing(
 	return allocTypedObjFromTypedData(fieldName, &typedData);
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_length
+//
+// Synopsis:
+// 
+//  obj.length -> Integer
+//
+// Description:
+//
+//  Return the length of an array. Throws if object is not an array.
+//
 static VALUE
 TypedObject_length(
 	_In_ VALUE self)
@@ -617,6 +700,18 @@ AllocTypedObject(
 	return typObj;
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_get_item
+//
+// Synopsis:
+// 
+//  obj[key] -> TypedObject
+//
+// Description:
+//
+//  Dictionary-style lookup on the object. If 'key' is a String attempts field
+//  lookup. Otherwise if convertible to Integer attempts array access.
+//
 static VALUE
 TypedObject_get_item(
 	_In_ VALUE self,
