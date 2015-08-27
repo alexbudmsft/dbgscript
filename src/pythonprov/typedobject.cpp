@@ -92,8 +92,19 @@ checkTypedData(
 	return true;
 }
 
-// Get an array element. I.e. object[i], where i is int in Python.
+//------------------------------------------------------------------------------
+// Function: TypedObject_mapping_subscript
 //
+// Synopsis:
+// 
+//  obj[index] -> TypedObject
+//
+// Description:
+//
+//  Get an array element, constructing a new TypedObject in the
+//  process. Throws if object is not an array or pointer. 'index' is the (int)
+//  index to obtain.
+//  
 static PyObject*
 TypedObject_sequence_get_item(
 	_In_ PyObject* self,
@@ -130,8 +141,18 @@ exit:
 	return ret;
 }
 
-// Get a field from a typed object, constructing a new TypedObject in the process.
+//------------------------------------------------------------------------------
+// Function: TypedObject_mapping_subscript
 //
+// Synopsis:
+// 
+//  obj[key] -> TypedObject
+//
+// Description:
+//
+//  Get a field from a typed object, constructing a new TypedObject in the
+//  process. 'key' is a str naming the desired field.
+//  
 static PyObject*
 TypedObject_mapping_subscript(
 	_In_ PyObject* self,
@@ -301,8 +322,18 @@ pyValueFromCValue(
 	return ret;
 }
 
-// __str__ method.
+//------------------------------------------------------------------------------
+// Function: TypedObject_str
 //
+// Synopsis:
+// 
+//  obj.__str__() -> str
+//
+// Description:
+//
+//  Implementation of builtin __str__ method. Returns human-readable string
+//  representation of object. Currently just a fixed string.
+//  
 static PyObject*
 TypedObject_str(
 	_In_ PyObject* /*self*/)
@@ -319,20 +350,15 @@ TypedObject_str(
 //------------------------------------------------------------------------------
 // Function: TypedObject_getattro
 //
+// Synopsis:
+// 
+//  obj[key] -> varies
+//
 // Description:
 //
-//  Virtual attribute getter for Typed Objects. This will work as 
-//
-// Parameters:
-//
-//  self - pointer to Lua state.
-//  attr - pointer to Lua state.
-//
-// Returns:
-//
-//  One result: The name of the TypedObject.
-//
-// Notes:
+//  Virtual attribute getter for Typed Objects. First calls the generic attribute
+//  lookup routine. If that fails with an AttributeError, attempts a field
+//  lookup.
 //
 static PyObject*
 TypedObject_getattro(
@@ -402,6 +428,18 @@ TypedObject_getattro(
 	return allocSubTypedObject(fieldName, &typedData);
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_get_value
+//
+// Synopsis:
+// 
+//  obj.value -> varies
+//
+// Description:
+//
+//  Return the value of a primitive type. Throws if object is not of a primitive
+//  type.
+//
 static PyObject*
 TypedObject_get_value(
 	_In_ PyObject* self,
@@ -455,7 +493,16 @@ exit:
 	return ret;
 }
 
-// len(obj)
+//------------------------------------------------------------------------------
+// Function: TypedObject_sequence_length
+//
+// Synopsis:
+// 
+//  len(obj) -> int
+//
+// Description:
+//
+//  Return the length of an array. Throws if object is not an array.
 //
 static Py_ssize_t
 TypedObject_sequence_length(
@@ -500,21 +547,15 @@ TypedObject_sequence_length(
 //------------------------------------------------------------------------------
 // Function: TypedObject_read_wide_string
 //
-// Description:
-//
-//  Read an, optionally counted, wide string from the target process.
-//
-// Parameters:
+// Synopsis:
 //
 //  obj.read_wide_string([count]) -> str
 //
-//  count - Number of characters to read. -1 means read up to NUL.
+// Description:
 //
-// Returns:
-//
-//  str object.
-//
-// Notes:
+//  Read an, optionally counted, wide string from the target process.
+//  count is the (int) number of characters to read. -1 means read up to the
+//  first NUL.
 //
 static PyObject*
 TypedObject_read_wide_string(
@@ -570,21 +611,16 @@ exit:
 //------------------------------------------------------------------------------
 // Function: TypedObject_read_string
 //
+// Synopsis:
+//
+//  obj.read_string([count]) -> str
+//
 // Description:
 //
 //  Read an, optionally counted, ANSI string from the target process.
 //
-// Parameters:
-//
-//  obj.read_string([count]) -> str
-//
-//  count - Number of characters to read. -1 means read up to NUL.
-//
-// Returns:
-//
-//  str object.
-//
-// Notes:
+//  count is the (int) number of characters to read. -1 means read up to the
+//  first NUL.
 //
 static PyObject*
 TypedObject_read_string(
@@ -637,6 +673,19 @@ exit:
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_get_runtime_obj
+//
+// Synopsis:
+// 
+//  obj.get_runtime_obj() -> TypedObject
+//
+// Description:
+//
+//  Discovers the runtime type of an object or pointer-to an object by checking
+//  its vtable. Creates a new object of this type. Throws if 'obj' does not 
+//  have a vtable.
+//  
 static PyObject*
 TypedObject_get_runtime_obj(
 	_In_ PyObject* self,
