@@ -17,7 +17,16 @@
 #include "typedobject.h"
 #include "thread.h"
 
-// Read a pointer from address 'addr'.
+//------------------------------------------------------------------------------
+// Function: DbgScript_read_ptr
+//
+// Synopsis:
+//
+//  DbgScript.resolve_enum(addr) -> Integer
+//
+// Description:
+//
+//  Read a pointer from address 'addr' (Integer).
 //
 static VALUE
 DbgScript_read_ptr(
@@ -39,6 +48,18 @@ DbgScript_read_ptr(
 	return ULL2NUM(ptrVal);
 }
 
+//------------------------------------------------------------------------------
+// Function: DbgScript_resolve_enum
+//
+// Synopsis:
+//
+//  DbgScript.resolve_enum(type, value) -> String
+//
+// Description:
+//
+//  Resolve an enum value to its symbolic identifier (String). 'type' identifies
+//  the enum type and 'value' is the value to resolve.
+//
 static VALUE
 DbgScript_resolve_enum(
 	_In_ VALUE /* self */,
@@ -72,6 +93,18 @@ DbgScript_resolve_enum(
 	return rb_str_new2(enumElementName);
 }
 
+//------------------------------------------------------------------------------
+// Function: DbgScript_get_global
+//
+// Synopsis:
+//
+//  DbgScript.get_global(sym) -> TypedObject
+//
+// Description:
+//
+//  Get a global variable as a TypedObject. 'sym' identifies the global
+//  symbol to retrieve.
+//
 static VALUE
 DbgScript_get_global(
 	_In_ VALUE /* self */,
@@ -106,15 +139,13 @@ DbgScript_get_global(
 //------------------------------------------------------------------------------
 // Function: DbgScript_current_thread
 //
+// Synopsis:
+//
+//  DbgScript.current_thread -> Thread
+//
 // Description:
 //
-//  Get current thread in the process.
-//  
-// Returns:
-//
-//  Thread object as Ruby VALUE.
-//
-// Notes:
+//  Get the current thread.
 //
 static VALUE
 DbgScript_current_thread(
@@ -145,15 +176,13 @@ DbgScript_current_thread(
 //------------------------------------------------------------------------------
 // Function: DbgScript_get_threads
 //
+// Synopsis:
+//
+//  DbgScript.get_threads() -> Array of Thread
+//
 // Description:
 //
-//  Get all threads in the process as a Ruby array.
-//  
-// Returns:
-//
-//  Array of Thread objects.
-//
-// Notes:
+//  Get all threads in the process.
 //
 static VALUE
 DbgScript_get_threads(
@@ -198,6 +227,20 @@ DbgScript_get_threads(
 	return threadArray;
 }
 
+//------------------------------------------------------------------------------
+// Function: DbgScript_start_buffering
+//
+// Synopsis:
+//
+//  DbgScript.start_buffering() -> nil
+//
+// Description:
+//
+//  Start an output buffering session. This can improve performance when writing
+//  a lot of content out to the debugger. dbgeng will normally flush every line
+//  of output which can cause undue performance degradation. Starting a buffering
+//  session will buffer the output in 8K chunks and flush them as they get filled.
+//
 static VALUE
 DbgScript_start_buffering(
 	_In_ VALUE /* self */)
@@ -210,6 +253,17 @@ DbgScript_start_buffering(
 	return Qnil;
 }
 
+//------------------------------------------------------------------------------
+// Function: DbgScript_stop_buffering
+//
+// Synopsis:
+//
+//  DbgScript.stop_buffering() -> nil
+//
+// Description:
+//
+//  Stop an output buffering session, and flushes any remaining buffer.
+//
 static VALUE
 DbgScript_stop_buffering(
 	_In_ VALUE /* self */)
@@ -237,6 +291,17 @@ DbgScript_stop_buffering(
 	return Qnil;
 }
 
+//------------------------------------------------------------------------------
+// Function: DbgScript_execute_command
+//
+// Synopsis:
+//
+//  DbgScript.execute_command(command) -> nil
+//
+// Description:
+//
+//  Execute a dbgeng command and output the results.
+//
 static VALUE
 DbgScript_execute_command(
 	_In_ VALUE /* self */,
@@ -257,6 +322,17 @@ DbgScript_execute_command(
 	return Qnil;
 }
 
+//------------------------------------------------------------------------------
+// Function: DbgScript_create_typed_object
+//
+// Synopsis:
+//
+//  DbgScript.create_typed_object(type, address) -> TypedObject
+//
+// Description:
+//
+//  Create a TypedObject from a type (String) and address (Integer).
+//
 static VALUE
 DbgScript_create_typed_object(
 	_In_ VALUE /* self */,

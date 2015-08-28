@@ -1,3 +1,18 @@
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: dllmain.cpp
+// @Author: alexbud
+//
+// Purpose:
+//
+//  Main implementation of host DLL (dbgscript.dll)
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************  
+
 #include "common.h"
 #include <strsafe.h>
 #include <assert.h>
@@ -9,6 +24,19 @@ static DbgScriptHostContext g_HostCtxt;
 _Check_return_ DbgScriptOutputCallbacks*
 GetDbgScriptOutputCb();
 
+//------------------------------------------------------------------------------
+// Function: GetHostContext
+//
+// Description:
+//
+//  Get pointer to DbgScriptHostContext singleton.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 _Check_return_ DbgScriptHostContext*
 GetHostContext()
 {
@@ -17,6 +45,8 @@ GetHostContext()
 
 static const int MAX_LANG_ID = 64;
 
+// ScriptProviderInfo - Represents information about a Script Provider.
+//
 struct ScriptProviderInfo
 {
 	ScriptProviderInfo()
@@ -57,6 +87,9 @@ struct ScriptProviderInfo
 	_CrtMemState MemStateDiff;
 };
 
+// ScriptProvCallbackBinding - structure to encapsulate a callback's export
+// with a field to populate in ScriptProviderInfo.
+//
 struct ScriptProvCallbackBinding
 {
 	const char* ExportName;
@@ -73,6 +106,19 @@ static const ScriptProvCallbackBinding x_CallbackBindings[] =
 	{ SCRIPT_PROV_CREATE, offsetof(ScriptProviderInfo, CreateFunc) },
 };
 
+//------------------------------------------------------------------------------
+// Function: DllMain
+//
+// Description:
+//
+//  DLL Entry point for host layer (dbgscript.dll).
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 BOOL WINAPI DllMain(
 	_In_ HINSTANCE hinstDLL,
 	_In_ DWORD     fdwReason,
@@ -95,6 +141,19 @@ BOOL WINAPI DllMain(
 	return TRUE;
 }
 
+//------------------------------------------------------------------------------
+// Function: unloadScriptProvider
+//
+// Description:
+//
+//  Unload the given script provider.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 static void
 unloadScriptProvider(
 	_Inout_ ScriptProviderInfo* info)
@@ -143,6 +202,19 @@ unloadScriptProvider(
 	}
 }
 
+//------------------------------------------------------------------------------
+// Function: loadAndCreateScriptProvider
+//
+// Description:
+//
+//  Load the given script provider and create an instance of it via its factory.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 static _Check_return_ HRESULT
 loadAndCreateScriptProvider(
 	_Inout_ ScriptProviderInfo* info)
@@ -225,6 +297,19 @@ exit:
 	return hr;
 }
 
+//------------------------------------------------------------------------------
+// Function: loadScriptProviderIfNeeded
+//
+// Description:
+//
+//  Load given script provider if not already loaded.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 static _Check_return_ HRESULT
 loadScriptProviderIfNeeded(
 	_Inout_ ScriptProviderInfo* info)
@@ -236,7 +321,18 @@ loadScriptProviderIfNeeded(
 	return S_OK;
 }
 
-// Just unload the script providers, but keep the list in tact.
+//------------------------------------------------------------------------------
+// Function: unloadAllScriptProviders
+//
+// Description:
+//
+//  Unload the script providers, but keep the list in tact.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
 //
 static void
 unloadAllScriptProviders()
@@ -249,8 +345,18 @@ unloadAllScriptProviders()
 	}
 }
 
-
-// Unloads and destroys all script providers. Used at Dll shutdown.
+//------------------------------------------------------------------------------
+// Function: cleanupScriptProviders
+//
+// Description:
+//
+//  Unload and destroy all script providers. Used at DLL shutdown.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
 //
 static void
 cleanupScriptProviders()
@@ -273,6 +379,20 @@ cleanupScriptProviders()
 	g_HostCtxt.ScriptProviders = nullptr;
 }
 
+//------------------------------------------------------------------------------
+// Function: registerScriptProviders
+//
+// Description:
+//
+//  Builds list of script providers based on registry. Does not actually
+//  load them.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 static _Check_return_ HRESULT
 registerScriptProviders()
 {
@@ -358,9 +478,21 @@ exit:
 	return hr;
 }
 
-// Called to initialize the DLL.
+//------------------------------------------------------------------------------
+// Function: DebugExtensionInitialize
 //
-DLLEXPORT HRESULT DebugExtensionInitialize(
+// Description:
+//
+//  dbgeng callback called at DLL initialization time. Initializes dbgscript DLL.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+DLLEXPORT HRESULT 
+DebugExtensionInitialize(
 	_Out_ PULONG Version,
 	_Out_ PULONG Flags)
 {
@@ -425,7 +557,18 @@ exit:
 	return hr;
 }
 
-// Called to uninitialize the DLL.
+//------------------------------------------------------------------------------
+// Function: DebugExtensionUninitialize
+//
+// Description:
+//
+//  dbgeng callback called at DLL cleanup time. Uninitializes dbgscript DLL.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
 //
 DLLEXPORT void CALLBACK 
 DebugExtensionUninitialize()
@@ -469,8 +612,22 @@ DebugExtensionUninitialize()
 	}
 }
 
-// comma-separated list of paths.
-// If run with no parameters, print the current path.
+//------------------------------------------------------------------------------
+// Function: scriptpath
+//
+// Synopsis:
+//
+//  !scriptpath [path]
+//
+// Description:
+//
+//  Sets or displays the current script path. 'path' is a comma-separated list
+//  of paths to search for scripts in. If run with no parameters, prints the
+//  current path.
+//
+// Returns:
+//
+// Notes:
 //
 DLLEXPORT HRESULT CALLBACK
 scriptpath(
@@ -721,11 +878,37 @@ exit:
 	return hr;
 }
 
-// Debugger syntax: !runscript <scriptfile>
+//------------------------------------------------------------------------------
+// Function: runscript
 //
-// 'args' is a single string with the entire command line passed in, unprocessed.
-// E.g. if run with !runscript a b c d blah
-// then args will be "a b c d blah"
+// Synopsis:
+//
+//  !runscript [host args] [--] [provider args] <scriptfile> [script args]
+//
+// Description:
+//
+//  Run a script against a given script provider.
+//
+//  [host args] can be
+//
+//  -l <lang id>  - specifies the language id, and thus script provider to
+//                  invoke.
+//  -t            - display the execution time at the end of the run.
+//
+//  '--' can be used to terminate the parsing of arguments by the host layer.
+//
+//  [provider args] are arguments that are specific to each script provider.
+//
+//  <scriptfile>  - names the script file to run. This can be an absolute path
+//                  or just a filename. In the latter case it will be searched
+//                  for in the cwd and in the list of paths specified by
+//                  !scriptpath. (This parameter is required.)
+//
+//  [script args] are any optional arguments to be passed to the script itself.
+//  
+// Returns:
+//
+// Notes:
 //
 DLLEXPORT HRESULT CALLBACK
 runscript(
@@ -812,7 +995,24 @@ exit:
 	return hr;
 }
 
-// Runs a script in a string.
+//------------------------------------------------------------------------------
+// Function: evalstring
+//
+// Synopsis:
+//
+//  !evalstring [host args] [--] <string-to-eval>
+//
+// Description:
+//
+//  Evaluates a string against a script provider.
+//
+//  [host args] are as in !runscript.
+//
+//  <string-to-eval> is the sting to evaluate. (This parameter is required.)
+//
+// Returns:
+//
+// Notes:
 //
 DLLEXPORT HRESULT CALLBACK
 evalstring(
@@ -938,6 +1138,25 @@ exit:
 	return hr;
 }
 
+//------------------------------------------------------------------------------
+// Function: startvm
+//
+// Synopsis:
+//
+//  !startvm
+//
+// Description:
+//
+//  Starts a persistent interpreter VM session. By default, after script
+//  execution, the script provider is unloaded and thus all its state is cleared.
+//
+//  This command instructs dbgscript to retain the VM state after each execution,
+//  until !stopvm is called.
+//
+// Returns:
+//
+// Notes:
+//
 DLLEXPORT HRESULT CALLBACK
 startvm(
 	_In_     IDebugClient* /*client*/,
@@ -961,6 +1180,21 @@ exit:
 	return hr;
 }
 
+//------------------------------------------------------------------------------
+// Function: stopvm
+//
+// Synopsis:
+//
+//  !stopvm
+//
+// Description:
+//
+//  Stops the VM session started by !startvm.
+//  
+// Returns:
+//
+// Notes:
+//
 DLLEXPORT HRESULT CALLBACK
 stopvm(
 	_In_     IDebugClient* /*client*/,
