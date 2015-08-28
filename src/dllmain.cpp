@@ -53,7 +53,9 @@ struct ScriptProviderInfo
 	{
 		memset(this, 0, sizeof(*this));
 	}
-
+	
+	// Next pointer in list.
+	//
 	ScriptProviderInfo* Next;
 
 	// Path to DLL.
@@ -75,11 +77,19 @@ struct ScriptProviderInfo
 	// Factory function.
 	//
 	SCRIPT_PROV_CREATE_FUNC CreateFunc;
-
+	
+	// Pointer to script provider instance (created via factory).
+	//
 	IScriptProvider* ScriptProvider;
-
+	
+	// Language ID this provider responds to (and thus claims).
+	//
 	WCHAR LangId[MAX_LANG_ID]; // -l <lang>
 
+	//
+	// CRT memory leak debugging information.
+	//
+	
 	_CrtMemState MemStateBefore;
 
 	_CrtMemState MemStateAfter;
@@ -92,8 +102,13 @@ struct ScriptProviderInfo
 //
 struct ScriptProvCallbackBinding
 {
+	// ExportName - Name of routine to bind.
+	//
 	const char* ExportName;
 
+	// Offset in ScriptProviderInfo of function pointer to which callback
+	// is to be assigned.
+	//
 	int CallbackOffset;
 };
 
@@ -721,17 +736,47 @@ exit:
 	return hr;
 }
 
+// ParsedArgs - structure to hold parsed argument values.
+//
 struct ParsedArgs
 {
+	// TimeRun - was -t provided? Run will be timed and reported.
+	//
 	bool TimeRun;
+
+	// LangId - language id provided.
+	//
 	const WCHAR* LangId;
+
+	// RemainingArgv - remaining arguments to be passed onto the script provider.
+	//
 	WCHAR** RemainingArgv;
+
+	// RemainingArgc - remaining count of arguments.
+	//
 	int RemainingArgc;
 
+	//
+	// Pointers to free when done with arguments.
+	//
+	
 	WCHAR* WideArgsToFree;
 	WCHAR** ArgListToFree;
 };
 
+//------------------------------------------------------------------------------
+// Function: parseArgs
+//
+// Description:
+//
+//  Helper to parse host-layer arguments.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 static _Check_return_ HRESULT
 parseArgs(
 	_In_z_ const char* args,
@@ -825,6 +870,19 @@ exit:
 	return hr;
 }
 
+//------------------------------------------------------------------------------
+// Function: freeArgs
+//
+// Description:
+//
+//  Frees a ParsedArgs structure filled out by 'parseArgs'.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 static void
 freeArgs(
 	_In_ ParsedArgs* parsedArgs)
@@ -833,6 +891,20 @@ freeArgs(
 	LocalFree(parsedArgs->ArgListToFree);
 }
 
+//------------------------------------------------------------------------------
+// Function: findScriptProvider
+//
+// Description:
+//
+//  Look up a script provider by its language id in the list of registered
+//  providers.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 static _Check_return_ HRESULT
 findScriptProvider(
 	_In_opt_z_ const WCHAR* langId,
