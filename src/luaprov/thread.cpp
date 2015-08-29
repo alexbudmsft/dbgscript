@@ -195,6 +195,49 @@ Thread_getStack(lua_State* L)
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Function: Thread_currentFrame
+//
+// Synopsis:
+//
+//  obj.currentFrame() -> StackFrame
+//
+// Description:
+//
+//  Return the current stack frame.
+//
+// TODO: Consider switching to the thread identified by 'self' before getting
+// the current frame.
+//
+static int
+Thread_currentFrame(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	DbgScriptThread* thd = (DbgScriptThread*)
+		luaL_checkudata(L, 1, THREAD_METATABLE);
+
+	thd;  // TODO: Use this to switch to this thread's context.
+	
+	// Allocate a StackFrame object.
+	//
+	DbgScriptStackFrame* dsframe = AllocStackFrameObject(L, 1);
+
+	// Call the support library to fill in the frame information.
+	//
+	HRESULT hr = DsGetCurrentStackFrame(hostCtxt, dsframe);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "DsGetCurrentStackFrame failed. Error 0x%08x.", hr);
+	}
+	
+	return 1;
+}
+
 // Static (class) methods.
 //
 static const luaL_Reg g_threadFunctions[] =
@@ -221,6 +264,7 @@ static const luaL_Reg g_threadMethods[] =
 {
 	{"__index", LuaClassPropIndexer},  // indexer. Handles properties/methods.
 	{"getStack", Thread_getStack},
+	{"currentFrame", Thread_currentFrame},
 	{nullptr, nullptr}  // sentinel.
 };
 

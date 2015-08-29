@@ -942,6 +942,61 @@ TypedObject_readWideString(lua_State* L)
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Function: TypedObject_deref
+//
+// Description:
+//
+//  Dereference a pointer (or array) object and return a new TypedObject
+//  of the dereferenced type.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  Param 1 is the user datum (TypedObject).
+//
+// Returns:
+//
+//  One result: Dereferenced type object.
+//
+// Notes:
+//
+static int
+TypedObject_deref(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+
+	// Dereferencing a pointer is the same as getting the zero'th element.
+	//
+	DEBUG_TYPED_DATA typedData = {0};
+	HRESULT hr = DsTypedObjectGetArrayElement(
+		hostCtxt,
+		typObj,
+		0,
+		&typedData);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+	}
+	
+	// Inherit the same name as the parent. This will push the new user datum on
+	// the stack.
+	//
+	allocSubTypedObject(L, typObj->Name, &typedData);
+	
+	return 1;
+}
+
 // Static (class) methods.
 //
 static const luaL_Reg g_typedObjectFunc[] =
@@ -964,6 +1019,7 @@ static const LuaClassProperty x_TypedObjectProps[] =
 	{ "module", TypedObject_getmodule, nullptr },
 	{ "value", TypedObject_getvalue, nullptr },
 	{ "address", TypedObject_getaddress, nullptr },
+	{ "deref", TypedObject_deref, nullptr },
 };
 
 // Instance methods.
