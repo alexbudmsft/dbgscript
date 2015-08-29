@@ -16,6 +16,46 @@
 #include "typedobject.h"
 
 //------------------------------------------------------------------------------
+// Function: allocTypedObjFromTypedData
+//
+// Description:
+//
+//  Helper to allocate a Ruby-wrapped Typed Object from DEBUG_TYPED_DATA.
+//
+// Parameters:
+//
+//  name - Name to initialize object with.
+//  typedData - DbgEng data to wrap.
+//
+// Returns:
+//
+//  New Ruby TypedObject.
+//
+// Notes:
+//
+static VALUE
+allocTypedObjFromTypedData(
+	_In_z_ const char* name,
+	_In_ DEBUG_TYPED_DATA* typedData)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	VALUE newObj = rb_class_new_instance(
+		0, nullptr, GetRubyProvGlobals()->TypedObjectClass);
+
+	DbgScriptTypedObject* obj = nullptr;
+
+	Data_Get_Struct(newObj, DbgScriptTypedObject, obj);
+
+	HRESULT hr = DsWrapTypedData(hostCtxt, name, typedData, obj);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eRuntimeError, "DsWrapTypedData failed. Error 0x%08x.", hr);
+	}
+
+	return newObj;
+}
+
+//------------------------------------------------------------------------------
 // Function: TypedObject_free
 //
 // Description:
@@ -341,6 +381,50 @@ TypedObject_read_wide_string(
 }
 
 //------------------------------------------------------------------------------
+// Function: TypedObject_deref
+//
+// Synopsis:
+// 
+//  obj.deref -> TypedObject
+//
+// Description:
+//
+//  Dereference a pointer (or array) object and return a new TypedObject
+//  of the dereferenced type.
+//  
+static VALUE
+TypedObject_deref(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	HRESULT hr = S_OK;
+	CHECK_ABORT(hostCtxt);
+
+	DbgScriptTypedObject* typObj = nullptr;
+
+	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
+	
+	checkTypedData(typObj, true /* fRaise */);
+
+	// Dereferencing a pointer is the same as getting the zero'th element.
+	//
+	DEBUG_TYPED_DATA typedData = {0};
+	hr = DsTypedObjectGetArrayElement(
+		hostCtxt,
+		typObj,
+		0,
+		&typedData);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eRuntimeError, "DsTypedObjectGetArrayElement failed. Error 0x%08x.", hr);
+	}
+
+	// Inherit the same name as the parent.
+	//
+	return allocTypedObjFromTypedData(typObj->Name, &typedData);
+}
+
+//------------------------------------------------------------------------------
 // Function: TypedObject_value
 //
 // Synopsis:
@@ -532,28 +616,6 @@ TypedObject_address(
 	return ULL2NUM(typObj->TypedData.Offset);
 }
 
-static VALUE
-allocTypedObjFromTypedData(
-	_In_z_ const char* name,
-	_In_ DEBUG_TYPED_DATA* typedData)
-{
-	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
-	VALUE newObj = rb_class_new_instance(
-		0, nullptr, GetRubyProvGlobals()->TypedObjectClass);
-
-	DbgScriptTypedObject* obj = nullptr;
-
-	Data_Get_Struct(newObj, DbgScriptTypedObject, obj);
-
-	HRESULT hr = DsWrapTypedData(hostCtxt, name, typedData, obj);
-	if (FAILED(hr))
-	{
-		rb_raise(rb_eRuntimeError, "DsWrapTypedData failed. Error 0x%08x.", hr);
-	}
-
-	return newObj;
-}
-
 //------------------------------------------------------------------------------
 // Function: TypedObject_method_missing
 //
@@ -665,6 +727,27 @@ TypedObject_length(
 	return ULONG2NUM(typObj->TypedData.Size / elemSize);
 }
 
+//------------------------------------------------------------------------------
+// Function: AllocTypedObject
+//
+// Description:
+//
+//  Helper to allocate a Ruby-wrapped Typed Object from scratch.
+//
+// Parameters:
+//
+//  size - Size of C/C++ object.
+//  name - Name to initialize object with.
+//  typeId - DbgEng type ID.
+//  moduleBase - Module base address where type is contained.
+//  virtualAddress - Virtual address of object.
+//
+// Returns:
+//
+//  New Ruby TypedObject.
+//
+// Notes:
+//
 _Check_return_ VALUE
 AllocTypedObject(
 	_In_ ULONG size,
@@ -770,6 +853,21 @@ TypedObject_get_item(
 	}
 }
 
+//------------------------------------------------------------------------------
+// Function: Init_TypedObject
+//
+// Description:
+//
+//  Initialize TypedObject class.
+//
+// Parameters:
+//
+// Returns:
+//
+//  void.
+//
+// Notes:
+//
 void
 Init_TypedObject()
 {
@@ -843,6 +941,12 @@ Init_TypedObject()
 		0 /* argc */);
 	
     rb_define_alias(typedObjectClass, "size", "length");
+	
+	rb_define_method(
+		typedObjectClass,
+		"deref",
+		RUBY_METHOD_FUNC(TypedObject_deref),
+		0 /* argc */);
 	
 	// Indexer method. Can take string or int key, for field or array access,
 	// respectively.
