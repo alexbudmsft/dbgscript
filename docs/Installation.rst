@@ -9,13 +9,15 @@ The Visual Studio `2015`_ and `2013`_ x64 CRT Redists are required.
 You do not need to install Python or Ruby as their core files are bundled with
 the provider.
 
-Provider Registration
-=====================
-The providers are registered in the
+3rd Party Provider Registration
+===============================
+The ``install.bat`` script will automatically install all the first-party providers.
+
+If you wish to install your own, add them to the
 
     ``HKCU\Software\Microsoft\DbgScript\Providers``
     
-key.
+registry key.
 
 The values in this key are of type REG_SZ and contain the `language identifier`
 of the provider. The data associated with the key is the full path to the DLL

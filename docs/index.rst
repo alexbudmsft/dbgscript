@@ -16,7 +16,7 @@ For example, in the Python Script Provider, a thread is modelled as a
 Thread object with various attributes and methods that can obtain further
 information about it, such as its call stack.
 
-DbgScript comes with two first-party providers: `Python`_ and `Ruby`_.
+DbgScript comes with three first-party providers: `Python`_ and `Ruby`_ and `Lua`_.
 
 .. toctree::
    :maxdepth: 2
@@ -25,7 +25,7 @@ DbgScript comes with two first-party providers: `Python`_ and `Ruby`_.
    Basics
    Python
    Ruby
-
+   Lua
 
 .. |logo| image:: logo.svg
     :width: 80 px
@@ -35,3 +35,4 @@ DbgScript comes with two first-party providers: `Python`_ and `Ruby`_.
 .. _`Debugging Tools for Windows`: https://msdn.microsoft.com/en-us/library/windows/hardware/ff551063(v=vs.85).aspx
 .. _`Python`: https://www.python.org
 .. _`Ruby`: https://www.ruby-lang.org/en
+.. _`Lua`: http://www.lua.org
