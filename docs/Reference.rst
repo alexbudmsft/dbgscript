@@ -1,8 +1,8 @@
 DbgScript Reference
 *******************
 
-Entry Points
-============
+Debugger Entry Points
+=====================
 
 !runscript
 ----------
@@ -70,7 +70,9 @@ Synopsis
 Description
 ^^^^^^^^^^^
 
-``!evalstring`` can be used to evaluate an ad-hoc statement.
+``!evalstring`` can be used to evaluate an ad-hoc statement. ``host switches``
+are as in `!runscript`_. ``<script-string>`` is the string to be evaluated in
+the selected script provider.
 
 Examples
 ^^^^^^^^
@@ -89,10 +91,40 @@ of Thread objects.)
 !scriptpath
 -----------
 
-TODO 
+Synopsis
+^^^^^^^^
+
+.. code-block:: none
+    :linenos:
+    
+    !scriptpath <path1>[,<path2>[,...]
+    !scriptpath
+    
+Description
+^^^^^^^^^^^
+
+Takes a comma-separated list of paths to search when running scripts via
+`!runscript`_.
+
+.. note:: 
+
+    The separator is a `comma`, not semicolon. Semicolon is reserved
+    by the debugger to separate commands.
+
+Run with no arguments to see the current path list.
 
 !startvm
 --------
+
+Synopsis
+^^^^^^^^
+
+.. code-block:: none
+
+    !startvm
+    
+Description
+^^^^^^^^^^^
 
 By default, every script execution or string evaluation will recycle the script
 provider's virtual machine. This means any functions or global variables you
@@ -108,6 +140,16 @@ state for all providers until `!stopvm`_ is called.
 !stopvm
 -------
 
+Synopsis
+^^^^^^^^
+
+.. code-block:: none
+
+    !stopvm
+    
+Description
+^^^^^^^^^^^
 Ends a persistent VM session started by `!startvm`_.
 
 
+.. _REPL: https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop
