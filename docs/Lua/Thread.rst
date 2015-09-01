@@ -7,11 +7,11 @@ Thread class
 
 .. attribute:: engineId() -> integer
 
-   Get the dbgeng local thread id. This is not the Windows thread id.
+   Get the dbgeng-local thread ID. This is not the Windows thread ID.
     
 .. attribute:: threadId() -> integer
 
-   Get the Windows thread id.
+   Get the Windows thread ID.
    
 .. attribute:: teb() -> integer
 
@@ -19,15 +19,8 @@ Thread class
    
 .. method:: currentFrame() -> StackFrame
 
-   Get the current :class:`StackFrame`.
+   Get the current ``StackFrame``.
 
-.. method:: get_stack() -> tuple of StackFrame
+.. method:: getStack() -> table of StackFrame
 
-   Get the collection of threads in the process.
-   
-   For example::
-   
-       thd = ... # some thread
-       stack = thd.get_stack()
-       for frame in stack:
-           print(frame.frame_number, frame.instruction_offset)
+   Get the current call stack.
