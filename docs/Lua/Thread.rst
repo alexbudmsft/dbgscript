@@ -1,5 +1,4 @@
-Thread class
-============
+.. include:: ../shared/Thread_preamble.txt
 
 .. Nifty trick: Use '.. attribute' and append empty parens to the name to get
    the -> arrow to show up as an elongated arrow just as in method definitions.

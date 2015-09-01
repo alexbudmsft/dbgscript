@@ -8,7 +8,7 @@
 
 .. attribute:: StackFrame.frame_number() -> int
 
-   Get the frame number of this stack frame as .
+   Get the frame number of this stack frame.
    
 .. attribute:: StackFrame.instruction_offset() -> int
 

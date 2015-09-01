@@ -1,9 +1,9 @@
 .. default-domain:: py
 .. currentmodule:: dbgscript
-.. class:: Thread
 
-Thread class
-============
+.. include:: ../shared/Thread_preamble.txt
+
+.. class:: Thread
 
 Attributes
 ----------------------

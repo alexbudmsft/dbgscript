@@ -2,35 +2,30 @@
 
 .. currentmodule:: dbgscript
 
-TypedObject class
-=================
+.. include:: ../shared/TypedObject_preamble.txt
 
 .. class:: TypedObject
 
-TypedObject represents a typed object in the target process's virtual address
-space. It can be constructed from a type and an address, or by looking up fields
-of a struct, dereferencing pointers, accessing array elements, and so on.
+.. attribute:: TypedObject.name() -> str
 
-TypedObject attributes
-----------------------
-
-.. attribute:: TypedObject.name
-
-   Get the name of the object, if available. Some objects have no name, for
-   example if they were created from array elements. Returns a :class:`str`.
+   Get the name of the object.
      
-.. attribute:: TypedObject.address
+.. attribute:: TypedObject.address() -> int
 
    Get the virtual address of the object as an :class:`int`.
    
-.. attribute:: TypedObject.type
+.. attribute:: TypedObject.type() -> str
 
    Get the type name of the object as a :class:`str`.
    
-.. attribute:: TypedObject.size
+.. attribute:: TypedObject.size() -> int
 
    Get the size of the object in bytes as an :class:`int`.
+   
+.. attribute:: TypedObject.module() -> str
 
+   Get the module name of the typed object.
+   
 .. TODO: Describe subscript operator (both int and str keys)
 
 Sequence support
