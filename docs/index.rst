@@ -19,8 +19,8 @@ information about it, such as its call stack.
 DbgScript comes with three first-party providers: `Python`_ and `Ruby`_ and `Lua`_.
 
 .. toctree::
-   :maxdepth: 2
-
+   :hidden:
+   
    Installation
    Basics
    Python

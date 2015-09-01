@@ -1,13 +1,19 @@
 Installation
 ************
 
+Run ``install.bat``. Assuming you have the `Prerequisites`_, you're good to go!
+
+Run ``.load C:\Program Files\DbgScript\dbgscript.dll`` to load DbgScript in
+your debugger of choice. (Default path shown above. DbgScript installs into
+``%ProgramFiles%``.)
+
 Prerequisites
 =============
 
 The Visual Studio `2015`_ and `2013`_ x64 CRT Redists are required.
 
-You do not need to install Python or Ruby as their core files are bundled with
-the provider.
+(You do not need to install Python or Ruby as their core files are bundled with
+the provider.)
 
 3rd Party Provider Registration
 ===============================
@@ -26,6 +32,6 @@ the provider is implemented in. For example::
     HKEY_CURRENT_USER\Software\Microsoft\DbgScript\Providers
         py    REG_SZ    E:\dev\dbgscript\deploy\debug\pythonprov\pythonprov.dll
         rb    REG_SZ    E:\dev\dbgscript\deploy\debug\rubyprov\rubyprov.dll
-
+        
 .. _`2013`: https://www.microsoft.com/en-us/download/details.aspx?id=40784
 .. _`2015`: https://www.microsoft.com/en-us/download/details.aspx?id=48145
