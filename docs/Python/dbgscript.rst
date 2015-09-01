@@ -5,6 +5,8 @@
 dbgscript Module
 ================
 
+.. include:: ../shared/dbgscript_mod.txt
+
 .. method:: current_thread() -> Thread
 
    Get the current thread in the process.

@@ -1,0 +1,2 @@
+The dbgscript module provides a set of top-level APIs that serve as an entry
+point in obtaining other classes.

@@ -4,6 +4,7 @@
 
 DbgScript Module
 ================
+.. include:: ../shared/dbgscript_mod.txt
 
 .. attr_reader:: current_thread
 
