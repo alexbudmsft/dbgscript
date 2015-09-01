@@ -92,5 +92,6 @@ state for all providers until `!stopvm`_ is called.
 !stopvm
 -------
 
+Ends a persistent VM session started by `!startvm`_.
 
 .. _REPL: https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop

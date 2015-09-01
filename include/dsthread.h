@@ -26,3 +26,10 @@ struct DbgScriptThread
 	//
 	ULONG ThreadId;
 };
+
+_Check_return_ HRESULT
+DsThreadGetTeb(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ DbgScriptThread* thread,
+	_Out_ UINT64* tebAddr);
+

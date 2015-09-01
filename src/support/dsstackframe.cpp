@@ -16,32 +16,64 @@
 #include "../common.h"
 #include "util.h"
 
+//------------------------------------------------------------------------------
+// Function: DsGetCurrentStackFrame
+//
+// Description:
+//
+//  Get current stack frame for given thread.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 _Check_return_ HRESULT
 DsGetCurrentStackFrame(
 	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ DbgScriptThread* thread,
 	_Out_ DbgScriptStackFrame* stackFrame)
 {
 	IDebugSymbols3* dbgSym = hostCtxt->DebugSymbols;
 	ULONG curFrameIdx = 0;
 	UINT64 instructionOffset = 0;
+
+	// FUTURE: Expose more of these fields.
+	//
 	DEBUG_STACK_FRAME frame;
+	
+	HRESULT hr = S_OK;
 
-	HRESULT hr = dbgSym->GetCurrentScopeFrameIndex(&curFrameIdx);
-	if (FAILED(hr))
 	{
-		hostCtxt->DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			"Error: Failed to get current frame index. Error 0x%08x.\n", hr);
-		goto exit;
-	}
+		// Need to switch thread context to 'thread', capture stack, then
+		// switch back.
+		//
+		CAutoSwitchThread autoSwitchThd(hostCtxt, thread);
 
-	hr = dbgSym->GetScope(&instructionOffset, &frame, nullptr, 0);
-	if (FAILED(hr))
-	{
-		hostCtxt->DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			"Error: Failed to get current scope. Error 0x%08x.\n", hr);
-		goto exit;
+		hr = autoSwitchThd.Switch();
+		if (FAILED(hr))
+		{
+			goto exit;
+		}
+
+		hr = dbgSym->GetCurrentScopeFrameIndex(&curFrameIdx);
+		if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: Failed to get current frame index. Error 0x%08x.\n", hr);
+			goto exit;
+		}
+
+		hr = dbgSym->GetScope(&instructionOffset, &frame, nullptr, 0);
+		if (FAILED(hr))
+		{
+			hostCtxt->DebugControl->Output(
+				DEBUG_OUTPUT_ERROR,
+				"Error: Failed to get current scope. Error 0x%08x.\n", hr);
+			goto exit;
+		}
 	}
 	
 	stackFrame->FrameNumber = curFrameIdx;
@@ -51,6 +83,19 @@ exit:
 	return hr;
 }
 
+//------------------------------------------------------------------------------
+// Function: DsGetStackTrace
+//
+// Description:
+//
+//  Get stack trace for given thread.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 _Check_return_ HRESULT
 DsGetStackTrace(
 	_In_ DbgScriptHostContext* hostCtxt,
@@ -66,7 +111,13 @@ DsGetStackTrace(
 		// switch back.
 		//
 		CAutoSwitchThread autoSwitchThd(hostCtxt, thread);
-
+		
+		hr = autoSwitchThd.Switch();
+		if (FAILED(hr))
+		{
+			goto exit;
+		}
+		
 		hr = hostCtxt->DebugControl->GetStackTrace(
 			0, 0, 0, frames, cFrames, framesFilled);
 		if (FAILED(hr))
@@ -82,4 +133,3 @@ DsGetStackTrace(
 exit:
 	return hr;
 }
-

@@ -132,6 +132,39 @@ Thread_get_stack(
 }
 
 //------------------------------------------------------------------------------
+// Function: Thread_get_teb
+//
+// Synopsis:
+//
+//  obj.teb -> Integer
+//
+// Description:
+//
+//  Return the current stack frame.
+//
+static VALUE
+Thread_get_teb(
+	_In_ VALUE self)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	DbgScriptThread* thd = nullptr;
+	Data_Get_Struct(self, DbgScriptThread, thd);
+	
+	// Get TEB from debug client.
+	//
+	UINT64 teb = 0;
+	HRESULT hr = DsThreadGetTeb(hostCtxt, thd, &teb);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eRuntimeError, "DsThreadGetTeb failed. Error 0x%08x.", hr);
+	}
+
+	return ULL2NUM(teb);
+}
+
+//------------------------------------------------------------------------------
 // Function: Thread_current_frame
 //
 // Synopsis:
@@ -142,9 +175,6 @@ Thread_get_stack(
 //
 //  Return the current stack frame.
 //
-// TODO: Consider switching to the thread identified by 'self' before getting
-// the current frame.
-//
 static VALUE
 Thread_current_frame(
 	_In_ VALUE self)
@@ -152,11 +182,14 @@ Thread_current_frame(
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
 	CHECK_ABORT(hostCtxt);
 	
+	DbgScriptThread* thd = nullptr;
+	Data_Get_Struct(self, DbgScriptThread, thd);
+	
 	DbgScriptStackFrame dsframe = {};
 
 	// Call the support library to fill in the frame information.
 	//
-	HRESULT hr = DsGetCurrentStackFrame(hostCtxt, &dsframe);
+	HRESULT hr = DsGetCurrentStackFrame(hostCtxt, thd, &dsframe);
 	if (FAILED(hr))
 	{
 		rb_raise(rb_eRuntimeError, "DsGetCurrentStackFrame failed. Error 0x%08x.", hr);
@@ -185,7 +218,7 @@ Thread_current_frame(
 //
 // Description:
 //
-//  Frees a DbgScriptThread object allocated by 'Thread_alloc'.
+//  Free routine for Thread class.
 //  
 // Returns:
 //
@@ -204,7 +237,7 @@ Thread_free(
 //
 // Description:
 //
-//  Allocates a Ruby-wrapped DbgScriptThread object.
+//  Allocator routine for Thread class.
 //  
 // Returns:
 //
@@ -220,13 +253,24 @@ Thread_alloc(
 	return Data_Wrap_Struct(klass, nullptr /* mark */, Thread_free, thd);
 }
 
-// Allocate a Thread object.
+//------------------------------------------------------------------------------
+// Function: AllocThreadObj
+//
+// Description:
+//
+//  Allocate and initialize a Thread object.
+//  
+// Returns:
+//
+// Notes:
 //
 _Check_return_ VALUE
 AllocThreadObj(
 	_In_ ULONG engineId,
 	_In_ ULONG threadId)
 {
+	// Calls allocator routine (Thread_alloc).
+	//
 	VALUE thdObj = rb_class_new_instance(
 		0, nullptr, GetRubyProvGlobals()->ThreadClass);
 
@@ -240,6 +284,17 @@ AllocThreadObj(
 	return thdObj;
 }
 
+//------------------------------------------------------------------------------
+// Function: Init_Thread
+//
+// Description:
+//
+//  Initializes the Thread class.
+//  
+// Returns:
+//
+// Notes:
+//
 void
 Init_Thread()
 {
@@ -270,6 +325,12 @@ Init_Thread()
 		threadClass,
 		"get_stack",
 		RUBY_METHOD_FUNC(Thread_get_stack),
+		0 /* argc */);
+	
+	rb_define_method(
+		threadClass,
+		"teb",
+		RUBY_METHOD_FUNC(Thread_get_teb),
 		0 /* argc */);
 	
 	rb_define_alloc_func(threadClass, Thread_alloc);

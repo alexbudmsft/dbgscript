@@ -5,37 +5,35 @@
 #include "common.h"
 #include <dsthread.h>
 
-static PyMemberDef Thread_MemberDef [] = 
-{
-	{ "engine_id", T_ULONG, offsetof(ThreadObj, Thread.EngineId), READONLY },
-	{ "thread_id", T_ULONG, offsetof(ThreadObj, Thread.ThreadId), READONLY },
-	{ NULL }
-};
-
-static PyTypeObject ThreadType =
-{
-	PyVarObject_HEAD_INIT(0, 0)
-	"dbgscript.Thread",     /* tp_name */
-	sizeof(ThreadObj)       /* tp_basicsize */
-};
-
+//------------------------------------------------------------------------------
+// Function: Thread_get_teb
+//
+// Synopsis:
+// 
+//  obj.teb -> int
+//
+// Description:
+//
+//  Get the address of the TEB for this thread.
+//  
 static PyObject*
 Thread_get_teb(
-	_In_ PyObject* /* self */,
+	_In_ PyObject* self,
 	_In_opt_ void* /* closure */)
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 
 	CHECK_ABORT(hostCtxt);
 	PyObject* ret = nullptr;
-
+	ThreadObj* thd = (ThreadObj*)self;
+	
 	// Get TEB from debug client.
 	//
 	UINT64 teb = 0;
-	HRESULT hr = hostCtxt->DebugSysObj->GetCurrentThreadTeb(&teb);
+	HRESULT hr = DsThreadGetTeb(hostCtxt, &thd->Thread, &teb);
 	if (FAILED(hr))
 	{
-		PyErr_Format(PyExc_OSError, "Failed to get TEB. Error 0x%08x.", hr);
+		PyErr_Format(PyExc_OSError, "DsThreadGetTeb failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 
@@ -45,6 +43,17 @@ exit:
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: Thread_get_current_frame
+//
+// Synopsis:
+// 
+//  obj.current_frame -> int
+//
+// Description:
+//
+//  Get the current StackFrame for this thread.
+//
 static PyObject*
 Thread_get_current_frame(
 	_In_ PyObject* self,
@@ -53,12 +62,13 @@ Thread_get_current_frame(
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 	CHECK_ABORT(hostCtxt);
 	
+	ThreadObj* thd = (ThreadObj*)self;
 	PyObject* ret = nullptr;
 	DbgScriptStackFrame dsframe = {};
 
 	// Call the support library to fill in the frame information.
 	//
-	HRESULT hr = DsGetCurrentStackFrame(hostCtxt, &dsframe);
+	HRESULT hr = DsGetCurrentStackFrame(hostCtxt, &thd->Thread, &dsframe);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_OSError, "DsGetCurrentStackFrame failed. Error 0x%08x.", hr);
@@ -71,6 +81,17 @@ exit:
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: Thread_get_stack
+//
+// Synopsis:
+// 
+//  obj.get_stack() -> tuple of StackFrame
+//
+// Description:
+//
+//  Get the current call stack for this thread.
+//
 static PyObject*
 Thread_get_stack(
 	_In_ PyObject* self,
@@ -138,6 +159,8 @@ exit:
 	return tuple;
 }
 
+// Thread_GetSetDef - Attributes for Thread class.
+//
 static PyGetSetDef Thread_GetSetDef[] =
 {
 	{
@@ -157,6 +180,8 @@ static PyGetSetDef Thread_GetSetDef[] =
 	{ NULL }  /* Sentinel */
 };
 
+// Thread_MethodDef - Methods for Thread class.
+//
 static PyMethodDef Thread_MethodDef[] =
 {
 	{
@@ -168,6 +193,37 @@ static PyMethodDef Thread_MethodDef[] =
 	{ NULL }  /* Sentinel */
 };
 
+// Thread_MemberDef - Member definitions for Thread class.
+//
+static PyMemberDef Thread_MemberDef [] = 
+{
+	{ "engine_id", T_ULONG, offsetof(ThreadObj, Thread.EngineId), READONLY },
+	{ "thread_id", T_ULONG, offsetof(ThreadObj, Thread.ThreadId), READONLY },
+	{ NULL }
+};
+
+// ThreadType - Type definition for Thread class.
+//
+static PyTypeObject ThreadType =
+{
+	PyVarObject_HEAD_INIT(0, 0)
+	"dbgscript.Thread",     /* tp_name */
+	sizeof(ThreadObj)       /* tp_basicsize */
+};
+
+//------------------------------------------------------------------------------
+// Function: InitThreadType
+//
+// Description:
+//
+//  Initialize Thread class.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 _Check_return_ bool
 InitThreadType()
 {
@@ -187,6 +243,19 @@ InitThreadType()
 	return true;
 }
 
+//------------------------------------------------------------------------------
+// Function: AllocThreadObj
+//
+// Description:
+//
+//  Allocate and initialize a new Thread object.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
 _Check_return_ PyObject*
 AllocThreadObj(
 	_In_ ULONG engineId,

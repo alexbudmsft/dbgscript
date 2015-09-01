@@ -9,4 +9,5 @@ add_library(
 	outputcallback.cpp
 	dsstackframe.cpp
 	dstypedobject.cpp
+	dsthread.cpp
 )

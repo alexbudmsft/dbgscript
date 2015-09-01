@@ -31,7 +31,10 @@
 
 #define ERR_FAILED_GET_NUM_SYM \
 	"Error: Failed to get number of symbols. Error 0x%08x.\n"
-	
+
+#define ERR_FAILED_GET_TEB \
+	"Error: Failed to get TEB. Error 0x%08x.\n"
+
 #define ERR_FAILED_GET_SYM_ENTRY_INFO \
 	"Error: Failed to get symbol entry information. Error 0x%08x.\n"
 

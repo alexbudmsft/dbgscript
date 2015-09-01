@@ -1,6 +1,8 @@
+thread = DbgScript.get_threads[0]
 cur_thd = DbgScript.current_thread
 
-stack = cur_thd.get_stack
+stack = thread.get_stack
+puts thread.teb.to_s(16)
 
 for f in stack do
     locals = f.get_locals

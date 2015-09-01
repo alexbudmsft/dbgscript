@@ -30,6 +30,7 @@ struct DbgScriptStackFrame
 _Check_return_ HRESULT
 DsGetCurrentStackFrame(
 	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ DbgScriptThread* thread,
 	_Out_ DbgScriptStackFrame* stackFrame);
 
 _Check_return_ HRESULT

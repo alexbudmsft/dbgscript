@@ -206,9 +206,6 @@ Thread_getStack(lua_State* L)
 //
 //  Return the current stack frame.
 //
-// TODO: Consider switching to the thread identified by 'self' before getting
-// the current frame.
-//
 static int
 Thread_currentFrame(lua_State* L)
 {
@@ -220,20 +217,63 @@ Thread_currentFrame(lua_State* L)
 	//
 	DbgScriptThread* thd = (DbgScriptThread*)
 		luaL_checkudata(L, 1, THREAD_METATABLE);
-
-	thd;  // TODO: Use this to switch to this thread's context.
 	
-	// Allocate a StackFrame object.
+	// Allocate a StackFrame object and push it on the stack.
 	//
 	DbgScriptStackFrame* dsframe = AllocStackFrameObject(L, 1);
 
 	// Call the support library to fill in the frame information.
 	//
-	HRESULT hr = DsGetCurrentStackFrame(hostCtxt, dsframe);
+	HRESULT hr = DsGetCurrentStackFrame(hostCtxt, thd, dsframe);
 	if (FAILED(hr))
 	{
 		return LuaError(L, "DsGetCurrentStackFrame failed. Error 0x%08x.", hr);
 	}
+	
+	return 1;
+}
+
+//------------------------------------------------------------------------------
+// Function: Thread_getTeb
+//
+// Synopsis:
+//
+//  obj.teb -> Integer
+//
+// Description:
+//
+//  Return the current stack frame.
+//
+// Input Stack:
+//
+//  Param 1 is the Thread object. (self)
+//
+// Returns:
+//
+//  One result: The address of the TEB for this Thread.
+//
+static int
+Thread_getTeb(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	DbgScriptThread* thd = (DbgScriptThread*)
+		luaL_checkudata(L, 1, THREAD_METATABLE);
+	
+	// Get TEB from debug client.
+	//
+	UINT64 teb = 0;
+	HRESULT hr = DsThreadGetTeb(hostCtxt, thd, &teb);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "DsThreadGetTeb failed. Error 0x%08x.", hr);
+	}
+	
+	lua_pushinteger(L, teb);
 	
 	return 1;
 }
@@ -256,6 +296,7 @@ static const LuaClassProperty x_ThreadProps[] =
 	// -----------------------------------------------------------
 	{ "engineId", Thread_getEngineId, nullptr },
 	{ "threadId", Thread_getThreadId, nullptr },
+	{ "teb", Thread_getTeb, nullptr },
 };
 
 // Instance methods.

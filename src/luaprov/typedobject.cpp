@@ -874,13 +874,13 @@ TypedObject_readString(lua_State* L)
 //------------------------------------------------------------------------------
 // Function: TypedObject_readWideString
 //
+// Synopsis:
+//
+//  obj.readWideString([count]) -> string
+//
 // Description:
 //
 //  Read a string from the target process as a Lua string.
-//
-// Parameters:
-//
-//  obj.readWideString([count]) -> str
 //
 // Input Stack:
 //
