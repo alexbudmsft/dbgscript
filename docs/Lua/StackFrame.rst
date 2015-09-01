@@ -1,33 +1,18 @@
-StackFrame class
-=================
+.. include:: ../shared/StackFrame_preamble.txt
 
-.. class:: StackFrame
+.. attribute:: StackFrame.frameNumber() -> integer
 
-The StackFrame class represents a stack frame in the target process. From it,
-the locals and arguments can be obtained.
-
-StackFrame attributes
-----------------------
-
-.. attribute:: StackFrame.frame_number
-
-   Get the frame number of this stack frame as :class:`int`.
+   Get the frame number of this stack frame.
    
-.. attribute:: StackFrame.instruction_offset
+.. attribute:: StackFrame.instructionOffset() -> integer
 
-   Get the virtual address of the frame's current instruction as :class:`int`.
+   Get the virtual address of the frame's current instruction.
    
-StackFrame methods
-----------------------
+.. method:: StackFrame.getLocals() -> table of TypedObject
 
-.. method:: StackFrame.get_locals()
-
-   Get the local variables in the stack frame as a tuple of :class:`TypedObject`.
+   Get the local variables in the stack frame. This includes arguments.
    
-.. method:: StackFrame.get_args()
+.. method:: StackFrame.getArgs() -> table of TypedObject
 
-   Similar to :meth:`.get_locals` except return the arguments only.
+   Similar to ``getLocals`` except returns the arguments only.
    
-Here's an example showing these methods in action:
-
-.. literalinclude:: ../../samples/py/stack_test.py

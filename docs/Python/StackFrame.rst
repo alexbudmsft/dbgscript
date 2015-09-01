@@ -2,36 +2,27 @@
 
 .. currentmodule:: dbgscript
 
-StackFrame class
-=================
+.. include:: ../shared/StackFrame_preamble.txt
 
 .. class:: StackFrame
 
-The StackFrame class represents a stack frame in the target process. From it,
-the locals and arguments can be obtained.
+.. attribute:: StackFrame.frame_number() -> int
 
-StackFrame attributes
-----------------------
-
-.. attribute:: StackFrame.frame_number
-
-   Get the frame number of this stack frame as :class:`int`.
+   Get the frame number of this stack frame as .
    
-.. attribute:: StackFrame.instruction_offset
+.. attribute:: StackFrame.instruction_offset() -> int
 
-   Get the virtual address of the frame's current instruction as :class:`int`.
+   Get the virtual address of the frame's current instruction.
+
+.. method:: StackFrame.get_locals() -> tuple of TypedObject
+
+   Get the local variables in the stack frame.
    
-StackFrame methods
-----------------------
-
-.. method:: StackFrame.get_locals()
-
-   Get the local variables in the stack frame as a tuple of :class:`TypedObject`.
-   
-.. method:: StackFrame.get_args()
+.. method:: StackFrame.get_args() -> tuple of TypedObject
 
    Similar to :meth:`.get_locals` except return the arguments only.
    
-Here's an example showing these methods in action:
+Example
+-------
 
 .. literalinclude:: ../../samples/py/stack_test.py
