@@ -97,7 +97,7 @@ Synopsis
 .. code-block:: none
     :linenos:
     
-    !scriptpath <path1>[,<path2>[,...]
+    !scriptpath <path1>[,<path2>[,...]]
     !scriptpath
     
 Description
