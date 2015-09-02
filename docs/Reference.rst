@@ -11,20 +11,20 @@ Synopsis
 ^^^^^^^^
 .. code-block:: none
 
-    !runscript [host switches] [--] [provider switches] <script file> [arg1 [, arg2 [, ...]]]
+    !runscript [host-switches] [--] [provider-switches] <script-file> [arg1[, arg2[, ...]]]
 
 Description
 ^^^^^^^^^^^
 
 The only required parameter is the script file.
 
-``host switches`` are one or more of
+``host-switches`` are one or more of
 
-  ``-l <lang id>``
+  ``-l <lang-id>``
     Specifies the language the script is written in. This invokes
     the registered provider for this language id.
                 
-    See Provider configuration for information on installing and
+    See :ref:`3rd-party-config` for information on installing and
     configuring language providers.
     
   ``-t``
@@ -38,7 +38,7 @@ necessary to include it if the first argument to the provider is a switch
 (i.e. starts with hypen (``-``)). If it is a filename, then this
 delimiter is unnecessary.
 
-``provider switches`` are switches specific to the provider. Each provider
+``provider-switches`` are switches specific to the provider. Each provider
 implements its own set of switches. Consult the documentation specific to the
 provider to see what switches it offers.
 
@@ -65,12 +65,12 @@ Synopsis
 ^^^^^^^^
 .. code-block:: none
 
-    !evalstring [host switches] [--] <script-string>
+    !evalstring [host-switches] [--] <script-string>
     
 Description
 ^^^^^^^^^^^
 
-``!evalstring`` can be used to evaluate an ad-hoc statement. ``host switches``
+``!evalstring`` can be used to evaluate an ad-hoc statement. ``host-switches``
 are as in `!runscript`_. ``<script-string>`` is the string to be evaluated in
 the selected script provider.
 

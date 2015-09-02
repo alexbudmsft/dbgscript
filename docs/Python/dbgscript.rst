@@ -11,7 +11,7 @@ dbgscript Module
 
    Get the current thread in the process.
 
-.. method:: get_threads() -> tuple(Thread)
+.. method:: get_threads() -> tuple of Thread
 
    Get the collection of threads in the process.
      

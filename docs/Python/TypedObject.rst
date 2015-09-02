@@ -12,38 +12,37 @@
      
 .. attribute:: TypedObject.address() -> int
 
-   Get the virtual address of the object as an :class:`int`.
+   Get the virtual address of the object.
    
 .. attribute:: TypedObject.type() -> str
 
-   Get the type name of the object as a :class:`str`.
+   Get the type name of the object.
    
 .. attribute:: TypedObject.size() -> int
 
-   Get the size of the object in bytes as an :class:`int`.
+   Get the size of the object in bytes.
    
 .. attribute:: TypedObject.module() -> str
 
    Get the module name of the typed object.
-   
-.. TODO: Describe subscript operator (both int and str keys)
 
-Sequence support
-----------------
+.. method:: obj[key]
 
-If the TypedObject represents an array or pointer, the object implements the
-sequence protocol.
+   If `key` is an integer, attempts an array element access. If the object
+   is not an array or pointer, raises :class:`RuntimeError`.
 
-If the object represents an array, its length can be determined with the
-builtin :func:`len` function.
+   If `key` is a string, attempts to look up a field with that name. If no such
+   field exists, raises :class:`RuntimeError`.
 
-If the object represents an array or pointer, its elements can be obtained via
-the subscript operator with an :class:`int` key::
+.. attribute:: obj.field
 
-    obj[0]  # obtains first element
-    obj[5]  # obtains sixth element
+   Secondary way of looking up fields. If `field` names a built-in attribute,
+   that attribute is returned. Otherwise a field lookup is performed.
 
-Mapping support
----------------
+   This allows a more convenient way of traversing C/C++ objects. E.g.::
 
-.. TODO
+     foo.m_bar
+     foo['m_bar']
+
+   are equivalent. The explicit form is more performant though and recommended
+   for tight loops.

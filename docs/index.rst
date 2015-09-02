@@ -9,8 +9,8 @@ arbitrary scripting languages into the `Debugging Tools for Windows`_.
 It offers an extensibility model allowing new languages to be added with no
 changes to the core.
 
-DbgScript extends the scripting languages with a typed object model that models
-elements in the target process like threads, (C++) objects, stack frames, etc.
+DbgScript extends scripting languages with a API that models
+elements in the target process like threads, C/C++ objects, stack frames, etc.
 
 For example, in the Python Script Provider, a thread is modelled as a
 Thread object with various attributes and methods that can obtain further

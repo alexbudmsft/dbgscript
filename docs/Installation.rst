@@ -15,6 +15,8 @@ The Visual Studio `2015`_ and `2013`_ x64 CRT Redists are required.
 (You do not need to install Python or Ruby as their core files are bundled with
 the provider.)
 
+.. _3rd-party-config:
+
 3rd Party Provider Registration
 ===============================
 The ``install.bat`` script will automatically install all the first-party providers.
