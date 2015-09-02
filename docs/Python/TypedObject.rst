@@ -47,7 +47,25 @@
    are equivalent. The explicit form is more performant though and recommended
    for tight loops.
 
-.. function:: builtin.len(obj)
+.. method:: TypedObject.read_string([count]) -> str
+
+   Read an ANSI string from the target process starting at this object's 
+   address. `count` (optional) specifies the maximum number of characters to read.
+   
+.. method:: TypedObject.read_wide_string([count]) -> str
+
+   Read a wide string from the target process starting at this object's 
+   address. `count` (optional) specifies the maximum number of characters to read.
+   
+.. attribute:: TypedObject.deref() -> TypedObject
+
+   Dereference the current object, if it's a pointer or array.
+   
+.. method:: TypedObject.get_runtime_obj() -> TypedObject
+
+   Attempts to dynamically down-cast the current object if it has a vtable.
+
+.. function:: builtin.len(obj) -> int
 
    If this object represents an array, returns its length, otherwise raises an
    :class:`ValueError`.

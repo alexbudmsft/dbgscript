@@ -48,6 +48,24 @@
    property, like ``name``. In that case, ``obj.name`` and ``obj['name']`` will
    yield the ``name`` property instead of performing a field lookup.
 
+.. method:: TypedObject.readString([count]) -> string
+
+   Read an ANSI string from the target process starting at this object's 
+   address. `count` (optional) specifies the maximum number of characters to read.
+   
+.. method:: TypedObject.readWideString([count]) -> string
+
+   Read a wide string from the target process starting at this object's 
+   address. `count` (optional) specifies the maximum number of characters to read.
+   
+.. attribute:: TypedObject.deref() -> TypedObject
+
+   Dereference the current object, if it's a pointer or array.
+   
+.. method:: TypedObject.getRuntimeObject() -> TypedObject
+
+   Attempts to dynamically down-cast the current object if it has a vtable.
+
 .. method:: #obj
 
    If this object represents an array, returns its length, otherwise raises an
