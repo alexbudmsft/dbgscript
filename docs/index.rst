@@ -22,7 +22,7 @@ DbgScript comes with three first-party providers: `Python`_ and `Ruby`_ and `Lua
    :hidden:
    
    Installation
-   Basics
+   Tutorial
    Reference
    Python
    Ruby

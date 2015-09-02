@@ -1,10 +1,16 @@
+Tutorial
+********
+
+This section covers basic command invocation as well as a tutorial on writing a
+simple script in the :doc:`Python`.
+
 Basics
-******
+======
 
 This section explains some basic usage of DbgScript. For details see the :doc:`Reference`.
 
 Running Scripts
-===============
+---------------
 
 To run a script, use the ``!runscript`` entry point. For example::
 
@@ -14,7 +20,7 @@ You can use `!scriptpath`_ to shorten the path you need to pass to ``!runscript`
 
                 
 Ad-hoc Evaluation
-=================
+-----------------
 
 ``!evalstring`` can be used to evaluate an ad-hoc statement. For example::
 
@@ -28,10 +34,10 @@ script provider. The output is shown in the debugger (in this case, an array
 of Thread objects.)
 
 Other Entry Points
-==================
+------------------
 
 !scriptpath
------------
+^^^^^^^^^^^
 
 This takes a comma-separated list of paths to search when running scripts. For example::
 
@@ -41,3 +47,16 @@ Note that the separator is a `comma`, not semicolon. Semicolon is reserved
 by the debugger to separate commands.
 
 Run with no arguments to see the current path list.
+
+Example
+=======
+
+The following example demonstrates a simple program along with a sample script
+to introspect its contents using the :doc:`Python`. The script is simple to port
+to other languages like Ruby or Lua.
+
+Suppose we have a simple C++ program:
+
+.. literalinclude:: ../samples/cpp/dummy1.cpp
+	:language: cpp
+	:linenos:

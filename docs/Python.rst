@@ -4,7 +4,6 @@ Python Script Provider
 .. toctree::
    :maxdepth: 2
    
-   Python/Tutorial
    Python/dbgscript
    Python/Thread
    Python/TypedObject
