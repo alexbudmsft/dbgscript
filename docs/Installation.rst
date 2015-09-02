@@ -4,16 +4,21 @@ Installation
 Run ``install.bat``. Assuming you have the `Prerequisites`_, you're good to go!
 
 Run ``.load C:\Program Files\DbgScript\dbgscript.dll`` to load DbgScript in
-your debugger of choice. (Default path shown above. DbgScript installs into
-``%ProgramFiles%``.)
+your debugger of choice. 
+
+.. note::
+
+	Default path shown above. DbgScript installs into ``%ProgramFiles%``.
 
 Prerequisites
 =============
 
 The Visual Studio `2015`_ and `2013`_ x64 CRT Redists are required.
 
-(You do not need to install Python or Ruby as their core files are bundled with
-the provider.)
+.. note::
+
+	You do not need to install Python or Ruby as their core files are bundled with
+	the provider.
 
 .. _3rd-party-config:
 
@@ -22,10 +27,7 @@ the provider.)
 The ``install.bat`` script will automatically install all the first-party providers.
 
 If you wish to install your own, add them to the
-
-    ``HKCU\Software\Microsoft\DbgScript\Providers``
-    
-registry key.
+``HKCU\Software\Microsoft\DbgScript\Providers`` registry key.
 
 The values in this key are of type REG_SZ and contain the `language identifier`
 of the provider. The data associated with the key is the full path to the DLL
