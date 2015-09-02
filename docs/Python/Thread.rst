@@ -5,29 +5,23 @@
 
 .. class:: Thread
 
-Attributes
-----------------------
-
-.. attribute:: engine_id
+.. attribute:: Thread.engine_id
 
    Get the dbgeng local thread id. This is not the Windows thread id.
 
-.. attribute:: thread_id
+.. attribute:: Thread.thread_id
 
    Get the Windows thread id.
    
-.. attribute:: teb
+.. attribute:: Thread.teb
 
    Get the address of the TEB.
    
-.. attribute:: current_frame
+.. attribute:: Thread.current_frame
 
    Get the current :class:`StackFrame`.
-   
-Thread methods
-----------------------
 
-.. method:: get_stack() -> tuple(StackFrame)
+.. method:: Thread.get_stack() -> tuple of StackFrame
 
    Get the collection of threads in the process.
    

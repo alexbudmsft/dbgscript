@@ -22,7 +22,3 @@
 
    Similar to :meth:`.get_locals` except return the arguments only.
    
-Example
--------
-
-.. literalinclude:: ../../samples/py/stack_test.py

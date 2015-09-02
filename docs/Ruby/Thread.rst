@@ -5,23 +5,23 @@
 
 .. class:: Thread
 
-.. attr_reader:: engine_id
+.. attr_reader:: Thread#engine_id -> Integer
 
    Get the dbgeng local thread id. This is not the Windows thread id.
 
-.. attr_reader:: thread_id
+.. attr_reader:: Thread#thread_id -> Integer
 
    Get the Windows thread id.
    
-.. attr_reader:: teb
+.. attr_reader:: Thread#teb -> Integer
 
    Get the address of the TEB.
    
-.. attr_reader:: current_frame
+.. attr_reader:: Thread#current_frame -> StackFrame
 
    Get the current :class:`StackFrame`.
 
-.. method:: get_stack() -> tuple(StackFrame)
+.. method:: Thread#get_stack() -> array of StackFrame
 
    Get the collection of threads in the process.
    
