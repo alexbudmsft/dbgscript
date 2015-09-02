@@ -48,4 +48,8 @@
    property, like ``name``. In that case, ``obj.name`` and ``obj['name']`` will
    yield the ``name`` property instead of performing a field lookup.
 
+.. method:: #obj
+
+   If this object represents an array, returns its length, otherwise raises an
+   error.
 

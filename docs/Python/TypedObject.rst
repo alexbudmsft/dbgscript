@@ -46,3 +46,9 @@
 
    are equivalent. The explicit form is more performant though and recommended
    for tight loops.
+
+.. function:: builtin.len(obj)
+
+   If this object represents an array, returns its length, otherwise raises an
+   :class:`ValueError`.
+

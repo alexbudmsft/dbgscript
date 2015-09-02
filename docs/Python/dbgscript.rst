@@ -7,6 +7,9 @@ dbgscript Module
 
 .. include:: ../shared/dbgscript_mod.txt
 
+You do not need to ``import dbgscript``. It is already visible in the global
+namespace.
+
 .. method:: current_thread() -> Thread
 
    Get the current thread in the process.
