@@ -60,3 +60,13 @@ Suppose we have a simple C++ program:
 .. literalinclude:: ../samples/cpp/dummy1.cpp
 	:language: cpp
 	:linenos:
+
+If we run it in a debugger until the ``printf`` line (42), we can start to 
+inspect the various objects we've created and populated.
+
+For example, we can read the string in ``car1.f->name`` in various ways:
+
+.. literalinclude:: ../samples/py/ansiString.py
+	:linenos:
+	
+
