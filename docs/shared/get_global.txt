@@ -1,0 +1,3 @@
+Create a TypedObject from a global variable in the process identified by
+`symbol`. Symbol should be module-qualified for best results. E.g. 
+``foo!bar``.

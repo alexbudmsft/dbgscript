@@ -2,6 +2,10 @@ dbgscript Module
 ================
 .. include:: ../shared/dbgscript_mod.txt
 
+.. method:: dbgscript.getGlobal(symbol) -> TypedObject
+
+   .. include:: ../shared/get_global.txt
+
 .. method:: dbgscript.currentThread() -> Thread
 
    Get the current thread in the process.
@@ -19,3 +23,21 @@ dbgscript Module
    Read a pointer value from the virtual address space of the target process.
    ``addr`` must be a valid (accessible) address. This will be 8 bytes on an
    x64 target.
+   
+.. method:: dbgscript.startBuffering()
+
+   .. include:: ../shared/start_buffering.txt
+
+.. method:: dbgscript.stopBuffering()
+
+   .. include:: ../shared/stop_buffering.txt
+
+.. method:: dbgscript.execCommand(cmd)
+
+   Executes a debugger command `cmd` and prints the output.
+
+.. method:: dbgscript.resolveEnum(enum, val) -> string
+
+   Obtains the textual name of the enumerant given an enum `enum` and a value
+   `val`.
+

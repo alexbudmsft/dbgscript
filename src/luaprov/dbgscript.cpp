@@ -376,7 +376,7 @@ dbgscript_getGlobal(lua_State* L)
 //
 // Returns:
 //
-//  The global typed object.
+//  The name of the enumerant (string).
 //
 // Notes:
 //
