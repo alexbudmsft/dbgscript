@@ -69,4 +69,22 @@ For example, we can read the string in ``car1.f->name`` in various ways:
 .. literalinclude:: ../samples/py/ansiString.py
 	:linenos:
 	
+This example showcases :py:meth:`dbgscript.create_typed_object` to create a
+:py:class:`dbgscript.TypedObject` from an address and type directly. This is a 
+common way of bootstrapping a script (though normally, the address would be 
+passed as a command-line argument to the script.) If the root object is a global,
+it may be obtained with :py:meth:`dbgscript.get_global`.
 
+This example also shows field lookup using the explicit ``obj['field']`` syntax.
+Fields may also be looked up though `dynamic property` syntax, i.e. 
+``obj.field``. In this case though, the explicit syntax must be used because
+the field being looked up has the same name as, and thus would be otherwise 
+hidden by the built-in property :py:attr:`dbgscript.TypedObject.name`. Built-in 
+properties/methods take precedence.
+
+Lastly, we read the string from the `TypedObject` wrapping the ``name`` field
+with :py:meth:`dbgscript.TypedObject.read_string`. This yields a Python `str` 
+ready to be printed out as usual.
+
+Notice that `stdout` is redirected to the debugger's command window, as 
+expected.
