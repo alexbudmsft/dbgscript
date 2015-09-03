@@ -1,4 +1,4 @@
-car = dbgscript.create_typed_object('dummy1!Car', 0x000005a9341fb10)
+car = dbgscript.create_typed_object('dummy1!Car', 0x00000eb64f1fbf0)
 
 # Read ANSI string.
 #

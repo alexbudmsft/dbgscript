@@ -86,5 +86,7 @@ Lastly, we read the string from the `TypedObject` wrapping the ``name`` field
 with :py:meth:`dbgscript.TypedObject.read_string`. This yields a Python `str` 
 ready to be printed out as usual.
 
+.. image:: tutorial_1.png
+
 Notice that `stdout` is redirected to the debugger's command window, as 
 expected.
