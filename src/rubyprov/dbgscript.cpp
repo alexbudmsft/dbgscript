@@ -49,6 +49,37 @@ DbgScript_read_ptr(
 }
 
 //------------------------------------------------------------------------------
+// Function: DbgScript_get_nearest_sym
+//
+// Synopsis:
+//
+//  DbgScript.get_nearest_sym(addr) -> String
+//
+// Description:
+//
+//  Lookup nearest symbol to address 'addr' (Integer).
+//
+static VALUE
+DbgScript_get_nearest_sym(
+	_In_ VALUE /* self */,
+	_In_ VALUE addr)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	const UINT64 ui64Addr = NUM2ULL(addr);
+	char name[MAX_SYMBOL_NAME_LEN] = {};
+
+	HRESULT hr = UtilGetNearestSymbol(hostCtxt, ui64Addr, name);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eArgError, "Failed to resolve symbol from address %p. Error 0x%08x.", addr, hr);
+	}
+
+	return rb_str_new2(name);
+}
+
+//------------------------------------------------------------------------------
 // Function: DbgScript_resolve_enum
 //
 // Synopsis:
@@ -368,7 +399,10 @@ Init_DbgScript()
 
 	rb_define_module_function(
 		module, "read_ptr", RUBY_METHOD_FUNC(DbgScript_read_ptr), 1 /* argc */);
-
+	
+	rb_define_module_function(
+		module, "get_nearest_sym", RUBY_METHOD_FUNC(DbgScript_get_nearest_sym), 1 /* argc */);
+	
 	rb_define_module_function(
 		module, "current_thread", RUBY_METHOD_FUNC(DbgScript_current_thread), 0 /* argc */);
 	
