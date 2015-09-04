@@ -23,5 +23,5 @@
 
 .. method:: Thread#get_stack() -> array of StackFrame
 
-   Get the collection of threads in the process.
+   Get the current call stack.
    

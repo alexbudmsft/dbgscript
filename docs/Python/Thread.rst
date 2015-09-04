@@ -23,7 +23,7 @@
 
 .. method:: Thread.get_stack() -> tuple of StackFrame
 
-   Get the collection of threads in the process.
+   Get the current call stack.
    
    For example::
    
