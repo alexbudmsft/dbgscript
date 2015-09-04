@@ -24,6 +24,11 @@ dbgscript Module
    ``addr`` must be a valid (accessible) address. This will be 8 bytes on an
    x64 target.
    
+.. method:: dbgscript.getNearestSym(addr) -> string
+
+   Lookup the nearest symbol to address `addr`. Operates similar to the debugger
+   ``ln`` command.
+   
 .. method:: dbgscript.startBuffering()
 
    .. include:: ../shared/start_buffering.txt
