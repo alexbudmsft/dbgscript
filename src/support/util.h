@@ -33,6 +33,12 @@ UtilReadPointer(
 	_Out_ UINT64* ptrVal);
 
 _Check_return_ HRESULT
+UtilGetNearestSymbol(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ UINT64 addr,
+	_Out_writes_(MAX_SYMBOL_NAME_LEN) char* buf);
+
+_Check_return_ HRESULT
 UtilReadWideString(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ UINT64 addr,

@@ -40,6 +40,66 @@ UtilReadPointer(
 }
 
 //------------------------------------------------------------------------------
+// Function: UtilGetNearestSymbol
+//
+// Description:
+//
+//  Lookup the nearest symbol given an address.
+//
+// Parameters:
+//
+//  addr - Virtual address to probe.
+//  buf - On successful return, name of nearest symbol. Expected to be
+//   a buffer of MAX_SYMBOL_NAME_LEN characters longs.
+//
+// Returns:
+//
+//  HRESULT.
+//
+// Notes:
+//
+_Check_return_ HRESULT
+UtilGetNearestSymbol(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ UINT64 addr,
+	_Out_writes_(MAX_SYMBOL_NAME_LEN) char* buf)
+{
+	UINT64 disp = 0;
+	ULONG cchActual = 0;
+	HRESULT hr = hostCtxt->DebugSymbols->GetNameByOffset(
+		addr, buf, MAX_SYMBOL_NAME_LEN, &cchActual, &disp);
+	if (FAILED(hr))
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_NAME_BY_OFFSET,
+			addr,
+			hr);
+		goto exit;
+	}
+
+	// If we have a displacement, append it to the name. Don't do it for S_FALSE
+	// since that means the symbol was already truncated. No point in appending
+	// anything more.
+	//
+	if (disp && hr != S_FALSE && MAX_SYMBOL_NAME_LEN - cchActual > 0)
+	{
+		// 'cchActual' includes the NUL, so we want to start writing
+		// just before 'cchActual'.
+		//
+		hr = StringCchPrintfA(
+			buf + (cchActual - 1),
+			MAX_SYMBOL_NAME_LEN - (cchActual - 1),
+			"+%#I64x",
+			disp);
+
+		assert(hr != STRSAFE_E_INVALID_PARAMETER);
+	}
+exit:
+	return hr;
+}
+
+//------------------------------------------------------------------------------
 // Function: UtilReadWideString
 //
 // Description:

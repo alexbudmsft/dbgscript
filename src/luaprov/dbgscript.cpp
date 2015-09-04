@@ -445,10 +445,50 @@ dbgscript_readPtr(lua_State* L)
 	HRESULT hr = UtilReadPointer(hostCtxt, addr, &ptrVal);
 	if (FAILED(hr))
 	{
-		return LuaError(L, "Failed to read pointer value from address '%p'. Error 0x%08x.", addr, hr);
+		return LuaError(L, "Failed to read pointer value from address %p. Error 0x%08x.", addr, hr);
 	}
 
 	lua_pushinteger(L, ptrVal);
+	return 1;
+}
+
+//------------------------------------------------------------------------------
+// Function: dbgscript_getNearestSym
+//
+// Description:
+//
+//  Lookup the nearest symbol from an address.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  1 - Address to probe (int)
+//
+// Returns:
+//
+//  The nearest symbol name.
+//
+// Notes:
+//
+static int
+dbgscript_getNearestSym(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	const UINT64 addr = luaL_checkinteger(L, 1);
+	char name[MAX_SYMBOL_NAME_LEN] = {};
+
+	HRESULT hr = UtilGetNearestSymbol(hostCtxt, addr, name);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "Failed to resolve symbol from address %p. Error 0x%08x.", addr, hr);
+	}
+
+	lua_pushstring(L, name);
 	return 1;
 }
 
@@ -465,6 +505,7 @@ static const luaL_Reg dbgscript[] =
 	{"getGlobal", dbgscript_getGlobal},
 	{"resolveEnum", dbgscript_resolveEnum},
 	{"readPtr", dbgscript_readPtr},
+	{"getNearestSym", dbgscript_getNearestSym},
 	{nullptr, nullptr}  // sentinel.
 };
 
