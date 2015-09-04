@@ -24,6 +24,10 @@ for %%f in (%FLAVORS%) do (
     REM
     copy install.bat deploy\%%f\
     
+    REM Copy release notes.
+    REM
+    copy releasenotes.txt deploy\%%f\
+    
     set LUA_BIN_DIR=debug
     
     if /I "%%f" NEQ "debug" (

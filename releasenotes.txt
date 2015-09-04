@@ -1,0 +1,7 @@
+1.0.1 (beta)
+------------
+
+* Add get_nearest_sym API. Mimics debugger `ln' command.
+
+1.0.0 - Initial Release
+-----------------------
