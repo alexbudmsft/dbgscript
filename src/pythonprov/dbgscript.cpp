@@ -26,6 +26,17 @@
 #include "stackframe.h"
 #include "typedobject.h"
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_create_typed_object
+//
+// Synopsis:
+// 
+//  dbgscript.create_typed_object(type, addr) -> TypedObject
+//
+// Description:
+//
+//  Create a typed object from a given type and address.
+//
 static PyObject*
 dbgscript_create_typed_object(
 	_In_ PyObject* /*self*/,
@@ -59,6 +70,17 @@ exit:
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_resolve_enum
+//
+// Synopsis:
+// 
+//  dbgscript.resolve_enum(enum, val) -> str
+//
+// Description:
+//
+//  Derive the textual enumerant string from an enum type and value.
+//
 static PyObject*
 dbgscript_resolve_enum(
 	_In_ PyObject* /*self*/,
@@ -101,6 +123,17 @@ exit:
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_get_global
+//
+// Synopsis:
+// 
+//  dbgscript.get_global(sym) -> TypedObject
+//
+// Description:
+//
+//  Create a typed object from a global variable identified by 'sym'.
+//
 static PyObject*
 dbgscript_get_global(
 	_In_ PyObject* /*self*/,
@@ -142,6 +175,17 @@ exit:
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_read_ptr
+//
+// Synopsis:
+// 
+//  dbgscript.read_ptr(addr) -> int
+//
+// Description:
+//
+//  Read a pointer value at a given address.
+//
 static PyObject*
 dbgscript_read_ptr(
 	_In_ PyObject* /*self*/,
@@ -172,6 +216,58 @@ exit:
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_get_nearest_sym
+//
+// Synopsis:
+// 
+//  dbgscript.get_nearest_sym(addr) -> int
+//
+// Description:
+//
+//  Lookup nearest symbol name at given address.
+//
+static PyObject*
+dbgscript_get_nearest_sym(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+
+	PyObject *ret = nullptr;
+	UINT64 addr = 0;
+	char name[MAX_SYMBOL_NAME_LEN] = {};
+	if (!PyArg_ParseTuple(args, "K:get_nearest_sym", &addr))
+	{
+		return nullptr;
+	}
+
+	HRESULT hr = UtilGetNearestSymbol(hostCtxt, addr, name);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_ValueError, "Failed to resolve symbol from address %p. Error 0x%08x.", addr, hr);
+		goto exit;
+	}
+
+	ret = PyUnicode_FromString(name);
+
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
+// Function: dbgscript_get_threads
+//
+// Synopsis:
+// 
+//  dbgscript.get_threads() -> tuple of Thread
+//
+// Description:
+//
+//  Get a collection of threads in the process.
+//
 static PyObject*
 dbgscript_get_threads(
 	_In_ PyObject* /*self*/,
@@ -245,6 +341,17 @@ exit:
 	return tuple;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_get_current_thread
+//
+// Synopsis:
+// 
+//  dbgscript.get_current_thread() -> Thread
+//
+// Description:
+//
+//  Get current thread in process.
+//
 static PyObject*
 dbgscript_get_current_thread(
 	_In_ PyObject* /*self*/,
@@ -280,6 +387,17 @@ exit:
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_start_buffering
+//
+// Synopsis:
+// 
+//  dbgscript.start_buffering() -> None
+//
+// Description:
+//
+//  Start an output buffering session.
+//
 static PyObject*
 dbgscript_start_buffering(
 	_In_ PyObject* /*self*/,
@@ -293,6 +411,17 @@ dbgscript_start_buffering(
 	Py_RETURN_NONE;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_stop_buffering
+//
+// Synopsis:
+// 
+//  dbgscript.stop_buffering() -> None
+//
+// Description:
+//
+//  Stop an output buffering session.
+//
 static PyObject*
 dbgscript_stop_buffering(
 	_In_ PyObject* /*self*/,
@@ -320,7 +449,16 @@ dbgscript_stop_buffering(
 	Py_RETURN_NONE;
 }
 
-// Global function in the dbgscript module.
+//------------------------------------------------------------------------------
+// Function: dbgscript_execute_command
+//
+// Synopsis:
+// 
+//  dbgscript.execute_command(cmd) -> None
+//
+// Description:
+//
+//  Execute a debugger command and output results.
 //
 static PyObject*
 dbgscript_execute_command(
@@ -391,6 +529,12 @@ static PyMethodDef dbgscript_MethodsDef[] =
 		dbgscript_read_ptr,
 		METH_VARARGS,
 		PyDoc_STR("Read a pointer at given address.")
+	},
+	{
+		"get_nearest_sym",
+		dbgscript_get_nearest_sym,
+		METH_VARARGS,
+		PyDoc_STR("Lookup the nearest symbol at given address.")
 	},
 	{
 		"get_global",
