@@ -390,6 +390,12 @@ CLuaScriptProvider::Run(
 	
 	if (err)
 	{
+		// Flush the remaining message buffer first.
+		//
+		UtilFlushMessageBuffer(hostCtxt);
+		
+		// Print the error with traceback.
+		//
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
 			"Lua runtime error %d: %s\n", err, lua_tostring(LuaState, -1));
@@ -440,6 +446,12 @@ CLuaScriptProvider::RunString(
 	
 	if (err)
 	{
+		// Flush the remaining message buffer first.
+		//
+		UtilFlushMessageBuffer(hostCtxt);
+
+		// Print the error with traceback.
+		//
 		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
 			"Lua runtime error %d: %s\n", err, lua_tostring(LuaState, -1));
