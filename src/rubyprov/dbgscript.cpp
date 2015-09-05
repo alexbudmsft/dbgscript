@@ -49,6 +49,43 @@ DbgScript_read_ptr(
 }
 
 //------------------------------------------------------------------------------
+// Function: DbgScript_field_offset
+//
+// Synopsis:
+// 
+//  DbgScript.field_offset(type, field) -> Integer
+//
+// Description:
+//
+//  Return the offset of 'field' in 'type'.
+//
+static VALUE
+DbgScript_field_offset(
+	_In_ VALUE /* self */,
+	_In_ VALUE type,
+	_In_ VALUE field)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	ULONG offset = 0;
+	HRESULT hr = UtilGetFieldOffset(
+		hostCtxt, StringValuePtr(type), StringValuePtr(field), &offset);
+	
+	if (FAILED(hr))
+	{
+		rb_raise(
+			rb_eArgError,
+			"Failed to get field offset for type '%s' and field '%s'. Error 0x%08x.",
+			type,
+			field,
+			hr);
+	}
+
+	return ULONG2NUM(offset);
+}
+
+//------------------------------------------------------------------------------
 // Function: DbgScript_get_nearest_sym
 //
 // Synopsis:
@@ -399,6 +436,9 @@ Init_DbgScript()
 
 	rb_define_module_function(
 		module, "read_ptr", RUBY_METHOD_FUNC(DbgScript_read_ptr), 1 /* argc */);
+	
+	rb_define_module_function(
+		module, "field_offset", RUBY_METHOD_FUNC(DbgScript_field_offset), 2 /* argc */);
 	
 	rb_define_module_function(
 		module, "get_nearest_sym", RUBY_METHOD_FUNC(DbgScript_get_nearest_sym), 1 /* argc */);
