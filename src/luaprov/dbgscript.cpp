@@ -453,6 +453,42 @@ dbgscript_readPtr(lua_State* L)
 }
 
 //------------------------------------------------------------------------------
+// Function: dbgscript_fieldOffset
+//
+// Synopsis:
+// 
+//  dbgscript.fieldOffset(type, field) -> integer
+//
+// Description:
+//
+//  Return the offset of 'field' in 'type'.
+//
+static int
+dbgscript_fieldOffset(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	const char* type = lua_tostring(L, 1);
+	const char* field = lua_tostring(L, 2);
+	
+	ULONG offset = 0;
+	HRESULT hr = UtilGetFieldOffset(hostCtxt, type, field, &offset);
+	if (FAILED(hr))
+	{
+		return LuaError(
+			L,
+			"Failed to get field offset for type '%s' and field '%s'. Error 0x%08x.",
+			type,
+			field,
+			hr);
+	}
+
+	lua_pushinteger(L, offset);
+	return 1;
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_getNearestSym
 //
 // Description:
@@ -505,6 +541,7 @@ static const luaL_Reg dbgscript[] =
 	{"getGlobal", dbgscript_getGlobal},
 	{"resolveEnum", dbgscript_resolveEnum},
 	{"readPtr", dbgscript_readPtr},
+	{"fieldOffset", dbgscript_fieldOffset},
 	{"getNearestSym", dbgscript_getNearestSym},
 	{nullptr, nullptr}  // sentinel.
 };
