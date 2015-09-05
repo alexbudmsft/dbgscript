@@ -37,6 +37,10 @@ namespace.
    Lookup the nearest symbol to address `addr`. Operates similar to the debugger
    ``ln`` command.
    
+.. method:: field_offset(type, field) -> int
+
+   Obtain the offset of `field` in `type`. Behaves like ``offsetof`` macro in C.
+   
 .. method:: start_buffering()
 
    .. include:: ../shared/start_buffering.txt

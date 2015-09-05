@@ -29,6 +29,10 @@ dbgscript Module
    Lookup the nearest symbol to address `addr`. Operates similar to the debugger
    ``ln`` command.
    
+.. method:: dbgscript.fieldOffset(type, field) -> integer
+
+   Obtain the offset of `field` in `type`. Behaves like ``offsetof`` macro in C.
+   
 .. method:: dbgscript.startBuffering()
 
    .. include:: ../shared/start_buffering.txt
