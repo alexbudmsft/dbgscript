@@ -19,6 +19,11 @@
 .. attribute:: TypedObject.size() -> integer
 
    Get the size of the object in bytes.
+
+.. attribute:: TypedObject.value()
+
+   Returns the value of the object, if it's a primitive type. Raises 
+   an error otherwise.
    
 .. attribute::
 	obj[key]

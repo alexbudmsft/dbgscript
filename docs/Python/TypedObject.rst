@@ -21,6 +21,11 @@
 .. attribute:: TypedObject.size() -> int
 
    Get the size of the object in bytes.
+
+.. attribute:: TypedObject.value()
+
+   Returns the value of the object, if it's a primitive type. Raises 
+   :class:`ValueError` otherwise.
    
 .. attribute:: TypedObject.module() -> str
 
