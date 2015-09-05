@@ -16,6 +16,7 @@
 #include "util.h"
 #include <assert.h>
 #include <strsafe.h>
+#include "symcache.h"
 
 //------------------------------------------------------------------------------
 // Function: UtilReadPointer
@@ -37,6 +38,51 @@ UtilReadPointer(
 	_Out_ UINT64* ptrVal)
 {
 	return hostCtxt->DebugDataSpaces->ReadPointersVirtual(1, addr, ptrVal);
+}
+
+//------------------------------------------------------------------------------
+// Function: UtilGetFieldOffset
+//
+// Description:
+//
+//  Get field offset given a type and field. Mimics offsetof macro in C.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+_Check_return_ HRESULT
+UtilGetFieldOffset(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_z_ const char* type,
+	_In_z_ const char* field,
+	_Out_ ULONG* offset)
+{
+	HRESULT hr = S_OK;
+	
+	// Lookup typeid/moduleBase from type name.
+	//
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(hostCtxt, type);
+	if (!typeInfo)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_TYPE_ID,
+			type,
+			hr);
+		goto exit;
+	}
+	
+	hr = hostCtxt->DebugSymbols->GetFieldOffset(
+		typeInfo->ModuleBase,
+		typeInfo->TypeId,
+		field,
+		offset);
+	
+exit:
+	return hr;
 }
 
 //------------------------------------------------------------------------------

@@ -33,6 +33,13 @@ UtilReadPointer(
 	_Out_ UINT64* ptrVal);
 
 _Check_return_ HRESULT
+UtilGetFieldOffset(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_z_ const char* type,
+	_In_z_ const char* field,
+	_Out_ ULONG* offset);
+
+_Check_return_ HRESULT
 UtilGetNearestSymbol(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ UINT64 addr,

@@ -217,6 +217,53 @@ exit:
 }
 
 //------------------------------------------------------------------------------
+// Function: dbgscript_field_offset
+//
+// Synopsis:
+// 
+//  dbgscript.field_offset(type, field) -> int
+//
+// Description:
+//
+//  Return the offset of 'field' in 'type'.
+//
+static PyObject*
+dbgscript_field_offset(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+
+	PyObject *ret = nullptr;
+	const char* type = nullptr;
+	const char* field = nullptr;
+	ULONG offset = 0;
+	if (!PyArg_ParseTuple(args, "ss:field_offset", &type, &field))
+	{
+		return nullptr;
+	}
+
+	HRESULT hr = UtilGetFieldOffset(hostCtxt, type, field, &offset);
+	if (FAILED(hr))
+	{
+		PyErr_Format(
+			PyExc_ValueError,
+			"Failed to get field offset for type '%s' and field '%s'. Error 0x%08x.",
+			type,
+			field,
+			hr);
+		goto exit;
+	}
+
+	ret = PyLong_FromUnsignedLong(offset);
+
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_get_nearest_sym
 //
 // Synopsis:
@@ -529,6 +576,12 @@ static PyMethodDef dbgscript_MethodsDef[] =
 		dbgscript_read_ptr,
 		METH_VARARGS,
 		PyDoc_STR("Read a pointer at given address.")
+	},
+	{
+		"field_offset",
+		dbgscript_field_offset,
+		METH_VARARGS,
+		PyDoc_STR("Get field offset given a type and address.")
 	},
 	{
 		"get_nearest_sym",
