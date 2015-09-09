@@ -37,7 +37,7 @@ DbgScript Module
    Lookup the nearest symbol to address `addr`. Operates similar to the debugger
    ``ln`` command.
 
-.. method:: get_peb() -> int
+.. method:: get_peb() -> Integer
 
    Get the address of the current process' PEB.
 
