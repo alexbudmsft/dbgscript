@@ -72,6 +72,34 @@ DbgScript_read_bytes(
 }
 
 //------------------------------------------------------------------------------
+// Function: DbgScript_get_peb
+//
+// Synopsis:
+//
+//  DbgScript.get_peb -> Integer
+//
+// Description:
+//
+//  Get the address of the current process' PEB.
+//
+static VALUE
+DbgScript_get_peb(
+	_In_ VALUE /* self */)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	UINT64 addr = 0;
+	HRESULT hr = UtilGetPeb(hostCtxt, &addr);
+	if (FAILED(hr))
+	{
+		rb_raise(rb_eRuntimeError, "Failed to get PEB. Error 0x%08x.", hr);
+	}
+
+	return ULL2NUM(addr);
+}
+
+//------------------------------------------------------------------------------
 // Function: DbgScript_field_offset
 //
 // Synopsis:
@@ -462,6 +490,9 @@ Init_DbgScript()
 
 	rb_define_module_function(
 		module, "read_bytes", RUBY_METHOD_FUNC(DbgScript_read_bytes), 2 /* argc */);
+	
+	rb_define_module_function(
+		module, "get_peb", RUBY_METHOD_FUNC(DbgScript_get_peb), 0 /* argc */);
 	
 	rb_define_module_function(
 		module, "field_offset", RUBY_METHOD_FUNC(DbgScript_field_offset), 2 /* argc */);

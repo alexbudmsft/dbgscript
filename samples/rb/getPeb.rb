@@ -1,0 +1,1 @@
+puts DbgScript.get_peb
