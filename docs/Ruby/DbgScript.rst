@@ -36,7 +36,11 @@ DbgScript Module
 
    Lookup the nearest symbol to address `addr`. Operates similar to the debugger
    ``ln`` command.
-   
+
+.. method:: get_peb() -> int
+
+   Get the address of the current process' PEB.
+
 .. method:: field_offset(type, field) -> Integer
 
    Obtain the offset of `field` in `type`. Behaves like ``offsetof`` macro in C.
