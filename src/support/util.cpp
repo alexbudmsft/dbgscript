@@ -272,6 +272,38 @@ exit:
 }
 
 //------------------------------------------------------------------------------
+// Function: UtilReadBytes
+//
+// Description:
+//
+//  Read bytes from target.
+//
+// Parameters:
+//
+//  cbCount - Number of bytes to read.
+//  cbActualLen - Actual number of bytes read, which may be smaller than
+//  requested size.
+//
+// Returns:
+//
+// Notes:
+//
+_Check_return_ HRESULT
+UtilReadBytes(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_ UINT64 addr,
+	_Out_writes_(cbCount) char* buf,
+	_In_ int cbCount,
+	_Out_ ULONG* cbActualLen)
+{
+	return hostCtxt->DebugDataSpaces->ReadVirtual(
+		addr,
+		buf,
+		cbCount,
+		cbActualLen);
+}
+
+//------------------------------------------------------------------------------
 // Function: UtilCheckAbort
 //
 // Description:
