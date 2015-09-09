@@ -33,6 +33,11 @@ UtilReadPointer(
 	_Out_ UINT64* ptrVal);
 
 _Check_return_ HRESULT
+UtilGetPeb(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_Out_ UINT64* pebAddr);
+
+_Check_return_ HRESULT
 UtilGetFieldOffset(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_z_ const char* type,

@@ -1,0 +1,1 @@
+print (dbgscript.get_peb())

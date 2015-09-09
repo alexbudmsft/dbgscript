@@ -176,6 +176,40 @@ exit:
 }
 
 //------------------------------------------------------------------------------
+// Function: dbgscript_get_peb
+//
+// Synopsis:
+// 
+//  dbgscript.get_peb() -> int
+//
+// Description:
+//
+//  Get the address of the current process' PEB.
+//
+static PyObject*
+dbgscript_get_peb(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* /*args*/)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	PyObject *ret = nullptr;
+
+	UINT64 addr = 0;
+	HRESULT hr = UtilGetPeb(hostCtxt, &addr);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_RuntimeError, "Failed to get PEB. Error 0x%08x.", hr);
+		goto exit;
+	}
+	
+	ret = PyLong_FromUnsignedLongLong(addr);
+
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_read_ptr
 //
 // Synopsis:
@@ -633,6 +667,12 @@ static PyMethodDef dbgscript_MethodsDef[] =
 		dbgscript_get_global,
 		METH_VARARGS,
 		PyDoc_STR("Get a global variable as a TypedObject.")
+	},
+	{
+		"get_peb",
+		dbgscript_get_peb,
+		METH_NOARGS,
+		PyDoc_STR("Get the current PEB address.")
 	},
 	{
 		"resolve_enum",

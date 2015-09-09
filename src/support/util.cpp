@@ -41,6 +41,27 @@ UtilReadPointer(
 }
 
 //------------------------------------------------------------------------------
+// Function: UtilGetPeb
+//
+// Description:
+//
+//  Fetch the current process' PEB.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+_Check_return_ HRESULT
+UtilGetPeb(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_Out_ UINT64* pebAddr)
+{
+	return hostCtxt->DebugSysObj->GetCurrentProcessPeb(pebAddr);
+}
+
+//------------------------------------------------------------------------------
 // Function: UtilGetFieldOffset
 //
 // Description:
