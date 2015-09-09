@@ -13,6 +13,11 @@ void
 RedirectStdIO(
 	_In_ PyObject* obj);
 
+PyObject*
+PyReadBytes(
+	_In_ UINT64 addr,
+	_In_ ULONG count);
+
 // Helper macro to call in every Python entry point that checks for abort
 // and raises a KeyboardInterrupt exception.
 //

@@ -70,14 +70,15 @@ RbReadBytes(
 		GetRubyProvGlobals()->HostCtxt, addr, buf, cb, &cbActual);
 	if (FAILED(hr))
 	{
+		delete [] buf;  // Don't leak.
 		rb_raise(rb_eRuntimeError, "UtilReadBytes failed. Error 0x%08x.", hr);
 	}
+	
 	VALUE ret = rb_str_new(buf, cbActual);
 
 	// Ruby makes an internal copy of the input buffer.
 	//
 	delete [] buf;
-	
 	return ret;
 }
 

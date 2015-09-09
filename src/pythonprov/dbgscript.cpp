@@ -264,6 +264,39 @@ exit:
 }
 
 //------------------------------------------------------------------------------
+// Function: dbgscript_read_bytes
+//
+// Synopsis:
+// 
+//  dbgscript.read_bytes(addr, count) -> bytes
+//
+// Description:
+//
+//  Read 'count' bytes from 'addr'.
+//
+static PyObject*
+dbgscript_read_bytes(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	PyObject *ret = nullptr;
+
+	UINT64 addr = 0;
+	ULONG count = 0;
+	if (!PyArg_ParseTuple(args, "Kk:field_offset", &addr, &count))
+	{
+		goto exit;
+	}
+
+	ret = PyReadBytes(addr, count);
+
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_get_nearest_sym
 //
 // Synopsis:
@@ -576,6 +609,12 @@ static PyMethodDef dbgscript_MethodsDef[] =
 		dbgscript_read_ptr,
 		METH_VARARGS,
 		PyDoc_STR("Read a pointer at given address.")
+	},
+	{
+		"read_bytes",
+		dbgscript_read_bytes,
+		METH_VARARGS,
+		PyDoc_STR("Read bytes from given address.")
 	},
 	{
 		"field_offset",

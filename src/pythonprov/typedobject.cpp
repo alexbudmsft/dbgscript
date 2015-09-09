@@ -724,6 +724,38 @@ exit:
 }
 
 //------------------------------------------------------------------------------
+// Function: TypedObject_read_bytes
+//
+// Synopsis:
+//
+//  obj.read_bytes(count) -> bytes
+//
+// Description:
+//
+//  Read a block of 'count' bytes from the target process from this object's
+//  address.
+//
+static PyObject*
+TypedObject_read_bytes(
+	_In_ PyObject* self,
+	_In_ PyObject* args)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	PyObject* ret = nullptr;
+	ULONG count;
+	TypedObject* typObj = (TypedObject*)self;
+	if (!PyArg_ParseTuple(args, "k:read_bytes", &count))
+	{
+		goto exit;
+	}
+
+	ret = PyReadBytes(typObj->Data.TypedData.Offset, count);
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
 // Function: TypedObject_get_runtime_obj
 //
 // Synopsis:
@@ -815,6 +847,12 @@ static PyMethodDef TypedObject_MethodDef[] =
 		TypedObject_read_string,
 		METH_VARARGS,
 		PyDoc_STR("Read an ANSI string from the target into a str.")
+	},
+	{
+		"read_bytes",
+		TypedObject_read_bytes,
+		METH_VARARGS,
+		PyDoc_STR("Read bytes starting at this object's address into a bytes object.")
 	},
 	{ NULL }  /* Sentinel */
 };
