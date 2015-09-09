@@ -453,6 +453,28 @@ dbgscript_readPtr(lua_State* L)
 }
 
 //------------------------------------------------------------------------------
+// Function: dbgscript_readBytes
+//
+// Synopsis:
+// 
+//  dbgscript.readBytes(addr, count) -> string
+//
+// Description:
+//
+//  Read 'count' bytes from 'addr'.
+//
+static int
+dbgscript_readBytes(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	const UINT64 addr = luaL_checkinteger(L, 1);
+	const ULONG count = (ULONG)luaL_checkinteger(L, 2);
+	return LuaReadBytes(L, addr, count);
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_fieldOffset
 //
 // Synopsis:
@@ -543,6 +565,7 @@ static const luaL_Reg dbgscript[] =
 	{"readPtr", dbgscript_readPtr},
 	{"fieldOffset", dbgscript_fieldOffset},
 	{"getNearestSym", dbgscript_getNearestSym},
+	{"readBytes", dbgscript_readBytes},
 	{nullptr, nullptr}  // sentinel.
 };
 

@@ -943,6 +943,48 @@ TypedObject_readWideString(lua_State* L)
 }
 
 //------------------------------------------------------------------------------
+// Function: TypedObject_readBytes
+//
+// Description:
+//
+//  Read a block of 'count' bytes from the target process from this object's
+//  address.
+//
+// Parameters:
+//
+//  obj.readBytes(count) -> string
+//
+// Input Stack:
+//
+//  Param 1 is the typed object. (self)
+//  Param 2: count of bytes to read.
+//
+// Returns:
+//
+//  One result: Bytes as a Lua string.
+//
+// Notes:
+//
+static int
+TypedObject_readBytes(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	UINT64 addr = 0;
+	
+	// Validate that the first param was 'self'. I.e. a Userdatum of the right
+	// type. (Having the right metatable).
+	//
+	DbgScriptTypedObject* typObj = (DbgScriptTypedObject*)
+		luaL_checkudata(L, 1, TYPED_OBJECT_METATABLE);
+
+	addr = typObj->TypedData.Offset;
+	
+	const ULONG count = (ULONG)luaL_checkinteger(L, 2);
+	return LuaReadBytes(L, addr, count);
+}
+
+//------------------------------------------------------------------------------
 // Function: TypedObject_deref
 //
 // Description:
@@ -1041,6 +1083,8 @@ static const luaL_Reg g_typedObjectMethods[] =
 
 	{"readString", TypedObject_readString},
 	{"readWideString", TypedObject_readWideString},
+
+	{"readBytes", TypedObject_readBytes},
 	{nullptr, nullptr}  // sentinel.
 };
 

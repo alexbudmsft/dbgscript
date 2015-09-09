@@ -22,3 +22,8 @@ LuaError(
 	_In_z_ const char* fmt,
 	...);
 
+int
+LuaReadBytes(
+	_In_ lua_State* L,
+	_In_ UINT64 addr,
+	_In_ ULONG count);
