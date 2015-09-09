@@ -28,6 +28,10 @@ DbgScript Module
    ``addr`` must be a valid (accessible) address. This will be 8 bytes on an
    x64 target.
    
+.. method:: read_bytes(addr, count) -> String
+
+   Read `count` bytes from `addr`.
+   
 .. method:: get_nearest_sym(addr) -> String
 
    Lookup the nearest symbol to address `addr`. Operates similar to the debugger

@@ -23,7 +23,11 @@ dbgscript Module
    Read a pointer value from the virtual address space of the target process.
    ``addr`` must be a valid (accessible) address. This will be 8 bytes on an
    x64 target.
-   
+
+.. method:: dbgscript.readBytes(addr, count) -> string
+
+   Read `count` bytes from `addr`.
+
 .. method:: dbgscript.getNearestSym(addr) -> string
 
    Lookup the nearest symbol to address `addr`. Operates similar to the debugger

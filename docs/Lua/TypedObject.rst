@@ -62,6 +62,11 @@
 
    Read a wide string from the target process starting at this object's 
    address. `count` (optional) specifies the maximum number of characters to read.
+
+.. method:: TypedObject.readBytes(count) -> string
+
+   Read a block of `count` bytes from the target process from this object's
+   address.
    
 .. attribute:: TypedObject.deref() -> TypedObject
 
