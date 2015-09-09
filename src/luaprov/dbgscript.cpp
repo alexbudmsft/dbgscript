@@ -550,6 +550,44 @@ dbgscript_getNearestSym(lua_State* L)
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Function: dbgscript_getPeb
+//
+// Description:
+//
+//  Get the address of the current process' PEB.
+//
+// Parameters:
+//
+//  L - pointer to Lua state.
+//
+// Input Stack:
+//
+//  None.
+//
+// Returns:
+//
+//  The address of the PEB.
+//
+// Notes:
+//
+static int
+dbgscript_getPeb(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	UINT64 addr = 0;
+	HRESULT hr = UtilGetPeb(hostCtxt, &addr);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "Failed to get PEB. Error 0x%08x.", hr);
+	}
+
+	lua_pushinteger(L, addr);
+	return 1;
+}
+
 // Functions in module.
 //
 static const luaL_Reg dbgscript[] =
@@ -565,6 +603,7 @@ static const luaL_Reg dbgscript[] =
 	{"readPtr", dbgscript_readPtr},
 	{"fieldOffset", dbgscript_fieldOffset},
 	{"getNearestSym", dbgscript_getNearestSym},
+	{"getPeb", dbgscript_getPeb},
 	{"readBytes", dbgscript_readBytes},
 	{nullptr, nullptr}  // sentinel.
 };
