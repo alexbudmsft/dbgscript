@@ -18,3 +18,7 @@ void
 LockDownClass(
 	_In_ VALUE klass);
 
+VALUE
+RbReadBytes(
+	_In_ UINT64 addr,
+	_In_ VALUE count);

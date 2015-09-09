@@ -49,6 +49,29 @@ DbgScript_read_ptr(
 }
 
 //------------------------------------------------------------------------------
+// Function: DbgScript_read_bytes
+//
+// Synopsis:
+//
+//  DbgScript.read_bytes(addr, count) -> String
+//
+// Description:
+//
+//  Read 'count' bytes from 'addr'.
+//
+static VALUE
+DbgScript_read_bytes(
+	_In_ VALUE /* self */,
+	_In_ VALUE addr,
+	_In_ VALUE count)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	return RbReadBytes(NUM2ULL(addr), count);
+}
+
+//------------------------------------------------------------------------------
 // Function: DbgScript_field_offset
 //
 // Synopsis:
@@ -436,6 +459,9 @@ Init_DbgScript()
 
 	rb_define_module_function(
 		module, "read_ptr", RUBY_METHOD_FUNC(DbgScript_read_ptr), 1 /* argc */);
+
+	rb_define_module_function(
+		module, "read_bytes", RUBY_METHOD_FUNC(DbgScript_read_bytes), 2 /* argc */);
 	
 	rb_define_module_function(
 		module, "field_offset", RUBY_METHOD_FUNC(DbgScript_field_offset), 2 /* argc */);

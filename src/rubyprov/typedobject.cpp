@@ -263,32 +263,12 @@ TypedObject_read_bytes(
 	_In_ VALUE count)
 {
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
-	HRESULT hr = S_OK;
 	CHECK_ABORT(hostCtxt);
 	
 	DbgScriptTypedObject* typObj = nullptr;
 	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
-	
-	const int cb = NUM2INT(count);
-	char* buf = new char[cb];
-	if (!buf)
-	{
-		rb_raise(rb_eNoMemError, "Couldn't allocate buffer.");
-	}
-	
-	ULONG cbActual = 0;
-	hr = UtilReadBytes(hostCtxt, typObj->TypedData.Offset, buf, cb, &cbActual);
-	if (FAILED(hr))
-	{
-		rb_raise(rb_eRuntimeError, "UtilReadBytes failed. Error 0x%08x.", hr);
-	}
-	VALUE ret = rb_str_new(buf, cbActual);
 
-	// Ruby makes an internal copy of the input buffer.
-	//
-	delete [] buf;
-	
-	return ret;
+	return RbReadBytes(typObj->TypedData.Offset, count);
 }
 
 //------------------------------------------------------------------------------

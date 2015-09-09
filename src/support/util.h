@@ -68,7 +68,7 @@ UtilReadBytes(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ UINT64 addr,
 	_Out_writes_(cbCount) char* buf,
-	_In_ int cbCount,
+	_In_ ULONG cbCount,
 	_Out_ ULONG* cbActualLen);
 
 _Check_return_ bool
