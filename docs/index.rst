@@ -6,7 +6,10 @@ DbgScript is a multi-script debugger extension.
 More precisely, it is a `DbgEng extension`_ that allows the embedding of
 arbitrary scripting languages into the `Debugging Tools for Windows`_.
 
-It offers an extensibility model allowing new languages to be added with no
+DbgScript lets you harness the power of Ruby, Python or Lua to dump complex data
+structures, mine data from dumps, conduct automated analyses, and more.
+
+It also offers an extensibility model allowing new languages to be added with no
 changes to the core.
 
 DbgScript extends scripting languages with a API that models
