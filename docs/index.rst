@@ -1,5 +1,5 @@
-|logo| DbgScript
-****************
+|logo| DbgScript |release|
+**************************
 
 DbgScript is a multi-script debugger extension.
 
