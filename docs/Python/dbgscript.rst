@@ -57,7 +57,7 @@ namespace.
 
    .. include:: ../shared/stop_buffering.txt
 
-.. method:: exec_command(cmd)
+.. method:: execute_command(cmd)
 
    Executes a debugger command `cmd` and prints the output.
 
