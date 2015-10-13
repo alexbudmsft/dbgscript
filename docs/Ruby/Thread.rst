@@ -21,7 +21,7 @@
 
    Get the current :class:`StackFrame`.
 
-.. method:: Thread#get_stack() -> array of StackFrame
+.. method:: Thread#get_stack -> array of StackFrame
 
    Get the current call stack.
    

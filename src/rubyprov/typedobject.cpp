@@ -106,7 +106,7 @@ checkTypedData(
 		{
 			// This object has no typed data. It must have been a null or bad ptr.
 			//
-			rb_raise(rb_eArgError, "Object has no typed data.");
+			rb_raise(rb_eTypeError, "Object has no typed data.");
 		}
 		else
 		{
@@ -478,7 +478,7 @@ TypedObject_value(
 
 	if (!DsTypedObjectIsPrimitive(typObj))
 	{
-		rb_raise(rb_eArgError, "Not a primitive type.");
+		rb_raise(rb_eTypeError, "Not a primitive type.");
 	}
 
 	// Read the appropriate size from memory.
@@ -732,7 +732,7 @@ TypedObject_length(
 	{
 		// Not array.
 		//
-		rb_raise(rb_eArgError, "Object not array.");
+		rb_raise(rb_eTypeError, "Object not array.");
 	}
 
 	// Get the zero'th item in order to get its size.

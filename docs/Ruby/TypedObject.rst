@@ -6,30 +6,30 @@
 
 .. class:: TypedObject
 
-.. attr_reader:: TypedObject#name() -> String
+.. attr_reader:: TypedObject#name -> String
 
    Get the name of the object.
      
-.. attr_reader:: TypedObject#address() -> Integer
+.. attr_reader:: TypedObject#address -> Integer
 
    Get the virtual address of the object.
    
-.. attr_reader:: TypedObject#type() -> String
+.. attr_reader:: TypedObject#type -> String
 
    Get the type name of the object.
    
-.. attr_reader:: TypedObject#module() -> String
+.. attr_reader:: TypedObject#module -> String
 
    Get the module name of the typed object.
    
-.. attr_reader:: TypedObject#data_size() -> Integer
+.. attr_reader:: TypedObject#data_size -> Integer
 
    Get the size of the object in bytes.
    
-.. attr_reader:: TypedObject#value()
+.. attr_reader:: TypedObject#value
 
    Returns the value of the object, if it's a primitive type. Raises 
-   :class:`ArgError` otherwise.
+   :class:`TypeError` otherwise.
 
 .. method:: obj[key]
 
@@ -67,17 +67,17 @@
    Read a block of `count` bytes from the target process from this object's
    address.
 
-.. method:: TypedObject#deref() -> TypedObject
+.. method:: TypedObject#deref -> TypedObject
 
    Dereference the current object, if it's a pointer or array.
    
-.. method:: TypedObject#get_runtime_obj() -> TypedObject
+.. method:: TypedObject#get_runtime_obj -> TypedObject
 
    Attempts to dynamically down-cast the current object if it has a vtable.
 
 .. method:: 
-	TypedObject#length() -> Integer
-	TypedObject#size() -> Integer
+	TypedObject#length -> Integer
+	TypedObject#size -> Integer
 
-   If this object represents an array, returns its length, otherwise raises an
-   :class:`ArgError`.
+   If this object represents an array, returns its length, otherwise raises a
+   :class:`TypeError`.
