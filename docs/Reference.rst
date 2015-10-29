@@ -71,8 +71,8 @@ Description
 ^^^^^^^^^^^
 
 ``!evalstring`` can be used to evaluate an ad-hoc statement. ``host-switches``
-are as in `!runscript`_. ``<script-string>`` is the string to be evaluated in
-the selected script provider.
+are as in `!runscript`_. ``<script-string>`` is the string to be sent unmodified
+to the selected script provider and executed.
 
 Examples
 ^^^^^^^^
@@ -87,6 +87,17 @@ Examples
 This example evaluates the statement ``puts DbgScript.get_threads`` in the Ruby
 script provider. The output is shown in the debugger (in this case, an array
 of Thread objects.)
+
+.. code-block:: none
+
+    0:000> !evalstring -l rb puts DbgScript.get_threads.map {|t| t.thread_id}
+    14376
+    20204
+    4524
+    18712
+    ...
+
+This example builds on the previous and dumps all the thread IDs.
 
 !scriptpath
 -----------
