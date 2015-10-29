@@ -359,7 +359,12 @@ UtilCheckAbort(
 //
 // Returns:
 //
+//  A new buffer allocation with new[]. Use delete[] to free.
+//
 // Notes:
+//
+//  Ensure this function's return value is freed from the same DLL as it is
+//  called.
 //
 _Check_return_ WCHAR*
 UtilConvertAnsiToWide(

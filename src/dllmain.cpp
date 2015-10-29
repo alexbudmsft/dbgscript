@@ -13,11 +13,13 @@
 // @EndHeader@
 //******************************************************************************  
 
-#include "common.h"
 #include <strsafe.h>
 #include <assert.h>
-#include "support/util.h"
 #include <crtdbg.h>
+
+#include "common.h"
+#include "cmdline.h"
+#include "support/util.h"
 
 static DbgScriptHostContext g_HostCtxt;
 
@@ -43,7 +45,6 @@ GetHostContext()
 	return &g_HostCtxt;
 }
 
-static const int MAX_LANG_ID = 64;
 
 // ScriptProviderInfo - Represents information about a Script Provider.
 //
@@ -736,161 +737,6 @@ exit:
 	return hr;
 }
 
-// ParsedArgs - structure to hold parsed argument values.
-//
-struct ParsedArgs
-{
-	// TimeRun - was -t provided? Run will be timed and reported.
-	//
-	bool TimeRun;
-
-	// LangId - language id provided.
-	//
-	const WCHAR* LangId;
-
-	// RemainingArgv - remaining arguments to be passed onto the script provider.
-	//
-	WCHAR** RemainingArgv;
-
-	// RemainingArgc - remaining count of arguments.
-	//
-	int RemainingArgc;
-
-	//
-	// Pointers to free when done with arguments.
-	//
-	
-	WCHAR* WideArgsToFree;
-	WCHAR** ArgListToFree;
-};
-
-//------------------------------------------------------------------------------
-// Function: parseArgs
-//
-// Description:
-//
-//  Helper to parse host-layer arguments.
-//
-// Parameters:
-//
-// Returns:
-//
-// Notes:
-//
-static _Check_return_ HRESULT
-parseArgs(
-	_In_z_ const char* args,
-	_Out_ ParsedArgs* parsedArgs)
-{
-	HRESULT hr = S_OK;
-	int cArgs = 0;
-	DbgScriptHostContext* hostCtxt = GetHostContext();
-	WCHAR* wszArgs = nullptr;
-	WCHAR** argList = nullptr;
-
-	wszArgs = UtilConvertAnsiToWide(args);
-	if (!wszArgs)
-	{
-		hostCtxt->DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			"Error: Failed to convert args to wide string.\n");
-		hr = E_FAIL;
-		goto exit;
-	}
-
-	argList = CommandLineToArgvW(wszArgs, &cArgs);
-	if (!argList)
-	{
-		hr = HRESULT_FROM_WIN32(GetLastError());
-		hostCtxt->DebugControl->Output(
-			DEBUG_OUTPUT_ERROR,
-			"Error: Failed to parse arguments: 0x%08x\n", hr);
-		goto exit;
-	}
-
-	int i = 0;
-	for (i = 0; i < cArgs; ++i)
-	{
-		// Encountered switch terminator? '--'
-		//
-		if (!wcscmp(argList[i], L"--"))
-		{
-			// Swallow and break out.
-			//
-			++i;
-			break;
-		}
-
-		// Keep switches to ourselves.
-		//
-		if (argList[i][0] == L'-')
-		{
-			if (!wcscmp(argList[i], L"-t"))
-			{
-				parsedArgs->TimeRun = true;
-			}
-			else if (!wcscmp(argList[i], L"-l"))
-			{
-				if (i + 1 >= cArgs)
-				{
-					hr = E_INVALIDARG;
-					hostCtxt->DebugControl->Output(
-						DEBUG_OUTPUT_ERROR,
-						"Error: -l requires a language ID.\n");
-					goto exit;
-				}
-				++i;
-				parsedArgs->LangId = argList[i];
-			}
-			else
-			{
-				hr = E_INVALIDARG;
-				hostCtxt->DebugControl->Output(
-					DEBUG_OUTPUT_ERROR,
-					"Error: Unknown switch '%ls'.\n", argList[i]);
-				goto exit;
-			}
-		}
-		else
-		{
-			break;
-		}
-	}
-	
-	// Rebase the arguments from the script to after what we consumed for the
-	// host.
-	//
-	parsedArgs->RemainingArgv = &argList[i];
-	parsedArgs->RemainingArgc = cArgs - i;
-	assert(parsedArgs->RemainingArgc >= 0);
-	
-exit:
-	parsedArgs->WideArgsToFree = wszArgs;
-	parsedArgs->ArgListToFree = argList;
-	return hr;
-}
-
-//------------------------------------------------------------------------------
-// Function: freeArgs
-//
-// Description:
-//
-//  Frees a ParsedArgs structure filled out by 'parseArgs'.
-//
-// Parameters:
-//
-// Returns:
-//
-// Notes:
-//
-static void
-freeArgs(
-	_In_ ParsedArgs* parsedArgs)
-{
-	delete[] parsedArgs->WideArgsToFree;
-	LocalFree(parsedArgs->ArgListToFree);
-}
-
 //------------------------------------------------------------------------------
 // Function: findScriptProvider
 //
@@ -994,18 +840,23 @@ runscript(
 	ScriptProviderInfo* scriptProv = nullptr;
 	const bool startVMEnabled = GetHostContext()->StartVMEnabled;
 	bool initializedProvider = false;
+	char* argsMutable = nullptr;
+	WCHAR* wszArgs = nullptr;
+	int cArgs = 0;
+	WCHAR** argList = nullptr;
+	DbgScriptHostContext* hostCtxt = GetHostContext();
 	if (!args[0])
 	{
 		// If it's an empty string, fail now.
 		//
-		GetHostContext()->DebugControl->Output(
+		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_ERROR,
 			"Error: !runscript requires at least one argument.\n");
 		hr = E_INVALIDARG;
 		goto exit;
 	}
-
-	hr = parseArgs(args, &parsedArgs);
+	argsMutable = _strdup(args);
+	hr = ParseArgs(argsMutable, &parsedArgs);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -1027,7 +878,31 @@ runscript(
 	
 	initializedProvider = true;
 
-	hr = scriptProv->ScriptProvider->Run(parsedArgs.RemainingArgc, parsedArgs.RemainingArgv);
+	wszArgs = UtilConvertAnsiToWide(parsedArgs.RemainingArgs);
+	if (!wszArgs)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Failed to convert args to wide string.\n");
+		hr = E_OUTOFMEMORY;
+		goto exit;
+	}
+	
+	// Generate an argument vector for script execution.
+	//
+	argList = CommandLineToArgvW(wszArgs, &cArgs);
+	if (!argList)
+	{
+		hr = HRESULT_FROM_WIN32(GetLastError());
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			"Error: Failed to parse arguments: 0x%08x\n", hr);
+		goto exit;
+	}
+
+	// Execute the script.
+	//
+	hr = scriptProv->ScriptProvider->Run(cArgs, argList);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -1035,34 +910,48 @@ runscript(
 
 	endTime = GetTickCount();
 
+	// Report timing.
+	//
 	if (parsedArgs.TimeRun)
 	{
 		DWORD elapsedMs = endTime - startTime;
-		GetHostContext()->DebugControl->Output(
+		hostCtxt->DebugControl->Output(
 			DEBUG_OUTPUT_NORMAL, "\nExecution time: %.2f s\n", elapsedMs / 1000.0);
 	}
 
 exit:
+	//
+	// Cleanup.
+	//
+	
 	if (!startVMEnabled && initializedProvider)
 	{
 		unloadScriptProvider(scriptProv);
 	}
-	
+
 	// Reset buffering flag, in case script forgets (or has an exception.)
 	//
-	GetHostContext()->IsBuffering = 0;
+	hostCtxt->IsBuffering = 0;
 
 	// Flush any remaining buffer (in case an exception was raised in the script,
 	// or they failed to stop buffering.
 	//
 	UtilFlushMessageBuffer(GetHostContext());
 
+	// Print final failure message *after* we flush the buffer.
+	//
 	if (FAILED(hr))
 	{
-		GetHostContext()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
+		GetHostContext()->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
 	}
 
-	freeArgs(&parsedArgs);
+	// Free memory.
+	// NULL is safe to use with all these functions.
+	//
+	delete[] wszArgs;
+	LocalFree(argList);
+	free(argsMutable);
 
 	return hr;
 }
@@ -1094,11 +983,9 @@ evalstring(
 	HRESULT hr = S_OK;
 	ParsedArgs parsedArgs = {};
 	ScriptProviderInfo* scriptProv = nullptr;
-	size_t cConverted = 0;
-	char ansiStringToEval[4096] = {};
-	errno_t err = 0;
 	const bool startVMEnabled = GetHostContext()->StartVMEnabled;
 	bool initializedProvider = false;
+	char* argsMutable = nullptr;
 
 	if (!args[0])
 	{
@@ -1110,8 +997,9 @@ evalstring(
 		hr = E_INVALIDARG;
 		goto exit;
 	}
-
-	hr = parseArgs(args, &parsedArgs);
+	
+	argsMutable = _strdup(args);
+	hr = ParseArgs(argsMutable, &parsedArgs);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -1122,59 +1010,12 @@ evalstring(
 	{
 		goto exit;
 	}
-
-	memset(ansiStringToEval, ' ', sizeof(ansiStringToEval) - 1);
-
-	// Join the remaining args into a single string to be evaluated.
+	
+	// Skip empty strings.
 	//
-	size_t bufPos = 0;
-	for (int i = 0; i < parsedArgs.RemainingArgc; ++i)
+	if (!*parsedArgs.RemainingArgs)
 	{
-		char ansiStringTemp[4096] = {};
-
-		// Convert to ANSI.
-		//
-		err = wcstombs_s(
-			&cConverted,
-			ansiStringTemp,
-			parsedArgs.RemainingArgv[i],
-			_countof(ansiStringTemp));
-
-		if (err)
-		{
-			g_HostCtxt.DebugControl->Output(
-				DEBUG_OUTPUT_ERROR,
-				"Error: Failed to convert wide string to ANSI: %d.\n", err);
-			hr = E_FAIL;
-			goto exit;
-		}
-
-		size_t len = strlen(ansiStringTemp);
-
-		if (bufPos + len > _countof(ansiStringToEval) - 1)
-		{
-			// Can't fit any more.
-			//
-			g_HostCtxt.DebugControl->Output(
-				DEBUG_OUTPUT_WARNING,
-				"Warning: String to evaluate was too long and has been truncated.\n");
-		}
-
-		len = min(len, _countof(ansiStringToEval) - 1 - bufPos);
-		if (!len)
-		{
-			break;
-		}
-
-		assert(len > 0);
-		memcpy(
-			ansiStringToEval + bufPos,
-			ansiStringTemp,
-			len);
-
-		// Skip over the string and leave one space character.
-		//
-		bufPos += len + 1;
+		goto exit;
 	}
 	
 	hr = loadScriptProviderIfNeeded(scriptProv);
@@ -1185,13 +1026,11 @@ evalstring(
 	
 	initializedProvider = true;
 
-	// Null terminate.
-	//
-	ansiStringToEval[bufPos] = 0;
 	g_HostCtxt.DebugControl->Output(
 		DEBUG_OUTPUT_VERBOSE,
-		"Evaluating string '%s'.\n", ansiStringToEval);
-	hr = scriptProv->ScriptProvider->RunString(ansiStringToEval);
+		"Evaluating string '%s'.\n", parsedArgs.RemainingArgs);
+
+	hr = scriptProv->ScriptProvider->RunString(parsedArgs.RemainingArgs);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -1206,7 +1045,8 @@ exit:
 	{
 		GetHostContext()->DebugControl->Output(DEBUG_OUTPUT_ERROR, "Script failed: 0x%08x.\n", hr);
 	}
-	freeArgs(&parsedArgs);
+	
+	free(argsMutable);
 	return hr;
 }
 
