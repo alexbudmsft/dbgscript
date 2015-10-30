@@ -25,7 +25,7 @@ interpreter::
     (<dbgscript.Thread object at 0x00000045F0A0BE50>, ...<snip>, <dbgscript.Thread object at 0x00000045F0A0BEE0>)
     >>> 
 
-To leave the REPL, just hit Enter (i.e. pass an empty string.)
+To leave the REPL, type ``quit()``.
 
 Debugging with pdb
 ==================
