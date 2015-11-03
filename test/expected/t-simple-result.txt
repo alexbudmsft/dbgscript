@@ -15,5 +15,7 @@ Opened log file 'results\t-simple-result.txt'
 0:000> !stopvm
 0:000> * Stop tracking results.
 0:000> *
+0:000> !runscript -l py py\t-simple.py
+Hello
 0:000> .logclose
 Closing open log file results\t-simple-result.txt
