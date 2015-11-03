@@ -20,8 +20,7 @@ $(DMPNAME): dummy.exe
 runtests: results\t-simple-result.txt
 
 results\t-simple-result.txt: t-simple.txt py\t-simple.py
-	cdb -z $(DMPNAME) -cf $** > NUL
-	call compareresults.bat $(@F)
+	call runtest.bat t-simple $(DMPNAME)
 	
 clean:
 	-del *.obj *.pdb *.exe *.dmp *.ilk

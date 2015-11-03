@@ -1,9 +1,12 @@
 @echo off
-set TESTNAME=%1
-fc results\%TESTNAME% expected\%TESTNAME% > NUL
+set RESULTNAME=%1
+fc results\%RESULTNAME% expected\%RESULTNAME% > NUL
 if errorlevel 1 (
-	move results\%TESTNAME% results\%TESTNAME%.fail > NUL
-	echo %TESTNAME% FAIL (see results\%TESTNAME%.fail^)
+	REM Append .fail suffix to ensure failed test runs again while still allowing
+	REM inspection of content.
+	REM
+	move results\%RESULTNAME% results\%RESULTNAME%.fail > NUL
+	echo %RESULTNAME% FAIL (see results\%RESULTNAME%.fail^)
 ) else (
-	echo %TESTNAME% PASS
+	echo %RESULTNAME% PASS
 )
