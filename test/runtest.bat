@@ -9,4 +9,4 @@ cdb -z %DMPNAME% -cf %TESTNAME%.txt > NUL
 
 REM Compare results.
 REM
-call compareresults.bat %TESTNAME%-result.txt
+call compareresults.bat %TESTNAME%
