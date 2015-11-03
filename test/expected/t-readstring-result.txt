@@ -1,5 +1,14 @@
 Opened log file 'results\t-readstring-result.txt'
-0:000> !runscript -l py py\t-readstring.py
+0:000> !runscript -l py .\py\t-readstring.py
+FooCar
+F
+Fo
+FooCar
+Wide FooCar
+W
+Wi
+Wide FooCar
+0:000> !runscript -l rb .\rb\t-readstring.rb
 FooCar
 F
 Fo

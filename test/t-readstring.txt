@@ -6,7 +6,8 @@ $<t-setup.txt
 * Start tracking results.
 *
 .logopen results\t-readstring-result.txt
-!runscript -l py py\t-readstring.py
+!runscript -l py .\py\t-readstring.py
+!runscript -l rb .\rb\t-readstring.rb
 * Stop tracking results.
 *
 .logclose
