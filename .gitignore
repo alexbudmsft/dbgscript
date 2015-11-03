@@ -4,6 +4,8 @@
 *.suo
 *.obj
 *.exe
+*.pdb
+*.dmp
 *.dll
 x64/
 deploy/

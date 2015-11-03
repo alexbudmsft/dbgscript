@@ -1,0 +1,4 @@
+* Setup phase common to all tests
+*
+* Load the extension DLL.
+.load C:\Program Files\DbgScript\dbgscript.dll

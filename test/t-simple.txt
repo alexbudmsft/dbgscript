@@ -1,0 +1,25 @@
+* Simple test
+* Beware of empty lines: they may repeat the previous command!
+*
+$<t-setup.txt
+*
+* Start tracking results.
+*
+.logopen results\t-simple-result.txt
+* Try simple string evals.
+*
+!evalstring -l py 1
+!evalstring -l py {}
+!evalstring -l py print(1)
+*
+* Try VM persistence
+*
+!startvm
+!evalstring -l py a = 5
+!evalstring -l py print(a)
+!stopvm
+* Stop tracking results.
+*
+.logclose
+* Exit
+q

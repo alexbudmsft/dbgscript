@@ -1,0 +1,7 @@
+bu dummy!beforeReturn
+g
+* go up one to 'main'.
+gu
+* produce a dump.
+.dump /ma dummy.dmp
+q
