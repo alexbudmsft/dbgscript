@@ -13,9 +13,14 @@ Opened log file 'results\t-simple-result.txt'
 0:000> !evalstring -l py print(a)
 5
 0:000> !stopvm
+0:000> !runscript -l py py\t-simple.py
+6 10
+Wheel diameters:
+6.46
+6.46
+6.46
+6.46
 0:000> * Stop tracking results.
 0:000> *
-0:000> !runscript -l py py\t-simple.py
-Hello
 0:000> .logclose
 Closing open log file results\t-simple-result.txt

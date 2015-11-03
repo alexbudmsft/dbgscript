@@ -18,9 +18,9 @@ $<t-setup.txt
 !evalstring -l py a = 5
 !evalstring -l py print(a)
 !stopvm
+!runscript -l py py\t-simple.py
 * Stop tracking results.
 *
-!runscript -l py py\t-simple.py
 .logclose
 * Exit
 q

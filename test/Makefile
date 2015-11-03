@@ -19,7 +19,7 @@ $(DMPNAME): dummy.exe
 
 runtests: results\t-simple-result.txt
 
-results\t-simple-result.txt: t-simple.txt
+results\t-simple-result.txt: t-simple.txt py\t-simple.py
 	cdb -z $(DMPNAME) -cf $**
 	fc results\$(@F) expected\$(@F)
 	
