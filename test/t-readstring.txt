@@ -1,0 +1,14 @@
+* Read String tests
+* Beware of empty lines: they may repeat the previous command!
+*
+$<t-setup.txt
+*
+* Start tracking results.
+*
+.logopen results\t-readstring-result.txt
+!runscript -l py py\t-readstring.py
+* Stop tracking results.
+*
+.logclose
+* Exit
+q
