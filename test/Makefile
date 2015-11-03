@@ -17,7 +17,7 @@ dummy.exe: dummy.cpp
 #
 $(DMPNAME): dummy.exe
 	@echo Making dump...
-	-del $(DMPNAME)
+	if exist $(DMPNAME) del $(DMPNAME)
 	cdb -cf makedmpcmds.txt dummy.exe > NUL
 
 runtests: \
