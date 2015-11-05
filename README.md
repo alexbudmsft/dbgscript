@@ -20,7 +20,7 @@ about it, such as its call stack.
 
 DbgScript comes with three first-party providers: Python, Ruby and Lua.
 
-See the documentation for more details.
+See the [documentation](http://alexbudmsft.github.io/dbgscript-docs) for more details.
 
 **NOTE**: This debugger extension is in no way affiliated with the debugger team
 (WinDbg, cdb, etc) and should be considered a 3rd party extension for all
