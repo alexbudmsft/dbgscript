@@ -38,9 +38,9 @@ Stable releases will have Z = 0.
 E.g.
  
  * 1.0.0 -> First stable release.
- * 1.0.1 -> First beta
- * 1.0.2 -> Second beta
- * 1.0.N -> N'th beta.
+ * 1.0.1 -> First beta.
+ * 1.0.2 -> Second beta.
+ * 1.0.N -> *N*th beta.
  * 1.1.0 -> Stable release with major = 1, minor = 1.
  
 Breaking changes will bump the major number.
