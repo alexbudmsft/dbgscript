@@ -118,6 +118,7 @@ ParseArgs(
 				// which indicates an app bug.
 				//
 				assert(!err);
+				err; // ref in retail build
 				assert(cchConverted > 0);
 			}
 			else
