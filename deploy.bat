@@ -26,7 +26,7 @@ for %%f in (%FLAVORS%) do (
     
     REM Copy release notes.
     REM
-    copy releasenotes.txt deploy\%%f\
+    copy releasenotes.md deploy\%%f\
     
     set LUA_BIN_DIR=debug
     
