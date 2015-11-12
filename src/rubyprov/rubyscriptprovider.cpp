@@ -362,6 +362,12 @@ lockdownRuby()
 	rb_undef_method(rb_mKernel, "open");
 
 	rb_define_global_const("File", Qundef);
+	rb_define_global_const("FileTest", Qundef);
+	rb_define_global_const("Process", Qundef);
+	rb_define_global_const("Fiber", Qundef);
+	rb_define_global_const("Thread", Qundef);
+	rb_define_global_const("Dir", Qundef);
+	rb_define_global_const("Signal", Qundef);
 #endif
 }
 
