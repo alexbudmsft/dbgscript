@@ -22,6 +22,10 @@ REM
 echo Copying files...
 robocopy "%BASEDIR%\DbgScript" "%INSTALLDIR%" /MIR /njh /njs /ndl /nc /ns /nfl /np
 
+if exist "%BASEDIR%\DbgScript\dbgscript-lockdown.dll" (
+	set LCKSUFFIX=-lockdown
+)
+
 REM Setup registry.
 REM
 set BASEREGKEY=HKCU\Software\Microsoft\DbgScript
@@ -29,13 +33,13 @@ set PROVKEY=%BASEREGKEY%\Providers
 
 echo Registering script providers (%PROVKEY%)...
 
-reg add %PROVKEY% /f /t REG_SZ /v py /d "%INSTALLDIR%\pythonprov\pythonprov.dll" > NUL
-reg add %PROVKEY% /f /t REG_SZ /v rb /d "%INSTALLDIR%\rubyprov\rubyprov.dll" > NUL
-reg add %PROVKEY% /f /t REG_SZ /v lua /d "%INSTALLDIR%\luaprov\luaprov.dll" > NUL
+reg add %PROVKEY% /f /t REG_SZ /v py /d "%INSTALLDIR%\pythonprov\pythonprov%LCKSUFFIX%.dll" > NUL
+reg add %PROVKEY% /f /t REG_SZ /v rb /d "%INSTALLDIR%\rubyprov\rubyprov%LCKSUFFIX%.dll" > NUL
+reg add %PROVKEY% /f /t REG_SZ /v lua /d "%INSTALLDIR%\luaprov\luaprov%LCKSUFFIX%.dll" > NUL
 
 echo.
 echo *********
-echo All done^^! Use ".load %INSTALLDIR%\dbgscript.dll" to load extension.
+echo All done^^! Use ".load %INSTALLDIR%\dbgscript%LCKSUFFIX%.dll" to load extension.
 echo *********
 echo.
 echo NOTE: Ensure you have the VS 2015 and 2013 x64 Redists installed!
