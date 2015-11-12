@@ -345,6 +345,26 @@ CRubyScriptProvider::RunString(
 extern "C" void Init_ext(void);
 extern "C" void Init_enc(void);
 
+static void
+lockdownRuby()
+{
+	//
+	// Basic lockdown.
+	//
+	// Prevent Kernel#exit et al.
+	//
+	rb_undef_method(rb_mKernel, "exit");
+	rb_undef_method(rb_mKernel, "exit!");
+
+#ifdef LOCKDOWN
+	// Extensive lockdown for LOCKDOWN build.
+	//
+	rb_undef_method(rb_mKernel, "open");
+
+	rb_define_global_const("File", Qundef);
+#endif
+}
+
 _Check_return_ HRESULT
 CRubyScriptProvider::StartVM()
 {
@@ -410,10 +430,7 @@ CRubyScriptProvider::StartVM()
 	//
 	Init_TypedObject();
 
-	// Prevent Kernel#exit et al.
-	//
-	rb_undef_method(rb_mKernel, "exit");
-	rb_undef_method(rb_mKernel, "exit!");
+	lockdownRuby();
 
 exit:
 	return hr;
