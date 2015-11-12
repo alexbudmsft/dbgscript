@@ -5,7 +5,7 @@ project (pythonprov)
 add_definitions(-DPy_NO_ENABLE_SHARED)
 
 include_directories (
-	${CMAKE_HOME_DIRECTORY}/include 
+	${CMAKE_HOME_DIRECTORY}/include
 	${CMAKE_HOME_DIRECTORY}/deps/python/include)
 
 link_directories(${CMAKE_HOME_DIRECTORY}/deps/python/lib)
@@ -53,10 +53,9 @@ set (SOURCES
 # Make a DLL.
 #
 add_library(pythonprov SHARED ${SOURCES})
+add_library(pythonprov-lockdown SHARED ${SOURCES})
 
-# pythonprov.dll depends on dbgscriptsupport.lib
-#
-target_link_libraries (pythonprov
+set (LIBS
 	dbgscriptsupport
 	ws2_32
 	msi
@@ -65,6 +64,19 @@ target_link_libraries (pythonprov
 	crypt32
 	liblzma
 	${LINK_LIST}
-	)
+)
 
-set_target_properties(pythonprov PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/LTCG /INCREMENTAL:NO")
+# pythonprov.dll depends on dbgscriptsupport.lib
+#
+target_link_libraries (pythonprov ${LIBS})
+target_link_libraries (pythonprov-lockdown ${LIBS})
+
+set (REL_LINK_FLAGS "/LTCG /INCREMENTAL:NO")
+
+set_target_properties(pythonprov PROPERTIES
+  LINK_FLAGS_RELWITHDEBINFO ${REL_LINK_FLAGS})
+set_target_properties(pythonprov-lockdown PROPERTIES
+  LINK_FLAGS_RELWITHDEBINFO ${REL_LINK_FLAGS})
+
+set_target_properties(pythonprov-lockdown PROPERTIES
+  COMPILE_DEFINITIONS "LOCKDOWN=1")

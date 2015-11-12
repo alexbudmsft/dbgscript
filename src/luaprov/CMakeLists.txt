@@ -26,18 +26,17 @@ set (SOURCES
 # Make a DLL.
 #
 add_library(luaprov SHARED ${SOURCES})
+add_library(luaprov-lockdown SHARED ${SOURCES})
+
+set (LIBS
+    dbgscriptsupport
+    debug ${LUA_LIB}/debug/lua-${LUA_VER}.lib
+    optimized ${LUA_LIB}/release/lua-${LUA_VER}.lib)
 
 # luaprov.dll depends on dbgscriptsupport.lib
 #
-target_link_libraries (luaprov dbgscriptsupport)
+target_link_libraries (luaprov ${LIBS})
+target_link_libraries (luaprov-lockdown ${LIBS})
 
-# Flavour-specific libs.
-#
-target_link_libraries (
-	luaprov debug
-	${LUA_LIB}/debug/lua-${LUA_VER}.lib)
-
-target_link_libraries (
-	luaprov optimized
-	${LUA_LIB}/release/lua-${LUA_VER}.lib)
-
+SET_TARGET_PROPERTIES(luaprov-lockdown
+  PROPERTIES COMPILE_DEFINITIONS "LOCKDOWN=1")

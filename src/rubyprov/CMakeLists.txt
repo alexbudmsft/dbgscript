@@ -11,7 +11,7 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUBY_STATIC")
 include (${DBGSCRIPTROOT}/common.cmake)
 
 include_directories (
-	${DBGSCRIPTROOT}/include 
+	${DBGSCRIPTROOT}/include
 	${DBGSCRIPTROOT}/deps/ruby/include/ruby-2.3.0
 	${DBGSCRIPTROOT}/deps/ruby/include/ruby-2.3.0/x64-mswin64_120
 	)
@@ -76,10 +76,9 @@ endforeach()
 # Make a DLL.
 #
 add_library(rubyprov SHARED ${SOURCES})
+add_library(rubyprov-lockdown SHARED ${SOURCES})
 
-# rubyprov.dll depends on dbgscriptsupport.lib
-#
-target_link_libraries (rubyprov
+set (LIBS
 	dbgscriptsupport
 	dbgeng.lib
 	dbghelp.lib
@@ -89,14 +88,37 @@ target_link_libraries (rubyprov
 	${LINK_LIST}
 	debug x64-msvcr120-ruby230_d-static.lib
 	optimized x64-msvcr120-ruby230-static.lib
-	)
+)
 
-# TODO Factor out for both retail and dbg
+# rubyprov.dll depends on dbgscriptsupport.lib
 #
+target_link_libraries (rubyprov ${LIBS})
+target_link_libraries (rubyprov-lockdown ${LIBS})
+
+# Generate extra object lists.
+#
+set (EXTRA_OBJ extinit.obj encinit.obj)
+set (EXTRA_OBJ_LIST_DBG "")
+set (EXTRA_OBJ_LIST_RTL "")
+foreach(x ${EXTRA_OBJ})
+  list (APPEND EXTRA_OBJ_LIST_DBG debug/${x})
+  list (APPEND EXTRA_OBJ_LIST_RTL release/${x})
+endforeach()
+
+string (REPLACE ";" " " EXTRA_OBJ_STR_DBG "${EXTRA_OBJ_LIST_DBG}")
+string (REPLACE ";" " " EXTRA_OBJ_STR_RTL "${EXTRA_OBJ_LIST_RTL}")
+
+SET_TARGET_PROPERTIES(rubyprov-lockdown
+  PROPERTIES LINK_FLAGS_DEBUG ${EXTRA_OBJ_STR_DBG})
 SET_TARGET_PROPERTIES(rubyprov
-	PROPERTIES LINK_FLAGS_DEBUG "debug/extinit.obj debug/encinit.obj")
-	
+  PROPERTIES LINK_FLAGS_DEBUG ${EXTRA_OBJ_STR_DBG})
+
+SET_TARGET_PROPERTIES(rubyprov-lockdown
+  PROPERTIES LINK_FLAGS_RELWITHDEBINFO ${EXTRA_OBJ_STR_RTL})
 SET_TARGET_PROPERTIES(rubyprov
-	PROPERTIES LINK_FLAGS_RELWITHDEBINFO "release/extinit.obj release/encinit.obj")
-	
+  PROPERTIES LINK_FLAGS_RELWITHDEBINFO ${EXTRA_OBJ_STR_RTL})
+
+SET_TARGET_PROPERTIES(rubyprov-lockdown
+  PROPERTIES COMPILE_DEFINITIONS "LOCKDOWN=1")
+
 add_subdirectory(../support ${CMAKE_CURRENT_BINARY_DIR}/support)
