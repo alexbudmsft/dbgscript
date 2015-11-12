@@ -3,8 +3,10 @@ setlocal enabledelayedexpansion
 
 echo Deploying dbgscript...
 
-rd /q/s deploy
-md deploy
+if exist deploy (
+    rd /q/s deploy
+    md deploy
+)
 
 set FLAVORS=Debug RelWithDebInfo
 
@@ -24,9 +26,10 @@ for %%f in (%FLAVORS%) do (
     REM
     copy install.bat deploy\%%f\
     
-    REM Copy release notes.
+    REM Copy release notes and license.
     REM
     copy releasenotes.md deploy\%%f\
+    copy LICENSE.txt deploy\%%f\
     
     set LUA_BIN_DIR=debug
     
