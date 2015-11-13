@@ -6,11 +6,11 @@
 
 .. class:: StackFrame
 
-.. attr_reader:: StackFrame#frame_number -> Integer
+.. method:: StackFrame#frame_number -> Integer
 
    Get the frame number of this stack frame.
    
-.. attr_reader:: StackFrame#instruction_offset -> Integer
+.. method:: StackFrame#instruction_offset -> Integer
 
    Get the virtual address of the frame's current instruction.
 
