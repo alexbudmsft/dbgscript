@@ -8,4 +8,4 @@ Ruby Script Provider
    Ruby/Thread
    Ruby/TypedObject
    Ruby/StackFrame
-   Ruby/Tips
+   
