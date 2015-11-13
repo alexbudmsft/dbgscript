@@ -319,12 +319,86 @@ dbgscript_read_bytes(
 
 	UINT64 addr = 0;
 	ULONG count = 0;
-	if (!PyArg_ParseTuple(args, "Kk:field_offset", &addr, &count))
+	if (!PyArg_ParseTuple(args, "Kk:read_bytes", &addr, &count))
 	{
 		goto exit;
 	}
 
 	ret = PyReadBytes(addr, count);
+
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
+// Function: dbgscript_read_string
+//
+// Synopsis:
+// 
+//  dbgscript.read_string(addr [, count]) -> str
+//
+// Description:
+//
+//  Read a string from 'addr' (up to 'count' bytes).
+//
+static PyObject*
+dbgscript_read_string(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	PyObject *ret = nullptr;
+
+	UINT64 addr = 0;
+	
+	// Initialize to default value. -1 means read up to NUL.
+	//
+	int count = -1;
+	
+	if (!PyArg_ParseTuple(args, "K|i:read_string", &addr, &count))
+	{
+		goto exit;
+	}
+
+	ret = PyReadString(addr, count);
+
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
+// Function: dbgscript_read_wide_string
+//
+// Synopsis:
+// 
+//  dbgscript.read_wide_string(addr [, count]) -> str
+//
+// Description:
+//
+//  Read a string from 'addr' (up to 'count' bytes).
+//
+static PyObject*
+dbgscript_read_wide_string(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	PyObject *ret = nullptr;
+
+	UINT64 addr = 0;
+	
+	// Initialize to default value. -1 means read up to NUL.
+	//
+	int count = -1;
+	
+	if (!PyArg_ParseTuple(args, "K|i:read_wide_string", &addr, &count))
+	{
+		goto exit;
+	}
+
+	ret = PyReadWideString(addr, count);
 
 exit:
 	return ret;
@@ -649,6 +723,18 @@ static PyMethodDef dbgscript_MethodsDef[] =
 		dbgscript_read_bytes,
 		METH_VARARGS,
 		PyDoc_STR("Read bytes from given address.")
+	},
+	{
+		"read_string",
+		dbgscript_read_string,
+		METH_VARARGS,
+		PyDoc_STR("Read a string from given address.")
+	},
+	{
+		"read_wide_string",
+		dbgscript_read_wide_string,
+		METH_VARARGS,
+		PyDoc_STR("Read a wide string from given address.")
 	},
 	{
 		"field_offset",

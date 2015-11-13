@@ -31,6 +31,20 @@ namespace.
    Read a pointer value from the virtual address space of the target process.
    ``addr`` must be a valid (accessible) address. This will be 8 bytes on an
    x64 target.
+
+.. method:: read_string(addr [, count]) -> str
+
+   Read an ANSI string from the target process starting at `addr`.
+   `count` (optional) specifies the maximum number of characters to read.
+
+   .. versionadded:: 1.0.4
+   
+.. method:: read_wide_string(addr [, count]) -> str
+
+   Read a wide string from the target process starting at `addr`.
+   `count` (optional) specifies the maximum number of characters to read.
+
+   .. versionadded:: 1.0.4
    
 .. method:: read_bytes(addr, count) -> bytes
 

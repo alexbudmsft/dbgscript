@@ -1,3 +1,18 @@
+//******************************************************************************
+//  Copyright (c) Microsoft Corporation.
+//
+// @File: typedobject.cpp
+// @Author: alexbud
+//
+// Purpose:
+//
+//  TypedObject class for Python Provider.
+//  
+// Notes:
+//
+// @EndHeader@
+//******************************************************************************  
+
 #include <windows.h>
 
 #include "typedobject.h"
@@ -614,12 +629,10 @@ TypedObject_read_wide_string(
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 	PyObject* ret = nullptr;
-	HRESULT hr = S_OK;
 	CHECK_ABORT(hostCtxt);
-	WCHAR buf[MAX_READ_STRING_LEN];
 	UINT64 addr = 0;
 	
-	// Initialize to default value. -1 means 
+	// Initialize to default value. -1 means read up to NUL.
 	//
 	int count = -1;
 	
@@ -637,20 +650,7 @@ TypedObject_read_wide_string(
 		goto exit;
 	}
 	
-	if (!count || count > MAX_READ_STRING_LEN - 1)
-	{
-		PyErr_Format(PyExc_ValueError, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
-		goto exit;
-	}
-	
-	hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count);
-	if (FAILED(hr))
-	{
-		PyErr_Format(PyExc_RuntimeError, "UtilReadWideString failed. Error 0x%08x.", hr);
-		goto exit;
-	}
-
-	ret = PyUnicode_FromWideChar(buf, -1 /* NUL terminated */);
+	ret = PyReadWideString(addr, count);
 exit:
 	return ret;
 }
@@ -676,12 +676,10 @@ TypedObject_read_string(
 {
 	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
 	PyObject* ret = nullptr;
-	HRESULT hr = S_OK;
 	CHECK_ABORT(hostCtxt);
-	char buf[MAX_READ_STRING_LEN];
 	UINT64 addr = 0;
 	
-	// Initialize to default value. -1 means 
+	// Initialize to default value. -1 means read up to NUL.
 	//
 	int count = -1;
 	
@@ -699,20 +697,8 @@ TypedObject_read_string(
 		goto exit;
 	}
 
-	if (!count || count > MAX_READ_STRING_LEN - 1)
-	{
-		PyErr_Format(PyExc_ValueError, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
-		goto exit;
-	}
+	ret = PyReadString(addr, count);
 
-	hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count);
-	if (FAILED(hr))
-	{
-		PyErr_Format(PyExc_RuntimeError, "UtilReadAnsiString failed. Error 0x%08x.", hr);
-		goto exit;
-	}
-
-	ret = PyUnicode_FromString(buf);
 exit:
 	return ret;
 }

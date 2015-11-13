@@ -4,9 +4,19 @@ FooCar
 F
 Fo
 FooCar
+FooCar
+F
+FooCa
+FooCar
+FooCar
 Wide FooCar
 W
 Wi
+Wide FooCar
+Wide FooCar
+W
+Wide 
+Wide FooCar
 Wide FooCar
 0:000> !runscript -l rb .\rb\t-readstring.rb
 FooCar
