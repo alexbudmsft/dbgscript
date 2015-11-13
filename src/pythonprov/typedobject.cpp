@@ -618,7 +618,6 @@ TypedObject_read_wide_string(
 	CHECK_ABORT(hostCtxt);
 	WCHAR buf[MAX_READ_STRING_LEN];
 	UINT64 addr = 0;
-	ULONG cchActualLen = 0;
 	
 	// Initialize to default value. -1 means 
 	//
@@ -644,16 +643,14 @@ TypedObject_read_wide_string(
 		goto exit;
 	}
 	
-	hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cchActualLen);
+	hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_RuntimeError, "UtilReadWideString failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 
-	// Don't include the NUL terminator.
-	//
-	ret = PyUnicode_FromWideChar(buf, cchActualLen - 1);
+	ret = PyUnicode_FromWideChar(buf, -1 /* NUL terminated */);
 exit:
 	return ret;
 }
@@ -683,7 +680,6 @@ TypedObject_read_string(
 	CHECK_ABORT(hostCtxt);
 	char buf[MAX_READ_STRING_LEN];
 	UINT64 addr = 0;
-	ULONG cbActualLen = 0;
 	
 	// Initialize to default value. -1 means 
 	//
@@ -709,16 +705,14 @@ TypedObject_read_string(
 		goto exit;
 	}
 
-	hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cbActualLen);
+	hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count);
 	if (FAILED(hr))
 	{
 		PyErr_Format(PyExc_RuntimeError, "UtilReadAnsiString failed. Error 0x%08x.", hr);
 		goto exit;
 	}
 
-	// Don't include the NUL terminator.
-	//
-	ret = PyUnicode_FromStringAndSize(buf, cbActualLen - 1);
+	ret = PyUnicode_FromString(buf);
 exit:
 	return ret;
 }

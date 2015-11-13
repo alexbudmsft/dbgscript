@@ -13,10 +13,23 @@ FooCar
 F
 Fo
 FooCar
+FooCar
+FooCar
+F
+FooCa
+FooCar
+FooCar
+ArgumentError
+ArgumentError
+ArgumentError
+ArgumentError
 Wide FooCar
 W
 Wi
 Wide FooCar
+Wide FooCar
+ArgumentError
+ArgumentError
 0:000> * Stop tracking results.
 0:000> *
 0:000> .logclose

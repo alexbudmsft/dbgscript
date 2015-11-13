@@ -56,8 +56,7 @@ UtilReadWideString(
 	_In_ UINT64 addr,
 	_Out_writes_to_(cchBuf, count) WCHAR* buf,
 	_In_ ULONG cchBuf,
-	_In_ int cchCount,
-	_Out_ ULONG* cchActualLen);
+	_In_ int cchMaxToRead);
 
 _Check_return_ HRESULT
 UtilReadAnsiString(
@@ -65,8 +64,7 @@ UtilReadAnsiString(
 	_In_ UINT64 addr,
 	_Out_writes_to_(cbBuf, cbCount) char* buf,
 	_In_ ULONG cbBuf,
-	_In_ int cbCount,
-	_Out_ ULONG* cbActualLen);
+	_In_ int cbMaxToRead);
 
 _Check_return_ HRESULT
 UtilReadBytes(

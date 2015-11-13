@@ -28,6 +28,13 @@ DbgScript Module
    ``addr`` must be a valid (accessible) address. This will be 8 bytes on an
    x64 target.
    
+.. method:: read_string(addr [, count]) -> String
+
+   Read an ANSI string from the target process starting at `addr`.
+   `count` (optional) specifies the maximum number of characters to read.
+
+   .. versionadded:: 1.0.4
+   
 .. method:: read_bytes(addr, count) -> String
 
    Read `count` bytes from `addr`.

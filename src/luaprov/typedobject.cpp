@@ -840,7 +840,6 @@ TypedObject_readString(lua_State* L)
 	CHECK_ABORT(hostCtxt);
 	char buf[MAX_READ_STRING_LEN];
 	UINT64 addr = 0;
-	ULONG cbActualLen = 0;
 	
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
 	// type. (Having the right metatable).
@@ -858,15 +857,13 @@ TypedObject_readString(lua_State* L)
 		return luaL_error(L, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
 	}
 	
-	HRESULT hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cbActualLen);
+	HRESULT hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count);
 	if (FAILED(hr))
 	{
 		return LuaError(L, "UtilReadAnsiString failed. Error 0x%08x.", hr);
 	}
 	
-	// Don't include the NUL terminator.
-	//
-	lua_pushlstring(L, buf, cbActualLen - 1);
+	lua_pushstring(L, buf);
 	
 	return 1;
 }
@@ -900,7 +897,6 @@ TypedObject_readWideString(lua_State* L)
 	CHECK_ABORT(hostCtxt);
 	WCHAR buf[MAX_READ_STRING_LEN];
 	UINT64 addr = 0;
-	ULONG cchActualLen = 0;
 	char utf8buf[MAX_READ_STRING_LEN * sizeof(WCHAR)];
 	
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
@@ -919,25 +915,23 @@ TypedObject_readWideString(lua_State* L)
 		return luaL_error(L, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
 	}
 	
-	HRESULT hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cchActualLen);
+	HRESULT hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count);
 	if (FAILED(hr))
 	{
 		return LuaError(L, "UtilReadWideString failed. Error 0x%08x.", hr);
 	}
 	
-	// Convert to UTF8. Output will *not* be NUL-terminated because input wasn't.
+	// Convert to UTF8.
 	//
 	const int cbWritten = WideCharToMultiByte(
-		CP_UTF8, 0, buf, cchActualLen - 1, utf8buf, sizeof utf8buf, nullptr, nullptr);
+		CP_UTF8, 0, buf, -1, utf8buf, sizeof utf8buf, nullptr, nullptr);
 	if (!cbWritten)
 	{
 		DWORD err = GetLastError();
 		luaL_error(L, "WideCharToMultiByte failed. Error %d.", err);
 	}
 	
-	// Don't include the NUL terminator.
-	//
-	lua_pushlstring(L, utf8buf, cbWritten);
+	lua_pushstring(L, utf8buf);
 	
 	return 1;
 }

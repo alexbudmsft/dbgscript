@@ -300,7 +300,6 @@ TypedObject_read_string(
 
 	char buf[MAX_READ_STRING_LEN];
 	UINT64 addr = 0;
-	ULONG cbActualLen = 0;
 
 	// Initialize to default value. -1 means 
 	//
@@ -324,13 +323,13 @@ TypedObject_read_string(
 		rb_raise(rb_eArgError, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
 	}
 	
-	hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cbActualLen);
+	hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count);
 	if (FAILED(hr))
 	{
 		rb_raise(rb_eRuntimeError, "UtilReadAnsiString failed. Error 0x%08x.", hr);
 	}
 
-	return rb_str_new(buf, cbActualLen - 1);
+	return rb_str_new_cstr(buf);
 }
 
 //------------------------------------------------------------------------------
@@ -363,7 +362,6 @@ TypedObject_read_wide_string(
 	WCHAR buf[MAX_READ_STRING_LEN];
 	char utf8buf[MAX_READ_STRING_LEN * sizeof(WCHAR)];
 	UINT64 addr = 0;
-	ULONG cchActualLen = 0;
 
 	// Initialize to default value. -1 means 
 	//
@@ -387,23 +385,23 @@ TypedObject_read_wide_string(
 		rb_raise(rb_eArgError, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
 	}
 	
-	hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cchActualLen);
+	hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count);
 	if (FAILED(hr))
 	{
 		rb_raise(rb_eRuntimeError, "UtilReadWideString failed. Error 0x%08x.", hr);
 	}
 
-	// Convert to UTF8. Output will *not* be NUL-terminated because input wasn't.
+	// Convert to UTF8.
 	//
 	const int cbWritten = WideCharToMultiByte(
-		CP_UTF8, 0, buf, cchActualLen - 1, utf8buf, sizeof utf8buf, nullptr, nullptr);
+		CP_UTF8, 0, buf, -1, utf8buf, sizeof utf8buf, nullptr, nullptr);
 	if (!cbWritten)
 	{
 		DWORD err = GetLastError();
 		rb_raise(rb_eRuntimeError, "WideCharToMultiByte failed. Error %d.", err);
 	}
 
-	return rb_utf8_str_new(utf8buf, cbWritten);
+	return rb_utf8_str_new_cstr(utf8buf);
 }
 
 //------------------------------------------------------------------------------
