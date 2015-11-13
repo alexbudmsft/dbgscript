@@ -30,6 +30,32 @@ Wide FooCar
 Wide FooCar
 ArgumentError
 ArgumentError
+Wide FooCar
+W
+Wide 
+Wide FooCar
+Wide FooCar
+0:000> !runscript -l lua .\lua\t-readstring.lua
+FooCar
+F
+Fo
+FooCar
+FooCar
+FooCar
+F
+FooCa
+FooCar
+FooCar
+Wide FooCar
+W
+Wi
+Wide FooCar
+Wide FooCar
+Wide FooCar
+W
+Wide 
+Wide FooCar
+Wide FooCar
 0:000> * Stop tracking results.
 0:000> *
 0:000> .logclose

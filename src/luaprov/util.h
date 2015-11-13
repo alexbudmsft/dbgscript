@@ -27,3 +27,15 @@ LuaReadBytes(
 	_In_ lua_State* L,
 	_In_ UINT64 addr,
 	_In_ ULONG count);
+
+int
+LuaReadWideString(
+	_In_ lua_State* L,
+	_In_ UINT64 addr,
+	_In_ int count);
+
+int
+LuaReadString(
+	_In_ lua_State* L,
+	_In_ UINT64 addr,
+	_In_ int count);

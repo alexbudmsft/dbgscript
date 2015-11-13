@@ -72,6 +72,49 @@ DbgScript_read_bytes(
 }
 
 //------------------------------------------------------------------------------
+// Function: DbgScript_read_wide_string
+//
+// Synopsis:
+//
+//  DbgScript.read_wide_string(addr [, count]) -> String
+//
+// Description:
+//
+//  Read an ANSI string from 'addr'.
+//
+//  count limits the (int) number of characters to read. -1 means read up to the
+//  first NUL.
+//
+static VALUE
+DbgScript_read_wide_string(
+	_In_ int argc,
+	_In_reads_(argc) VALUE* argv,
+	_In_ VALUE /*self*/)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	UINT64 addr = 0;
+
+	// Initialize to default value. -1 means 
+	//
+	int count = -1;
+
+	if (argc > 2)
+	{
+		rb_raise(rb_eArgError, "wrong number of arguments");
+	}
+	else if (argc == 2)
+	{
+		count = NUM2INT(argv[1]);
+	}
+	
+	addr = NUM2ULL(argv[0]);
+	
+	return RbReadWideString(addr, count);
+}
+
+//------------------------------------------------------------------------------
 // Function: DbgScript_read_string
 //
 // Synopsis:
@@ -93,9 +136,7 @@ DbgScript_read_string(
 {
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
 	CHECK_ABORT(hostCtxt);
-	HRESULT hr = S_OK;
 
-	char buf[MAX_READ_STRING_LEN];
 	UINT64 addr = 0;
 
 	// Initialize to default value. -1 means 
@@ -113,18 +154,7 @@ DbgScript_read_string(
 	
 	addr = NUM2ULL(argv[0]);
 	
-	if (!count || count > MAX_READ_STRING_LEN - 1)
-	{
-		rb_raise(rb_eArgError, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
-	}
-	
-	hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count);
-	if (FAILED(hr))
-	{
-		rb_raise(rb_eRuntimeError, "UtilReadAnsiString failed. Error 0x%08x.", hr);
-	}
-
-	return rb_str_new_cstr(buf);
+	return RbReadString(addr, count);
 }
 
 //------------------------------------------------------------------------------
@@ -549,6 +579,9 @@ Init_DbgScript()
 	
 	rb_define_module_function(
 		module, "read_string", RUBY_METHOD_FUNC(DbgScript_read_string), -1 /* argc */);
+	
+	rb_define_module_function(
+		module, "read_wide_string", RUBY_METHOD_FUNC(DbgScript_read_wide_string), -1 /* argc */);
 	
 	rb_define_module_function(
 		module, "get_peb", RUBY_METHOD_FUNC(DbgScript_get_peb), 0 /* argc */);

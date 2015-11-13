@@ -63,3 +63,11 @@ negative_test(ArgumentError) {
 negative_test(ArgumentError) {
   puts car['wide_name'].read_wide_string(1000000)
 }
+
+# Exercise DbgScript#read_wide_string.
+#
+puts DbgScript.read_wide_string(car['wide_name'].address)
+puts DbgScript.read_wide_string(car['wide_name'].address, 1)
+puts DbgScript.read_wide_string(car['wide_name'].address, 5)
+puts DbgScript.read_wide_string(car['wide_name'].address, 500)
+puts DbgScript.read_wide_string(car['wide_name'].address, -1)

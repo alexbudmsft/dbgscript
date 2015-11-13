@@ -35,6 +35,13 @@ DbgScript Module
 
    .. versionadded:: 1.0.4
    
+.. method:: read_wide_string(addr [, count]) -> String
+
+   Read a wide string from the target process starting at `addr`.
+   `count` (optional) specifies the maximum number of characters to read.
+
+   .. versionadded:: 1.0.4
+   
 .. method:: read_bytes(addr, count) -> String
 
    Read `count` bytes from `addr`.

@@ -23,7 +23,21 @@ dbgscript Module
    Read a pointer value from the virtual address space of the target process.
    ``addr`` must be a valid (accessible) address. This will be 8 bytes on an
    x64 target.
+   
+.. method:: dbgscript.readString(addr [, count]) -> string
 
+   Read an ANSI string from the target process starting at `addr`.
+   `count` (optional) specifies the maximum number of characters to read.
+
+   .. versionadded:: 1.0.4
+   
+.. method:: dbgscript.readWideString(addr [, count]) -> string
+
+   Read a wide string from the target process starting at `addr`.
+   `count` (optional) specifies the maximum number of characters to read.
+
+   .. versionadded:: 1.0.4
+   
 .. method:: dbgscript.readBytes(addr, count) -> string
 
    Read `count` bytes from `addr`.

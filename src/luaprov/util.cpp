@@ -92,3 +92,90 @@ LuaReadBytes(
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Function: LuaReadWideString
+//
+// Description:
+//
+//  Read a wide string from the target process as a Lua string up to 'count'
+//  chars.
+//  
+// Returns:
+//
+//  Pushes new string on stack and returns 1 result.
+//
+// Notes:
+//
+int
+LuaReadWideString(
+	_In_ lua_State* L,
+	_In_ UINT64 addr,
+	_In_ int count)
+{
+	WCHAR buf[MAX_READ_STRING_LEN] = {};
+	char utf8buf[MAX_READ_STRING_LEN * sizeof(WCHAR)] = {};
+	if (!count || count > MAX_READ_STRING_LEN - 1)
+	{
+		return luaL_error(L, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
+	}
+	
+	HRESULT hr = UtilReadWideString(
+		GetLuaProvGlobals()->HostCtxt, addr, STRING_AND_CCH(buf), count);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "UtilReadWideString failed. Error 0x%08x.", hr);
+	}
+	
+	// Convert to UTF8.
+	//
+	const int cbWritten = WideCharToMultiByte(
+		CP_UTF8, 0, buf, -1, utf8buf, sizeof utf8buf, nullptr, nullptr);
+	if (!cbWritten)
+	{
+		DWORD err = GetLastError();
+		luaL_error(L, "WideCharToMultiByte failed. Error %d.", err);
+	}
+	
+	lua_pushstring(L, utf8buf);
+	
+	return 1;
+}
+
+//------------------------------------------------------------------------------
+// Function: LuaReadString
+//
+// Description:
+//
+//  Read a wide string from the target process as a Lua string up to 'count'
+//  chars.
+//  
+// Returns:
+//
+//  Pushes new string on stack and returns 1 result.
+//
+// Notes:
+//
+int
+LuaReadString(
+	_In_ lua_State* L,
+	_In_ UINT64 addr,
+	_In_ int count)
+{
+	char buf[MAX_READ_STRING_LEN] = {};
+	if (!count || count > MAX_READ_STRING_LEN - 1)
+	{
+		return luaL_error(L, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
+	}
+	
+	HRESULT hr = UtilReadAnsiString(
+		GetLuaProvGlobals()->HostCtxt, addr, STRING_AND_CCH(buf), count);
+	if (FAILED(hr))
+	{
+		return LuaError(L, "UtilReadAnsiString failed. Error 0x%08x.", hr);
+	}
+	
+	lua_pushstring(L, buf);
+	
+	return 1;
+}
+

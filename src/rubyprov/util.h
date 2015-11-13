@@ -18,7 +18,17 @@ void
 LockDownClass(
 	_In_ VALUE klass);
 
-VALUE
+_Check_return_ VALUE
 RbReadBytes(
 	_In_ UINT64 addr,
 	_In_ VALUE count);
+
+_Check_return_ VALUE
+RbReadString(
+	_In_ UINT64 addr,
+	_In_ int count);
+
+_Check_return_ VALUE
+RbReadWideString(
+	_In_ UINT64 addr,
+	_In_ int count);
