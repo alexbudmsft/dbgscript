@@ -42,18 +42,26 @@ dbgscript Module
 
    Read `count` bytes from `addr`.
 
+   .. versionadded:: 1.0.3
+
 .. method:: dbgscript.getNearestSym(addr) -> string
 
    Lookup the nearest symbol to address `addr`. Operates similar to the debugger
    ``ln`` command.
+
+   .. versionadded:: 1.0.1
    
 .. method:: dbgscript.getPeb() -> integer
 
    Get the address of the current process' PEB.
+
+   .. versionadded:: 1.0.3
    
 .. method:: dbgscript.fieldOffset(type, field) -> integer
 
    Obtain the offset of `field` in `type`. Behaves like ``offsetof`` macro in C.
+   
+   .. versionadded:: 1.0.2
    
 .. method:: dbgscript.startBuffering()
 
