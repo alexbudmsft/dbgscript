@@ -345,6 +345,43 @@ CRubyScriptProvider::RunString(
 extern "C" void Init_ext(void);
 extern "C" void Init_enc(void);
 
+#ifdef LOCKDOWN
+static const char* x_lockedDownExtensions[] =
+{
+	"socket.so",
+};
+
+//------------------------------------------------------------------------------
+// Function: extensionFilter
+//
+// Description:
+//
+//  Filter callback for core Ruby extensions. Used for lockdown.
+//
+// Parameters:
+//
+//  name - Name of extension. E.g. "socket.so".
+//
+// Returns:
+//
+//  Non-zero if extension should be filtered *out* (I.e. locked down).
+//
+// Notes:
+//
+static int
+extensionFilter(const char* name)
+{
+	for (int i = 0; i < _countof(x_lockedDownExtensions); ++i)
+	{
+		if (!strcmp(name, x_lockedDownExtensions[i]))
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+#endif
+
 static void
 lockdownRuby()
 {
@@ -395,6 +432,12 @@ CRubyScriptProvider::StartVM()
 		hr = E_FAIL;  // TODO: Better error.
 		goto exit;
 	}
+	
+#ifdef LOCKDOWN
+	// Set the extension filter before initializing the standard extensions.
+	//
+	ruby_set_ext_filter(extensionFilter);
+#endif
 
 	ruby_init_loadpath();
 	Init_enc();
