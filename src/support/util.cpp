@@ -171,12 +171,14 @@ exit:
 //
 // Description:
 //
-//  Read an optionally counted wide string from the target's memory.
+//  Read a wide string from the target's memory.
 //
 // Parameters:
 //
-//  cchCount - if -1, then assumes string is NUL-terminated, otherwise indicates
-//   how many characters to read.
+//  addr - address to read from.
+//  buf - on success, a NUL-terminated wide string is returned here.
+//  cchMaxToRead - if < 0, then read as far as possible until NUL, otherwise
+//   read at most this many chars.
 //
 // Returns:
 //
@@ -186,46 +188,41 @@ _Check_return_ HRESULT
 UtilReadWideString(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ UINT64 addr,
-	_Out_writes_to_(cchBuf, cchCount) WCHAR* buf,
+	_Out_writes_to_(cchBuf, cchMaxToRead) WCHAR* buf,
 	_In_ ULONG cchBuf,
-	_In_ int cchCount,
-	_Out_ ULONG* cchActualLen)
+	_In_ int cchMaxToRead)
 {
 	ULONG cbActual = 0;
 	HRESULT hr = S_OK;
-	if (cchCount < 0)
+
+	if (cchMaxToRead < 0)
 	{
-		// ReadUnicodeStringVirtualWide looks for a NULL-terminator and fails
-		// if it doesn't find one within 'maxBytes' bytes.
-		//
-		hr = hostCtxt->DebugDataSpaces->ReadUnicodeStringVirtualWide(
-			addr,
-			cchBuf * sizeof(WCHAR),  // maxBytes
-			buf,
-			cchBuf,
-			&cbActual);
+		cchMaxToRead = cchBuf;
 	}
-	else
-	{
-		// ReadVirtual just reads arbitrary content up to a given size.
-		// We add 1 to cchCount so that the caller gets 'cchCount' non-NUL
-		// characters. Otherwise if the caller were to pass '1', we would read
-		// no characters because we are telling 'ReadVirtual' our buffer has
-		// space only for a NUL.
-		//
-		hr = hostCtxt->DebugDataSpaces->ReadVirtual(
-			addr,
-			buf,
-			min(cchBuf, (ULONG)cchCount + 1) * sizeof(WCHAR),
-			&cbActual);
-	}
+	
+	// ReadUnicodeStringVirtualWide looks for a NULL-terminator and fails
+	// if it doesn't find one within 'maxBytes' bytes.
+	//
+	hr = hostCtxt->DebugDataSpaces->ReadUnicodeStringVirtualWide(
+		addr,
+		cchMaxToRead * sizeof(WCHAR),  // maxBytes
+		buf,
+		cchBuf,
+		&cbActual);
 
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
-	
-	*cchActualLen = cbActual / sizeof(WCHAR);
+
+	// NOTE: ReadUnicodeStringVirtualWide may actually give back more characters
+	// than 'maxBytes'!!! Truncate the string ourselves.
+	//
+	if ((ULONG)cchMaxToRead < cbActual / sizeof(WCHAR))
+	{
+		buf[cchMaxToRead] = 0;
+	}
+
 exit:
 	return hr;
 }
@@ -235,12 +232,14 @@ exit:
 //
 // Description:
 //
-//  Read an optionally counted ANSI string from the target's memory.
+//  Read an ANSI string from the target's memory.
 //
 // Parameters:
 //
-//  cchCount - if -1, then assumes string is NUL-terminated, otherwise indicates
-//   how many characters to read.
+//  addr - address to read from.
+//  buf - on success, a NUL-terminated ANSI string is returned here.
+//  cbMaxToRead - if < 0, then read as far as possible until NUL, otherwise read
+//    at most this many chars.
 //
 // Returns:
 //
@@ -252,37 +251,34 @@ UtilReadAnsiString(
 	_In_ UINT64 addr,
 	_Out_writes_to_(cbBuf, cbCount) char* buf,
 	_In_ ULONG cbBuf,
-	_In_ int cbCount,
-	_Out_ ULONG* cbActualLen)
+	_In_ int cbMaxToRead)
 {
 	HRESULT hr = S_OK;
-	if (cbCount < 0)
+	ULONG cbActualLen = 0;
+	
+	if (cbMaxToRead < 0)
 	{
-		// ReadMultiByteStringVirtual looks for a NULL-terminator and fails
-		// if it doesn't find one within 'maxBytes' bytes.
-		//
-		hr = hostCtxt->DebugDataSpaces->ReadMultiByteStringVirtual(
-			addr,
-			cbBuf,  // maxBytes
-			buf,
-			cbBuf,
-			cbActualLen);
-	}
-	else
-	{
-		// ReadVirtual just reads arbitrary content up to a given size.
-		// We add 1 to cchCount so that the caller gets 'cchCount' non-NUL
-		// characters. Otherwise if the caller were to pass '1', we would read
-		// no characters because we are telling 'ReadVirtual' our buffer has
-		// space only for a NUL.
-		//
-		hr = hostCtxt->DebugDataSpaces->ReadVirtual(
-			addr,
-			buf,
-			min(cbBuf, (ULONG)cbCount + 1),
-			cbActualLen);
+		cbMaxToRead = cbBuf;
 	}
 
+	// ReadMultiByteStringVirtual looks for a NULL-terminator and fails
+	// if it doesn't find one within 'maxBytes' bytes.
+	//
+	hr = hostCtxt->DebugDataSpaces->ReadMultiByteStringVirtual(
+		addr,
+		cbMaxToRead,  // maxBytes
+		buf,
+		cbBuf,
+		&cbActualLen);
+
+	// NOTE: ReadMultiByteStringVirtual may actually give back more characters
+	// than 'maxBytes'!!! Truncate the string ourselves.
+	//
+	if ((ULONG)cbMaxToRead < cbActualLen)
+	{
+		buf[cbMaxToRead] = 0;
+	}
+	
 	if (FAILED(hr))
 	{
 		goto exit;

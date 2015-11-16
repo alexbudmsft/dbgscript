@@ -5,19 +5,19 @@
 
 .. class:: Thread
 
-.. attr_reader:: Thread#engine_id -> Integer
+.. method:: Thread#engine_id -> Integer
 
    Get the dbgeng local thread id. This is not the Windows thread id.
 
-.. attr_reader:: Thread#thread_id -> Integer
+.. method:: Thread#thread_id -> Integer
 
    Get the Windows thread id.
    
-.. attr_reader:: Thread#teb -> Integer
+.. method:: Thread#teb -> Integer
 
    Get the address of the TEB.
    
-.. attr_reader:: Thread#current_frame -> StackFrame
+.. method:: Thread#current_frame -> StackFrame
 
    Get the current :class:`StackFrame`.
 

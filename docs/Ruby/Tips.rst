@@ -1,4 +1,0 @@
-Tips and Tricks
-***************
-
-TODO

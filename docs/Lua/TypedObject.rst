@@ -68,6 +68,8 @@
    Read a block of `count` bytes from the target process from this object's
    address.
    
+   .. versionadded:: 1.0.3
+   
 .. attribute:: TypedObject.deref() -> TypedObject
 
    Dereference the current object, if it's a pointer or array.

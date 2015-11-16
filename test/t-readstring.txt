@@ -8,6 +8,7 @@ $<t-setup.txt
 .logopen results\t-readstring-result.txt
 !runscript -l py .\py\t-readstring.py
 !runscript -l rb .\rb\t-readstring.rb
+!runscript -l lua .\lua\t-readstring.lua
 * Stop tracking results.
 *
 .logclose

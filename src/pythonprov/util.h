@@ -18,6 +18,16 @@ PyReadBytes(
 	_In_ UINT64 addr,
 	_In_ ULONG count);
 
+PyObject*
+PyReadString(
+	_In_ UINT64 addr,
+	_In_ int count);
+
+PyObject*
+PyReadWideString(
+	_In_ UINT64 addr,
+	_In_ int count);
+
 // Helper macro to call in every Python entry point that checks for abort
 // and raises a KeyboardInterrupt exception.
 //

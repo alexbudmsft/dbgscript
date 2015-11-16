@@ -27,7 +27,11 @@ runtests: \
 results\t-simple-result.txt: t-simple.txt py\t-simple.py
 	call runtest.bat t-simple $(DMPNAME)
 
-results\t-readstring-result.txt: t-readstring.txt py\t-readstring.py rb\t-readstring.rb
+results\t-readstring-result.txt: \
+	t-readstring.txt \
+	py\t-readstring.py \
+	rb\t-readstring.rb \
+	lua\t-readstring.lua
 	call runtest.bat t-readstring $(DMPNAME)
 
 clean:

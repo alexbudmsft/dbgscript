@@ -23,23 +23,45 @@ dbgscript Module
    Read a pointer value from the virtual address space of the target process.
    ``addr`` must be a valid (accessible) address. This will be 8 bytes on an
    x64 target.
+   
+.. method:: dbgscript.readString(addr [, count]) -> string
 
+   Read an ANSI string from the target process starting at `addr`.
+   `count` (optional) specifies the maximum number of characters to read.
+
+   .. versionadded:: 1.0.4
+   
+.. method:: dbgscript.readWideString(addr [, count]) -> string
+
+   Read a wide string from the target process starting at `addr`.
+   `count` (optional) specifies the maximum number of characters to read.
+
+   .. versionadded:: 1.0.4
+   
 .. method:: dbgscript.readBytes(addr, count) -> string
 
    Read `count` bytes from `addr`.
+
+   .. versionadded:: 1.0.3
 
 .. method:: dbgscript.getNearestSym(addr) -> string
 
    Lookup the nearest symbol to address `addr`. Operates similar to the debugger
    ``ln`` command.
+
+   .. versionadded:: 1.0.1
    
 .. method:: dbgscript.getPeb() -> integer
 
    Get the address of the current process' PEB.
+
+   .. versionadded:: 1.0.3
    
 .. method:: dbgscript.fieldOffset(type, field) -> integer
 
    Obtain the offset of `field` in `type`. Behaves like ``offsetof`` macro in C.
+   
+   .. versionadded:: 1.0.2
    
 .. method:: dbgscript.startBuffering()
 

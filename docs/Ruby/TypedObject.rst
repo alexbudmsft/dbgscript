@@ -6,27 +6,27 @@
 
 .. class:: TypedObject
 
-.. attr_reader:: TypedObject#name -> String
+.. method:: TypedObject#name -> String
 
    Get the name of the object.
      
-.. attr_reader:: TypedObject#address -> Integer
+.. method:: TypedObject#address -> Integer
 
    Get the virtual address of the object.
    
-.. attr_reader:: TypedObject#type -> String
+.. method:: TypedObject#type -> String
 
    Get the type name of the object.
    
-.. attr_reader:: TypedObject#module -> String
+.. method:: TypedObject#module -> String
 
    Get the module name of the typed object.
    
-.. attr_reader:: TypedObject#data_size -> Integer
+.. method:: TypedObject#data_size -> Integer
 
    Get the size of the object in bytes.
    
-.. attr_reader:: TypedObject#value
+.. method:: TypedObject#value
 
    Returns the value of the object, if it's a primitive type. Raises 
    :class:`TypeError` otherwise.
@@ -39,7 +39,7 @@
    If `key` is a string, attempts to look up a field with that name. If no such
    field exists, raises :class:`RuntimeError`.
 
-.. attr_reader:: obj.field
+.. method:: obj.field
 
    Secondary way of looking up fields. If `field` names a built-in attribute,
    that attribute is returned. Otherwise a field lookup is performed.
@@ -66,6 +66,8 @@
 
    Read a block of `count` bytes from the target process from this object's
    address.
+
+   .. versionadded:: 1.0.3
 
 .. method:: TypedObject#deref -> TypedObject
 

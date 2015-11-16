@@ -8,4 +8,4 @@ Lua Script Provider
    Lua/Thread
    Lua/StackFrame
    Lua/TypedObject
-   Lua/Tips
+   

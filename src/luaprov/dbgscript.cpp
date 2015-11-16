@@ -475,6 +475,50 @@ dbgscript_readBytes(lua_State* L)
 }
 
 //------------------------------------------------------------------------------
+// Function: dbgscript_readString
+//
+// Synopsis:
+// 
+//  dbgscript.readString(addr [, count]) -> string
+//
+// Description:
+//
+//  Read a string from 'addr' (up to 'count' bytes).
+//
+static int
+dbgscript_readString(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	const UINT64 addr = luaL_checkinteger(L, 1);
+	const int count = (int)luaL_optinteger(L, 2, -1 /* default val */);
+	return LuaReadString(L, addr, count);
+}
+
+//------------------------------------------------------------------------------
+// Function: dbgscript_readWideString
+//
+// Synopsis:
+// 
+//  dbgscript.readWideString(addr [, count]) -> string
+//
+// Description:
+//
+//  Read a wide string from 'addr' (up to 'count' bytes).
+//
+static int
+dbgscript_readWideString(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	const UINT64 addr = luaL_checkinteger(L, 1);
+	const int count = (int)luaL_optinteger(L, 2, -1 /* default val */);
+	return LuaReadWideString(L, addr, count);
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_fieldOffset
 //
 // Synopsis:
@@ -605,6 +649,8 @@ static const luaL_Reg dbgscript[] =
 	{"getNearestSym", dbgscript_getNearestSym},
 	{"getPeb", dbgscript_getPeb},
 	{"readBytes", dbgscript_readBytes},
+	{"readString", dbgscript_readString},
+	{"readWideString", dbgscript_readWideString},
 	{nullptr, nullptr}  // sentinel.
 };
 

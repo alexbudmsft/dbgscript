@@ -292,17 +292,14 @@ TypedObject_read_string(
 	_In_ VALUE self)
 {
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
-	HRESULT hr = S_OK;
 	CHECK_ABORT(hostCtxt);
 	
 	DbgScriptTypedObject* typObj = nullptr;
 	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
 
-	char buf[MAX_READ_STRING_LEN];
 	UINT64 addr = 0;
-	ULONG cbActualLen = 0;
 
-	// Initialize to default value. -1 means 
+	// Initialize to default value. -1 means entire string (until NUL).
 	//
 	int count = -1;
 
@@ -319,18 +316,7 @@ TypedObject_read_string(
 		count = NUM2INT(argv[0]);
 	}
 
-	if (!count || count > MAX_READ_STRING_LEN - 1)
-	{
-		rb_raise(rb_eArgError, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
-	}
-	
-	hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cbActualLen);
-	if (FAILED(hr))
-	{
-		rb_raise(rb_eRuntimeError, "UtilReadAnsiString failed. Error 0x%08x.", hr);
-	}
-
-	return rb_str_new(buf, cbActualLen - 1);
+	return RbReadString(addr, count);
 }
 
 //------------------------------------------------------------------------------
@@ -353,21 +339,17 @@ TypedObject_read_wide_string(
 	_In_reads_(argc) VALUE* argv,
 	_In_ VALUE self)
 {
+	UINT64 addr = 0;
+
+	// Initialize to default value. -1 means entire string (until NUL).
+	//
+	int count = -1;
+	
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
-	HRESULT hr = S_OK;
 	CHECK_ABORT(hostCtxt);
 	
 	DbgScriptTypedObject* typObj = nullptr;
 	Data_Get_Struct(self, DbgScriptTypedObject, typObj);
-
-	WCHAR buf[MAX_READ_STRING_LEN];
-	char utf8buf[MAX_READ_STRING_LEN * sizeof(WCHAR)];
-	UINT64 addr = 0;
-	ULONG cchActualLen = 0;
-
-	// Initialize to default value. -1 means 
-	//
-	int count = -1;
 
 	checkTypedData(typObj, true /* fRaise */);
 
@@ -382,28 +364,7 @@ TypedObject_read_wide_string(
 		count = NUM2INT(argv[0]);
 	}
 
-	if (!count || count > MAX_READ_STRING_LEN - 1)
-	{
-		rb_raise(rb_eArgError, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
-	}
-	
-	hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cchActualLen);
-	if (FAILED(hr))
-	{
-		rb_raise(rb_eRuntimeError, "UtilReadWideString failed. Error 0x%08x.", hr);
-	}
-
-	// Convert to UTF8. Output will *not* be NUL-terminated because input wasn't.
-	//
-	const int cbWritten = WideCharToMultiByte(
-		CP_UTF8, 0, buf, cchActualLen - 1, utf8buf, sizeof utf8buf, nullptr, nullptr);
-	if (!cbWritten)
-	{
-		DWORD err = GetLastError();
-		rb_raise(rb_eRuntimeError, "WideCharToMultiByte failed. Error %d.", err);
-	}
-
-	return rb_utf8_str_new(utf8buf, cbWritten);
+	return RbReadWideString(addr, count);
 }
 
 //------------------------------------------------------------------------------

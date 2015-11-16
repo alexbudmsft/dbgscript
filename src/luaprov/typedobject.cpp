@@ -825,7 +825,7 @@ TypedObject_getfield(lua_State* L)
 // Input Stack:
 //
 //  Param 1 is the typed object. (self)
-//  Param 2: count. [opt] Number of characters to read. -1 means read up to NUL.
+//  Param 2: count. [opt] Max number of characters to read. -1 means read up to NUL.
 //
 // Returns:
 //
@@ -838,9 +838,6 @@ TypedObject_readString(lua_State* L)
 {
 	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
 	CHECK_ABORT(hostCtxt);
-	char buf[MAX_READ_STRING_LEN];
-	UINT64 addr = 0;
-	ULONG cbActualLen = 0;
 	
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
 	// type. (Having the right metatable).
@@ -850,25 +847,9 @@ TypedObject_readString(lua_State* L)
 	
 	checkTypedData(L, typObj);
 
-	addr = typObj->TypedData.Offset;
-	
-	int count = (int)luaL_optinteger(L, 2, -1 /* default val */);
-	if (!count || count > MAX_READ_STRING_LEN - 1)
-	{
-		return luaL_error(L, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
-	}
-	
-	HRESULT hr = UtilReadAnsiString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cbActualLen);
-	if (FAILED(hr))
-	{
-		return LuaError(L, "UtilReadAnsiString failed. Error 0x%08x.", hr);
-	}
-	
-	// Don't include the NUL terminator.
-	//
-	lua_pushlstring(L, buf, cbActualLen - 1);
-	
-	return 1;
+	const UINT64 addr = typObj->TypedData.Offset;
+	const int count = (int)luaL_optinteger(L, 2, -1 /* default val */);
+	return LuaReadString(L, addr, count);
 }
 
 //------------------------------------------------------------------------------
@@ -885,7 +866,7 @@ TypedObject_readString(lua_State* L)
 // Input Stack:
 //
 //  Param 1 is the typed object. (self)
-//  Param 2: count. [opt] Number of characters to read. -1 means read up to NUL.
+//  Param 2: count. [opt] Max number of characters to read. -1 means read up to NUL.
 //
 // Returns:
 //
@@ -898,10 +879,6 @@ TypedObject_readWideString(lua_State* L)
 {
 	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
 	CHECK_ABORT(hostCtxt);
-	WCHAR buf[MAX_READ_STRING_LEN];
-	UINT64 addr = 0;
-	ULONG cchActualLen = 0;
-	char utf8buf[MAX_READ_STRING_LEN * sizeof(WCHAR)];
 	
 	// Validate that the first param was 'self'. I.e. a Userdatum of the right
 	// type. (Having the right metatable).
@@ -911,35 +888,9 @@ TypedObject_readWideString(lua_State* L)
 	
 	checkTypedData(L, typObj);
 	
-	addr = typObj->TypedData.Offset;
-	
-	int count = (int)luaL_optinteger(L, 2, -1 /* default val */);
-	if (!count || count > MAX_READ_STRING_LEN - 1)
-	{
-		return luaL_error(L, "count supports at most %d and can't be 0", MAX_READ_STRING_LEN - 1);
-	}
-	
-	HRESULT hr = UtilReadWideString(hostCtxt, addr, STRING_AND_CCH(buf), count, &cchActualLen);
-	if (FAILED(hr))
-	{
-		return LuaError(L, "UtilReadWideString failed. Error 0x%08x.", hr);
-	}
-	
-	// Convert to UTF8. Output will *not* be NUL-terminated because input wasn't.
-	//
-	const int cbWritten = WideCharToMultiByte(
-		CP_UTF8, 0, buf, cchActualLen - 1, utf8buf, sizeof utf8buf, nullptr, nullptr);
-	if (!cbWritten)
-	{
-		DWORD err = GetLastError();
-		luaL_error(L, "WideCharToMultiByte failed. Error %d.", err);
-	}
-	
-	// Don't include the NUL terminator.
-	//
-	lua_pushlstring(L, utf8buf, cbWritten);
-	
-	return 1;
+	const UINT64 addr = typObj->TypedData.Offset;
+	const int count = (int)luaL_optinteger(L, 2, -1 /* default val */);
+	return LuaReadWideString(L, addr, count);
 }
 
 //------------------------------------------------------------------------------

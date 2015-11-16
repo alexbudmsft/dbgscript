@@ -71,4 +71,83 @@ exit:
 	return ret;
 }
 
+//------------------------------------------------------------------------------
+// Function: PyReadString
+//
+// Description:
+//
+//  Read a narrow string (up to 'count' bytes) from 'addr'.
+//  
+// Returns:
+//
+// Notes:
+//
+PyObject*
+PyReadString(
+	_In_ UINT64 addr,
+	_In_ int count)
+{
+	PyObject* ret = nullptr;
+	char buf[MAX_READ_STRING_LEN] = {};
+	if (!count || count > MAX_READ_STRING_LEN - 1)
+	{
+		PyErr_Format(
+			PyExc_ValueError,
+			"count supports at most %d and can't be 0",
+			MAX_READ_STRING_LEN - 1);
+		goto exit;
+	}
+
+	HRESULT hr = UtilReadAnsiString(
+		GetPythonProvGlobals()->HostCtxt, addr, STRING_AND_CCH(buf), count);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_RuntimeError, "UtilReadAnsiString failed. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	ret = PyUnicode_FromString(buf);
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
+// Function: PyReadWideString
+//
+// Description:
+//
+//  Read a wide string (up to 'count' bytes) from 'addr'.
+//  
+// Returns:
+//
+// Notes:
+//
+PyObject*
+PyReadWideString(
+	_In_ UINT64 addr,
+	_In_ int count)
+{
+	PyObject* ret = nullptr;
+	WCHAR buf[MAX_READ_STRING_LEN] = {};
+	if (!count || count > MAX_READ_STRING_LEN - 1)
+	{
+		PyErr_Format(
+			PyExc_ValueError,
+			"count supports at most %d and can't be 0",
+			MAX_READ_STRING_LEN - 1);
+		goto exit;
+	}
+
+	HRESULT hr = UtilReadWideString(
+		GetPythonProvGlobals()->HostCtxt, addr, STRING_AND_CCH(buf), count);
+	if (FAILED(hr))
+	{
+		PyErr_Format(PyExc_RuntimeError, "UtilReadWideString failed. Error 0x%08x.", hr);
+		goto exit;
+	}
+
+	ret = PyUnicode_FromWideChar(buf, -1 /* NUL terminated */);
+exit:
+	return ret;
+}
 
