@@ -346,9 +346,45 @@ extern "C" void Init_ext(void);
 extern "C" void Init_enc(void);
 
 #ifdef LOCKDOWN
+
+// List of core extensions to block.
+//
+// See generated extinit.c when building Ruby for full list.
+//
 static const char* x_lockedDownExtensions[] =
 {
+	"bigdecimal.so",
+	"continuation.so",
+	"coverage.so",
+	"date_core.so",
+	"digest.so",
+	"digest/bubblebabble.so",
+	"digest/md5.so",
+	"digest/rmd160.so",
+	"digest/sha1.so",
+	"digest/sha2.so",
+	"etc.so",
+	"fcntl.so",
+	"fiber.so",
+	"io/console.so",
+	"io/nonblock.so",
+	"json/ext/generator.so",
+	"json/ext/parser.so",
+	"mathn/complex.so",
+	"mathn/rational.so",
+	"nkf.so",
+	"objspace.so",
+	"pathname.so",
+	"psych.so",
+	"racc/cparse.so",
+	"rbconfig/sizeof.so",
+	"ripper.so",
+	"sdbm.so",
 	"socket.so",
+	"stringio.so",
+	"strscan.so",
+	"thread.so",
+	"win32ole.so",
 };
 
 //------------------------------------------------------------------------------
