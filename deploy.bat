@@ -37,10 +37,16 @@ if /I "%3" == "lockdown" (
 
 echo Deploying %FLAV% to %OUTDIR%
 echo --------------------------------------
+
 md %DBGSCRIPT_DIR%
-md %DBGSCRIPT_DIR%\pythonprov
+
+REM Don't bundle Python or Lua until they're locked down.
+REM
+if /I "%3" NEQ "lockdown" (
+	md %DBGSCRIPT_DIR%\pythonprov
+	md %DBGSCRIPT_DIR%\luaprov
+)
 md %DBGSCRIPT_DIR%\rubyprov
-md %DBGSCRIPT_DIR%\luaprov
 
 REM Copy installation script.
 REM
@@ -62,26 +68,30 @@ REM
 copy build\%FLAV%\dbgscript%LCKSUFFIX%.dll %DBGSCRIPT_DIR%\
 copy build\%FLAV%\dbgscript%LCKSUFFIX%.pdb %DBGSCRIPT_DIR%\
 
-REM ========================================================================
-REM Copy Python provider.
+REM Don't bundle Python or Lua until they're locked down.
 REM
-copy build\src\pythonprov\%FLAV%\pythonprov%LCKSUFFIX%.dll %DBGSCRIPT_DIR%\pythonprov\
-copy build\src\pythonprov\%FLAV%\pythonprov%LCKSUFFIX%.pdb %DBGSCRIPT_DIR%\pythonprov\
+if /I "%3" NEQ "lockdown" (
+	REM ========================================================================
+	REM Copy Python provider.
+	REM
+	copy build\src\pythonprov\%FLAV%\pythonprov%LCKSUFFIX%.dll %DBGSCRIPT_DIR%\pythonprov\
+	copy build\src\pythonprov\%FLAV%\pythonprov%LCKSUFFIX%.pdb %DBGSCRIPT_DIR%\pythonprov\
 
-REM Copy over the Python standard library.
-REM
-xcopy /EYQ deps\python\runtime\lib %DBGSCRIPT_DIR%\pythonprov\Lib\
+	REM Copy over the Python standard library.
+	REM
+	xcopy /EYQ deps\python\runtime\lib %DBGSCRIPT_DIR%\pythonprov\Lib\
 
-REM ========================================================================
-REM Copy Lua provider.
-REM
-copy build\src\luaprov\%FLAV%\luaprov%LCKSUFFIX%.dll %DBGSCRIPT_DIR%\luaprov\
-copy build\src\luaprov\%FLAV%\luaprov%LCKSUFFIX%.pdb %DBGSCRIPT_DIR%\luaprov\
+	REM ========================================================================
+	REM Copy Lua provider.
+	REM
+	copy build\src\luaprov\%FLAV%\luaprov%LCKSUFFIX%.dll %DBGSCRIPT_DIR%\luaprov\
+	copy build\src\luaprov\%FLAV%\luaprov%LCKSUFFIX%.pdb %DBGSCRIPT_DIR%\luaprov\
 
-REM Copy the Lua DLLs
-REM
-copy deps\lua-%LUA_VER%\bin\!LUA_BIN_DIR!\lua-%LUA_VER%.dll %DBGSCRIPT_DIR%\luaprov\
-copy deps\lua-%LUA_VER%\bin\!LUA_BIN_DIR!\lua-%LUA_VER%.pdb %DBGSCRIPT_DIR%\luaprov\
+	REM Copy the Lua DLLs
+	REM
+	copy deps\lua-%LUA_VER%\bin\!LUA_BIN_DIR!\lua-%LUA_VER%.dll %DBGSCRIPT_DIR%\luaprov\
+	copy deps\lua-%LUA_VER%\bin\!LUA_BIN_DIR!\lua-%LUA_VER%.pdb %DBGSCRIPT_DIR%\luaprov\
+)
 
 REM ========================================================================
 REM Copy Ruby provider.

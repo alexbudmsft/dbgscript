@@ -33,9 +33,20 @@ set PROVKEY=%BASEREGKEY%\Providers
 
 echo Registering script providers (%PROVKEY%)...
 
-reg add %PROVKEY% /f /t REG_SZ /v py /d "%INSTALLDIR%\pythonprov\pythonprov%LCKSUFFIX%.dll" > NUL
-reg add %PROVKEY% /f /t REG_SZ /v rb /d "%INSTALLDIR%\rubyprov\rubyprov%LCKSUFFIX%.dll" > NUL
-reg add %PROVKEY% /f /t REG_SZ /v lua /d "%INSTALLDIR%\luaprov\luaprov%LCKSUFFIX%.dll" > NUL
+REM Some providers may not exist in the lockdown distribution. Only install
+REM those that are present.
+REM
+if exist "%INSTALLDIR%\pythonprov" (
+	reg add %PROVKEY% /f /t REG_SZ /v py /d "%INSTALLDIR%\pythonprov\pythonprov%LCKSUFFIX%.dll" > NUL
+)
+
+if exist "%INSTALLDIR%\rubyprov" (
+	reg add %PROVKEY% /f /t REG_SZ /v rb /d "%INSTALLDIR%\rubyprov\rubyprov%LCKSUFFIX%.dll" > NUL
+)
+
+if exist "%INSTALLDIR%\luaprov" (
+	reg add %PROVKEY% /f /t REG_SZ /v lua /d "%INSTALLDIR%\luaprov\luaprov%LCKSUFFIX%.dll" > NUL
+)
 
 echo.
 echo *********
