@@ -380,7 +380,43 @@ extensionFilter(const char* name)
 	}
 	return 0;
 }
-#endif
+
+//------------------------------------------------------------------------------
+// Function: undefineClass
+//
+// Description:
+//
+//  Undefines a class under Object.
+//
+// Parameters:
+//
+//  name - Name of class to undefine.
+//
+// Returns:
+//
+//  void
+//
+// Notes:
+//
+static void
+undefineClass(_In_z_ const char* name)
+{
+	rb_funcall(rb_cObject, rb_intern("remove_const"), 1, rb_str_new_cstr(name));
+}
+
+// List of core classes to undefine.
+//
+static const char* x_classesToUndefine[] =
+{
+	"File",
+	"FileTest",
+	"Process",
+	"Fiber",
+	"Thread",
+	"Dir",
+	"Signal",
+};
+#endif  // LOCKDOWN
 
 static void
 lockdownRuby()
@@ -394,17 +430,20 @@ lockdownRuby()
 	rb_undef_method(rb_mKernel, "exit!");
 
 #ifdef LOCKDOWN
+	//
 	// Extensive lockdown for LOCKDOWN build.
+	//
+
+	// Undefine Kernel#open
 	//
 	rb_undef_method(rb_mKernel, "open");
 
-	rb_define_global_const("File", Qundef);
-	rb_define_global_const("FileTest", Qundef);
-	rb_define_global_const("Process", Qundef);
-	rb_define_global_const("Fiber", Qundef);
-	rb_define_global_const("Thread", Qundef);
-	rb_define_global_const("Dir", Qundef);
-	rb_define_global_const("Signal", Qundef);
+	// Undefine core classes.
+	//
+	for (int i = 0; i < _countof(x_classesToUndefine); ++i)
+	{
+		undefineClass(x_classesToUndefine[i]);
+	}
 #endif
 }
 

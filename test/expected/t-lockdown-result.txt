@@ -1,0 +1,15 @@
+Opened log file 'results\t-lockdown-result.txt'
+0:000> !runscript -l rb .\rb\t-lockdown.rb
+LoadError
+NameError
+NameError
+NameError
+NameError
+NameError
+NameError
+NameError
+NameError
+0:000> * Stop tracking results.
+0:000> *
+0:000> .logclose
+Closing open log file results\t-lockdown-result.txt
