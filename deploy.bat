@@ -45,6 +45,10 @@ REM
 if /I "%3" NEQ "lockdown" (
 	md %DBGSCRIPT_DIR%\pythonprov
 	md %DBGSCRIPT_DIR%\luaprov
+) else (
+    REM Copy lockdown notes only for the lockdown distro.
+    REM
+    copy lockdownnotes.md %OUTDIR%\
 )
 md %DBGSCRIPT_DIR%\rubyprov
 
