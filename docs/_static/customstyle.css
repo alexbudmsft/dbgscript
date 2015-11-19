@@ -3,3 +3,9 @@
 div[class^='highlight'] pre, code, .rst-content code {
     font-size: 14px;
 }
+
+span.versionmodified {
+	font-style: italic;
+	font-size: 90%;
+	font-weight: bold;
+}
