@@ -1,4 +1,0 @@
-Start an output buffering session. All output from this point will be 
-buffered in 8K chunks. This can help improve performance when writing a lot 
-of content in a loop, as the WinDbg command window will not be redrawn after 
-every line of output.

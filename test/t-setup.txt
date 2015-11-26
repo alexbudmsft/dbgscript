@@ -1,6 +1,0 @@
-* Setup phase common to all tests
-*
-* Load the extension DLL.
-* Only one of these will exist. Try load both.
-.load C:\Program Files\DbgScript\dbgscript.dll
-.load C:\Program Files\DbgScript\dbgscript-lockdown.dll

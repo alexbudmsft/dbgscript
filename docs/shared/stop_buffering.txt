@@ -1,2 +1,0 @@
-Stop an output buffering session. The buffer will also automatically be 
-flushed on script terminaton, for any reason (unhandled exception or otherwise).

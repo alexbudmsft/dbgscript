@@ -1,6 +1,0 @@
-TypedObject class
-=================
-
-TypedObject represents a typed object in the target process's virtual address
-space. It can be constructed from a type and an address, or by looking up fields
-of a struct, dereferencing pointers, accessing array elements, and so on.

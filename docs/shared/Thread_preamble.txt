@@ -1,4 +1,0 @@
-Thread class
-============
-
-Represents a thread in the target process.

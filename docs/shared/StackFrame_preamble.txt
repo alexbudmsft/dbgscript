@@ -1,5 +1,0 @@
-StackFrame class
-================
-
-Represents a stack frame in the target process.
-
