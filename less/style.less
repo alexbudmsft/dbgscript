@@ -11,7 +11,6 @@
 /* If you don't use any of these blocks just remove unnecessary LESS files */
 /* header */
 @import '@{startup-basePath}ui-kit/ui-kit-header/less/header-10.less';
-@import '@{startup-basePath}ui-kit/ui-kit-header/less/header-11.less';
 
 /* content */
 @import '@{startup-basePath}ui-kit/ui-kit-content/less/content-7.less';
@@ -22,9 +21,10 @@
 
 /* footer */
 @import '@{startup-basePath}ui-kit/ui-kit-footer/less/footer-2.less';
-@import '@{startup-basePath}ui-kit/ui-kit-footer/less/footer-3.less';
 
+/* fonts */
 @import url(https://fonts.googleapis.com/css?family=Roboto+Slab);
+@import url(https://fonts.googleapis.com/css?family=Open+Sans);
 
 .header-11 {
 	background-color: #0a0924;
@@ -32,4 +32,8 @@
 
 .header-10 .navbar .brand {
 	font-family: "Roboto Slab", "Georgia", Arial, sans-serif;
+}
+
+.nav {
+	font-family: 'Open Sans', sans-serif;
 }
