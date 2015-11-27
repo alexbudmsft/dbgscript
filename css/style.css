@@ -1,4 +1,5 @@
 @import url(http://fonts.googleapis.com/css?family=Montserrat);
+@import url(https://fonts.googleapis.com/css?family=Roboto+Slab);
 .dropdown-arrow-inverse {
   border-bottom-color: #34495e !important;
   border-top-color: #34495e !important;
@@ -2137,4 +2138,7 @@ section * {
 }
 .header-11 {
   background-color: #0a0924;
+}
+.header-10 .navbar .brand {
+  font-family: "Roboto Slab", "Georgia", Arial, sans-serif;
 }
