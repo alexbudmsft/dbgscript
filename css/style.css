@@ -1776,7 +1776,11 @@ section * {
 .header-10 .navbar .brand {
   font-family: "Roboto Slab", "Georgia", Arial, sans-serif;
 }
-.nav {
+.nav,
+h1,
+h2,
+h3,
+.header-10-sub .hero-unit h1 {
   font-family: 'Open Sans', sans-serif;
 }
 .header-10-sub .background {
