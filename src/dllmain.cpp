@@ -495,6 +495,160 @@ exit:
 }
 
 //------------------------------------------------------------------------------
+// Function: acquireDbgEngIfaces
+//
+// Description:
+//
+//  Obtain commonly used DbgEng interfaces from IDebugClient and save them in
+//  g_HostCtxt.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+static _Check_return_ HRESULT 
+acquireDbgEngIfaces(
+	_In_ IDebugClient* client)
+{
+	HRESULT hr = S_OK;
+
+	// Save the passed-in client.
+	//
+	g_HostCtxt.DebugClient = client;
+	
+	hr = client->QueryInterface(
+		__uuidof(IDebugControl), (void **)&g_HostCtxt.DebugControl);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
+	hr = client->QueryInterface(
+		__uuidof(IDebugSystemObjects), (void **)&g_HostCtxt.DebugSysObj);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
+	hr = client->QueryInterface(
+		__uuidof(IDebugSymbols3), (void **)&g_HostCtxt.DebugSymbols);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
+	hr = client->QueryInterface(
+		__uuidof(IDebugAdvanced2), (void **)&g_HostCtxt.DebugAdvanced);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+
+	hr = client->QueryInterface(
+		__uuidof(IDebugDataSpaces4), (void **)&g_HostCtxt.DebugDataSpaces);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+exit:
+	return hr;
+}
+
+//------------------------------------------------------------------------------
+// Function: releaseDbgEngIfaces
+//
+// Description:
+//
+//  Releases DbgEng interfaces in g_HostCtxt, including the IDebugClient.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+//  Idempotent: checks for NULL.
+//
+static void 
+releaseDbgEngIfaces()
+{
+	if (g_HostCtxt.DebugDataSpaces)
+	{
+		g_HostCtxt.DebugDataSpaces->Release();
+		g_HostCtxt.DebugDataSpaces = nullptr;
+	}
+
+	if (g_HostCtxt.DebugAdvanced)
+	{
+		g_HostCtxt.DebugAdvanced->Release();
+		g_HostCtxt.DebugAdvanced = nullptr;
+	}
+
+	if (g_HostCtxt.DebugSymbols)
+	{
+		g_HostCtxt.DebugSymbols->Release();
+		g_HostCtxt.DebugSymbols = nullptr;
+	}
+
+	if (g_HostCtxt.DebugSysObj)
+	{
+		g_HostCtxt.DebugSysObj->Release();
+		g_HostCtxt.DebugSysObj = nullptr;
+	}
+
+	if (g_HostCtxt.DebugControl)
+	{
+		g_HostCtxt.DebugControl->Release();
+		g_HostCtxt.DebugControl = nullptr;
+	}
+
+	if (g_HostCtxt.DebugClient)
+	{
+		g_HostCtxt.DebugClient->Release();
+		g_HostCtxt.DebugClient = nullptr;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Function: releaseDbgEngIfaces
+//
+// Description:
+//
+//  Releases and re-acquires DbgEng interfaces from the given client if it
+//  differs from the cached one.
+//
+// Parameters:
+//
+// Returns:
+//
+// Notes:
+//
+static _Check_return_ HRESULT 
+reAcquireIfacesIfNeeded(
+	_In_ IDebugClient* client)
+{
+	HRESULT hr = S_OK;
+	
+	// Often times we'll be given the same client for each extension invocation.
+	// Only reacquire the ifaces if the client is different to what we have
+	// cached.
+	//
+	if (client != g_HostCtxt.DebugClient)
+	{
+		releaseDbgEngIfaces();
+		hr = acquireDbgEngIfaces(client);
+		if (FAILED(hr))
+		{
+			goto exit;
+		}
+	}
+exit:
+	return hr;
+}
+
+//------------------------------------------------------------------------------
 // Function: DebugExtensionInitialize
 //
 // Description:
@@ -515,43 +669,18 @@ DebugExtensionInitialize(
 	HRESULT hr = S_OK;
 	*Version = DEBUG_EXTENSION_VERSION(1, 0);
 	*Flags = 0;
+	IDebugClient* client = nullptr;
 
-	hr = DebugCreate(__uuidof(IDebugClient), (void **)&g_HostCtxt.DebugClient);
+	// Make an initial client so we can output to the debugger in this routine.
+	// Future extension calls might overwrite it.
+	//
+	hr = DebugCreate(__uuidof(IDebugClient), (void **)&client);
 	if (FAILED(hr))
 	{
 		goto exit;
 	}
 
-	hr = g_HostCtxt.DebugClient->QueryInterface(
-		__uuidof(IDebugControl), (void **)&g_HostCtxt.DebugControl);
-	if (FAILED(hr))
-	{
-		goto exit;
-	}
-
-	hr = g_HostCtxt.DebugClient->QueryInterface(
-		__uuidof(IDebugSystemObjects), (void **)&g_HostCtxt.DebugSysObj);
-	if (FAILED(hr))
-	{
-		goto exit;
-	}
-
-	hr = g_HostCtxt.DebugClient->QueryInterface(
-		__uuidof(IDebugSymbols3), (void **)&g_HostCtxt.DebugSymbols);
-	if (FAILED(hr))
-	{
-		goto exit;
-	}
-
-	hr = g_HostCtxt.DebugClient->QueryInterface(
-		__uuidof(IDebugAdvanced2), (void **)&g_HostCtxt.DebugAdvanced);
-	if (FAILED(hr))
-	{
-		goto exit;
-	}
-
-	hr = g_HostCtxt.DebugClient->QueryInterface(
-		__uuidof(IDebugDataSpaces4), (void **)&g_HostCtxt.DebugDataSpaces);
+	hr = acquireDbgEngIfaces(client);
 	if (FAILED(hr))
 	{
 		goto exit;
@@ -591,41 +720,7 @@ DebugExtensionUninitialize()
 {
 	cleanupScriptProviders();
 
-	if (g_HostCtxt.DebugDataSpaces)
-	{
-		g_HostCtxt.DebugDataSpaces->Release();
-		g_HostCtxt.DebugDataSpaces = nullptr;
-	}
-
-	if (g_HostCtxt.DebugAdvanced)
-	{
-		g_HostCtxt.DebugAdvanced->Release();
-		g_HostCtxt.DebugAdvanced = nullptr;
-	}
-
-	if (g_HostCtxt.DebugSymbols)
-	{
-		g_HostCtxt.DebugSymbols->Release();
-		g_HostCtxt.DebugSymbols = nullptr;
-	}
-
-	if (g_HostCtxt.DebugSysObj)
-	{
-		g_HostCtxt.DebugSysObj->Release();
-		g_HostCtxt.DebugSysObj = nullptr;
-	}
-
-	if (g_HostCtxt.DebugControl)
-	{
-		g_HostCtxt.DebugControl->Release();
-		g_HostCtxt.DebugControl = nullptr;
-	}
-
-	if (g_HostCtxt.DebugClient)
-	{
-		g_HostCtxt.DebugClient->Release();
-		g_HostCtxt.DebugClient = nullptr;
-	}
+	releaseDbgEngIfaces();
 }
 
 //------------------------------------------------------------------------------
@@ -647,7 +742,7 @@ DebugExtensionUninitialize()
 //
 DLLEXPORT HRESULT CALLBACK
 scriptpath(
-	_In_     IDebugClient* /*client*/,
+	_In_     IDebugClient* client,
 	_In_opt_ PCSTR         args)
 {
 	// Deallocate the existing list.
@@ -657,7 +752,13 @@ scriptpath(
 	const char* comma = nullptr;
 	const char* str = args;
 	HRESULT hr = S_OK;
-
+	
+	hr = reAcquireIfacesIfNeeded(client);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+	
 	if (strlen(str) > 0)
 	{
 		elem = g_HostCtxt.ScriptPath;
@@ -830,7 +931,7 @@ exit:
 //
 DLLEXPORT HRESULT CALLBACK
 runscript(
-	_In_     IDebugClient* /*client*/,
+	_In_     IDebugClient* client,
 	_In_opt_ PCSTR         args)
 {
 	HRESULT hr = S_OK;
@@ -845,6 +946,13 @@ runscript(
 	int cArgs = 0;
 	WCHAR** argList = nullptr;
 	DbgScriptHostContext* hostCtxt = GetHostContext();
+
+	hr = reAcquireIfacesIfNeeded(client);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+	
 	if (!args[0])
 	{
 		// If it's an empty string, fail now.
@@ -977,7 +1085,7 @@ exit:
 //
 DLLEXPORT HRESULT CALLBACK
 evalstring(
-	_In_     IDebugClient* /*client*/,
+	_In_     IDebugClient* client,
 	_In_opt_ PCSTR         args)
 {
 	HRESULT hr = S_OK;
@@ -986,7 +1094,13 @@ evalstring(
 	const bool startVMEnabled = GetHostContext()->StartVMEnabled;
 	bool initializedProvider = false;
 	char* argsMutable = nullptr;
-
+	
+	hr = reAcquireIfacesIfNeeded(client);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+	
 	if (!args[0])
 	{
 		// If it's an empty string, fail now.
@@ -1071,11 +1185,17 @@ exit:
 //
 DLLEXPORT HRESULT CALLBACK
 startvm(
-	_In_     IDebugClient* /*client*/,
+	_In_     IDebugClient* client,
 	_In_opt_ PCSTR         /*args*/)
 {
 	HRESULT hr = S_OK;
-
+	
+	hr = reAcquireIfacesIfNeeded(client);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
+	
 	if (GetHostContext()->StartVMEnabled)
 	{
 		g_HostCtxt.DebugControl->Output(
@@ -1109,10 +1229,16 @@ exit:
 //
 DLLEXPORT HRESULT CALLBACK
 stopvm(
-	_In_     IDebugClient* /*client*/,
+	_In_     IDebugClient* client,
 	_In_opt_ PCSTR         /*args*/)
 {
 	HRESULT hr = S_OK;
+	
+	hr = reAcquireIfacesIfNeeded(client);
+	if (FAILED(hr))
+	{
+		goto exit;
+	}
 	
 	if (!GetHostContext()->StartVMEnabled)
 	{
