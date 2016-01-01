@@ -107,6 +107,51 @@ exit:
 }
 
 //------------------------------------------------------------------------------
+// Function: UtilGetTypeSize
+//
+// Description:
+//
+//  Get size of given type. Mimics sizeof operator in C.
+//
+// Parameters:
+//
+// Returns:
+//
+//  Size of 'type' in bytes.
+//
+// Notes:
+//
+_Check_return_ HRESULT
+UtilGetTypeSize(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_z_ const char* type,
+	_Out_ ULONG* size)
+{
+	HRESULT hr = S_OK;
+	
+	// Lookup typeid/moduleBase from type name.
+	//
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(hostCtxt, type);
+	if (!typeInfo)
+	{
+		hostCtxt->DebugControl->Output(
+			DEBUG_OUTPUT_ERROR,
+			ERR_FAILED_GET_TYPE_ID,
+			type,
+			hr);
+		goto exit;
+	}
+	
+	hr = hostCtxt->DebugSymbols->GetTypeSize(
+		typeInfo->ModuleBase,
+		typeInfo->TypeId,
+		size);
+	
+exit:
+	return hr;
+}
+
+//------------------------------------------------------------------------------
 // Function: UtilGetNearestSymbol
 //
 // Description:
@@ -203,11 +248,14 @@ UtilReadWideString(
 	// ReadUnicodeStringVirtualWide looks for a NULL-terminator and fails
 	// if it doesn't find one within 'maxBytes' bytes.
 	//
+	// This function returns E_INVALIDARG if it doesn't find a NUL terminator
+	// within 'maxBytes' bytes.
+	//
 	hr = hostCtxt->DebugDataSpaces->ReadUnicodeStringVirtualWide(
 		addr,
-		cchMaxToRead * sizeof(WCHAR),  // maxBytes
+		cchBuf * sizeof(WCHAR), // maxBytes to search for the NULL.
 		buf,
-		cchBuf,
+		cchMaxToRead,
 		&cbActual);
 
 	if (FAILED(hr))
@@ -262,13 +310,13 @@ UtilReadAnsiString(
 	}
 
 	// ReadMultiByteStringVirtual looks for a NULL-terminator and fails
-	// if it doesn't find one within 'maxBytes' bytes.
+	// if it doesn't find one within 'maxBytes' bytes (with E_INVALIDARG)
 	//
 	hr = hostCtxt->DebugDataSpaces->ReadMultiByteStringVirtual(
 		addr,
-		cbMaxToRead,  // maxBytes
+		cbBuf,  // maxBytes
 		buf,
-		cbBuf,
+		cbMaxToRead,
 		&cbActualLen);
 
 	// NOTE: ReadMultiByteStringVirtual may actually give back more characters

@@ -298,6 +298,51 @@ exit:
 }
 
 //------------------------------------------------------------------------------
+// Function: dbgscript_get_type_size
+//
+// Synopsis:
+// 
+//  dbgscript.get_type_size(type) -> int
+//
+// Description:
+//
+//  Return the size of 'type' in bytes.
+//
+static PyObject*
+dbgscript_get_type_size(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+
+	PyObject* ret = nullptr;
+	const char* type = nullptr;
+	ULONG size = 0;
+	if (!PyArg_ParseTuple(args, "s:get_type_size", &type))
+	{
+		return nullptr;
+	}
+
+	HRESULT hr = UtilGetTypeSize(hostCtxt, type, &size);
+	if (FAILED(hr))
+	{
+		PyErr_Format(
+			PyExc_ValueError,
+			"Failed to get size of type '%s'. Error 0x%08x.",
+			type,
+			hr);
+		goto exit;
+	}
+
+	ret = PyLong_FromUnsignedLong(size);
+
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_read_bytes
 //
 // Synopsis:
@@ -741,6 +786,12 @@ static PyMethodDef dbgscript_MethodsDef[] =
 		dbgscript_field_offset,
 		METH_VARARGS,
 		PyDoc_STR("Get field offset given a type and address.")
+	},
+	{
+		"get_type_size",
+		dbgscript_get_type_size,
+		METH_VARARGS,
+		PyDoc_STR("Get size of given a type in bytes.")
 	},
 	{
 		"get_nearest_sym",

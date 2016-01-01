@@ -120,7 +120,7 @@ RbReadString(
 //
 // Description:
 //
-//  Read 'count' bytes from 'addr'
+//  Read a wide string (up to 'count' characters) from 'addr'.
 //  
 // Returns:
 //

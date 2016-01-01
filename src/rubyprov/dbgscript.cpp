@@ -223,6 +223,40 @@ DbgScript_field_offset(
 }
 
 //------------------------------------------------------------------------------
+// Function: DbgScript_get_type_size
+//
+// Synopsis:
+// 
+//  DbgScript.get_type_size(type) -> Integer
+//
+// Description:
+//
+//  Return the size of 'type' in bytes.
+//
+static VALUE
+DbgScript_get_type_size(
+	_In_ VALUE /* self */,
+	_In_ VALUE type)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	ULONG size = 0;
+	HRESULT hr = UtilGetTypeSize(hostCtxt, StringValuePtr(type), &size);
+	
+	if (FAILED(hr))
+	{
+		rb_raise(
+			rb_eArgError,
+			"Failed to get size of type '%s'. Error 0x%08x.",
+			type,
+			hr);
+	}
+
+	return ULONG2NUM(size);
+}
+
+//------------------------------------------------------------------------------
 // Function: DbgScript_get_nearest_sym
 //
 // Synopsis:
@@ -588,6 +622,9 @@ Init_DbgScript()
 	
 	rb_define_module_function(
 		module, "field_offset", RUBY_METHOD_FUNC(DbgScript_field_offset), 2 /* argc */);
+	
+	rb_define_module_function(
+		module, "get_type_size", RUBY_METHOD_FUNC(DbgScript_get_type_size), 1 /* argc */);
 	
 	rb_define_module_function(
 		module, "get_nearest_sym", RUBY_METHOD_FUNC(DbgScript_get_nearest_sym), 1 /* argc */);

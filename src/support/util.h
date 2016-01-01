@@ -45,6 +45,12 @@ UtilGetFieldOffset(
 	_Out_ ULONG* offset);
 
 _Check_return_ HRESULT
+UtilGetTypeSize(
+	_In_ DbgScriptHostContext* hostCtxt,
+	_In_z_ const char* type,
+	_Out_ ULONG* size);
+
+_Check_return_ HRESULT
 UtilGetNearestSymbol(
 	_In_ DbgScriptHostContext* hostCtxt,
 	_In_ UINT64 addr,

@@ -4,3 +4,8 @@
 * Only one of these will exist. Try load both.
 .load C:\Program Files\DbgScript\dbgscript.dll
 .load C:\Program Files\DbgScript\dbgscript-lockdown.dll
+*
+* Set symbol path.
+*
+.symfix
+.reload

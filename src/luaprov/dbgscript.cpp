@@ -555,6 +555,40 @@ dbgscript_fieldOffset(lua_State* L)
 }
 
 //------------------------------------------------------------------------------
+// Function: dbgscript_getTypeSize
+//
+// Synopsis:
+// 
+//  dbgscript.getTypeSize(type) -> integer
+//
+// Description:
+//
+//  Return the size of 'type' in bytes.
+//
+static int
+dbgscript_getTypeSize(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	
+	const char* type = lua_tostring(L, 1);
+	
+	ULONG size = 0;
+	HRESULT hr = UtilGetTypeSize(hostCtxt, type, &size);
+	if (FAILED(hr))
+	{
+		return LuaError(
+			L,
+			"Failed to get size of type '%s'. Error 0x%08x.",
+			type,
+			hr);
+	}
+
+	lua_pushinteger(L, size);
+	return 1;
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_getNearestSym
 //
 // Description:
@@ -646,6 +680,7 @@ static const luaL_Reg dbgscript[] =
 	{"resolveEnum", dbgscript_resolveEnum},
 	{"readPtr", dbgscript_readPtr},
 	{"fieldOffset", dbgscript_fieldOffset},
+	{"getTypeSize", dbgscript_getTypeSize},
 	{"getNearestSym", dbgscript_getNearestSym},
 	{"getPeb", dbgscript_getPeb},
 	{"readBytes", dbgscript_readBytes},

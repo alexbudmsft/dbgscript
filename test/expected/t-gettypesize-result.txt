@@ -1,0 +1,11 @@
+Opened log file 'results\t-gettypesize-result.txt'
+0:000> !runscript -l py .\py\t-gettypesize.py
+16
+0:000> !runscript -l rb .\rb\t-gettypesize.rb
+16
+0:000> !runscript -l lua .\lua\t-gettypesize.lua
+16
+0:000> * Stop tracking results.
+0:000> *
+0:000> .logclose
+Closing open log file results\t-gettypesize-result.txt

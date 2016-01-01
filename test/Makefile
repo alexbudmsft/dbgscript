@@ -24,7 +24,8 @@ $(DMPNAME): dummy.exe
 #
 coretests: \
 	results\t-simple-result.txt \
-	results\t-readstring-result.txt
+	results\t-readstring-result.txt \
+	results\t-gettypesize-result.txt
 	
 # Lockdown tests. Run *only* if lockdown build is installed.
 #
@@ -40,6 +41,13 @@ results\t-readstring-result.txt: \
 	rb\t-readstring.rb \
 	lua\t-readstring.lua
 	call runtest.bat t-readstring $(DMPNAME)
+
+results\t-gettypesize-result.txt: \
+	t-gettypesize.txt \
+	py\t-gettypesize.py \
+	rb\t-gettypesize.rb \
+	lua\t-gettypesize.lua
+	call runtest.bat t-gettypesize $(DMPNAME)
 
 results\t-lockdown-result.txt: t-lockdown.txt rb\t-lockdown.rb
 	call runtest.bat t-lockdown $(DMPNAME)
