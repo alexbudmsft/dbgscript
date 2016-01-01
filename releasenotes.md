@@ -1,3 +1,10 @@
+1.0.4 (beta)
+------------
+
+* Add `dbgscript.get_type_size(type)` API.
+* Add `dbgscript.read_[wide_]string` APIs. These were previously only available
+  on TypedObject, but now can be invoked at the top-level without an object.
+
 1.0.3 (beta)
 ------------
 

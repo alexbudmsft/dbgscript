@@ -62,6 +62,12 @@ dbgscript Module
    Obtain the offset of `field` in `type`. Behaves like ``offsetof`` macro in C.
    
    .. versionadded:: 1.0.2
+
+.. method:: dbgscript.getTypeSize(type) -> integer
+
+   Obtain the size of `type` in bytes. Behaves like ``sizeof`` operator in C.
+   
+   .. versionadded:: 1.0.4
    
 .. method:: dbgscript.startBuffering()
 

@@ -70,6 +70,12 @@ namespace.
    Obtain the offset of `field` in `type`. Behaves like ``offsetof`` macro in C.
    
    .. versionadded:: 1.0.2
+
+.. method:: get_type_size(type) -> int
+
+   Obtain the size of `type` in bytes. Behaves like ``sizeof`` operator in C.
+   
+   .. versionadded:: 1.0.4
    
 .. method:: start_buffering()
 

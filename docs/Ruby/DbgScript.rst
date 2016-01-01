@@ -67,6 +67,12 @@ DbgScript Module
    
    .. versionadded:: 1.0.2
    
+.. method:: DbgScript.get_type_size(type) -> Integer
+
+   Obtain the size of `type` in bytes. Behaves like ``sizeof`` operator in C.
+   
+   .. versionadded:: 1.0.4
+
 .. method:: DbgScript.start_buffering()
 
    .. include:: ../shared/start_buffering.txt
