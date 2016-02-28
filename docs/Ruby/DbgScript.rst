@@ -17,7 +17,12 @@ DbgScript Module
 .. method:: DbgScript.create_typed_object(type, addr) -> TypedObject
 
    .. include:: ../shared/create_typed_object.txt
-   
+
+.. method:: DbgScript.create_typed_pointer(type, addr) -> TypedObject
+
+   .. include:: ../shared/create_typed_pointer.txt
+   .. versionadded:: 1.0.5
+ 
 .. method:: DbgScript.get_threads() -> array of Thread
 
    Get the collection of threads in the process.

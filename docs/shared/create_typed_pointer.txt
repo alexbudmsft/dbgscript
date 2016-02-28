@@ -1,0 +1,9 @@
+Create a pointer to a :class:`TypedObject` from an address and type. Specify
+the base type for ``type``. E.g. for an ``int*``, pass ``int``. This works for
+arbitrary buffers; arrays included.
+   
+.. note::
+
+   Prefer using the fully-qualfied type name (i.e. including the module prefix)
+   as it will accelerate symbol lookup dramatically. I.e. ``module!Foo``, not
+   ``Foo``.

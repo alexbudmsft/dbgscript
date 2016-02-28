@@ -26,6 +26,11 @@ namespace.
 
    .. include:: ../shared/create_typed_object.txt
    
+.. method:: create_typed_pointer(type, addr) -> TypedObject
+
+   .. include:: ../shared/create_typed_pointer.txt
+   .. versionadded:: 1.0.5
+   
 .. method:: read_ptr(addr) -> int
 
    Read a pointer value from the virtual address space of the target process.

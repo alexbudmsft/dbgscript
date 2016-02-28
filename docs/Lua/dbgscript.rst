@@ -18,6 +18,12 @@ dbgscript Module
 
    .. include:: ../shared/create_typed_object.txt
    
+.. method:: dbgscript.createTypedPointer(type, addr) -> TypedObject
+
+   .. include:: ../shared/create_typed_pointer.txt
+   
+   .. versionadded:: 1.0.5
+   
 .. method:: dbgscript.readPtr(addr) -> integer
 
    Read a pointer value from the virtual address space of the target process.
