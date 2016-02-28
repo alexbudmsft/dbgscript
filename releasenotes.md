@@ -1,7 +1,13 @@
 1.0.5 (beta)
 ------------
 
-* Add `dbgscript.create_typed_pointer` API.
+* Add `dbgscript.create_typed_pointer` API. Acts like `create_typed_object` but
+  returns a pointer to the object instead. This makes buffer traversal possible
+  from an explicit buffer start address and element type.
+
+* Fix: `TypedObject.value` API now acts consistently across providers for the
+  `char` type. Previously, Python would return a `str` but Ruby/Lua would return
+  an integer type.
 
 1.0.4 (beta)
 ------------
