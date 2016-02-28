@@ -1,12 +1,6 @@
 require 'utils'
 
-local t = dbgscript.currentThread()
-local f = t:currentFrame()
-local locals = f:getLocals()
-
--- Get the 'car' local.
---
-local car = table.find(locals, function (e) return e.name == 'car' end)
+local car = getCar()
 
 -- Read ANSI string.
 --

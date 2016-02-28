@@ -1,13 +1,6 @@
-t = dbgscript.current_thread()
-f = t.current_frame
+from utils import *
 
-# 'locals' is a Python built-in function.
-#
-f_locals = f.get_locals()
-
-# Get the 'car' local. Throws StopIteration if not found.
-#
-car = next(t for t in f_locals if t.name == 'car')
+car = get_car()
 
 # Read ANSI string.
 #

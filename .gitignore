@@ -12,3 +12,4 @@ deploy/
 build*/
 *~
 *.swp
+__pycache__/

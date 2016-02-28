@@ -6,7 +6,9 @@ $<t-setup.txt
 * Start tracking results.
 *
 .logopen results\t-createtypedptr-result.txt
+!runscript -l py .\py\t-createtypedptr.py
 !runscript -l rb .\rb\t-createtypedptr.rb
+!runscript -l lua .\lua\t-createtypedptr.lua
 * Stop tracking results.
 *
 .logclose

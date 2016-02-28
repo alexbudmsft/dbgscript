@@ -10,5 +10,5 @@ tp = DbgScript.create_typed_pointer('kernelbase!char', addr)
 
 # Print the first few characters.
 #
-puts tp[0].value.chr
+puts tp[0].value.chr  # TODO: Unify .value in Python/Ruby.
 puts tp[1].value.chr
