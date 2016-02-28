@@ -1,3 +1,8 @@
+1.0.5 (beta)
+------------
+
+* Add `dbgscript.create_typed_pointer` API.
+
 1.0.4 (beta)
 ------------
 

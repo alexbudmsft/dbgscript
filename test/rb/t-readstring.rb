@@ -1,12 +1,6 @@
 require_relative 'utils'
 
-t = DbgScript.current_thread
-f = t.current_frame
-locals = f.get_locals
-
-# Get the 'car' local.
-#
-car = locals.find {|t| t.name == 'car'}
+car = get_car
 
 # Read ANSI string.
 #

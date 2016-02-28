@@ -1,0 +1,8 @@
+Opened log file 'results\t-createtypedptr-result.txt'
+0:000> !runscript -l rb .\rb\t-createtypedptr.rb
+F
+o
+0:000> * Stop tracking results.
+0:000> *
+0:000> .logclose
+Closing open log file results\t-createtypedptr-result.txt
