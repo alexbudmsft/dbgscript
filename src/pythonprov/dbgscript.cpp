@@ -27,6 +27,46 @@
 #include "typedobject.h"
 
 //------------------------------------------------------------------------------
+// Function: createTypedObjectHelper
+//
+// Description:
+//
+//  Helper to create a typed object or pointer.
+//
+static PyObject*
+createTypedObjectHelper(
+	_In_ PyObject* args,
+	_In_ bool wantPointer)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+
+	CHECK_ABORT(hostCtxt);
+
+	PyObject *ret = nullptr;
+	const char *typeName = nullptr;
+	UINT64 addr = 0;
+
+	if (!PyArg_ParseTuple(args, "sK", &typeName, &addr))
+	{
+		return nullptr;
+	}
+
+	// Lookup typeid/moduleBase from type name.
+	//
+	ModuleAndTypeId* typeInfo = GetCachedSymbolType(hostCtxt, typeName);
+	if (!typeInfo)
+	{
+		PyErr_Format(PyExc_ValueError, "Failed to get type id for type '%s'.", typeName);
+		goto exit;
+	}
+
+	ret = AllocTypedObject(
+		0, nullptr, typeInfo->TypeId, typeInfo->ModuleBase, addr, wantPointer);
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_create_typed_object
 //
 // Synopsis:
@@ -42,32 +82,27 @@ dbgscript_create_typed_object(
 	_In_ PyObject* /*self*/,
 	_In_ PyObject* args)
 {
-	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	return createTypedObjectHelper(args, false /* wantPtr */);
+}
 
-	CHECK_ABORT(hostCtxt);
-
-	PyObject *ret = nullptr;
-	const char *typeName = nullptr;
-	UINT64 addr = 0;
-
-	if (!PyArg_ParseTuple(args, "sK:create_typed_object", &typeName, &addr))
-	{
-		return nullptr;
-	}
-
-	// Lookup typeid/moduleBase from type name.
-	//
-	ModuleAndTypeId* typeInfo = GetCachedSymbolType(hostCtxt, typeName);
-	if (!typeInfo)
-	{
-		PyErr_Format(PyExc_ValueError, "Failed to get type id for type '%s'.", typeName);
-		goto exit;
-	}
-
-	ret = AllocTypedObject(
-		0, nullptr, typeInfo->TypeId, typeInfo->ModuleBase, addr);
-exit:
-	return ret;
+//------------------------------------------------------------------------------
+// Function: dbgscript_create_typed_pointer
+//
+// Synopsis:
+// 
+//  dbgscript.create_typed_pointer(type, addr) -> TypedObject
+//
+// Description:
+//
+//  Create a typed pointer from a given type and address. 'type' is the base
+//  type from which to create a pointer. E.g. for int*, the base type is int.
+//
+static PyObject*
+dbgscript_create_typed_pointer(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	return createTypedObjectHelper(args, true /* wantPtr */);
 }
 
 //------------------------------------------------------------------------------
@@ -170,7 +205,8 @@ dbgscript_get_global(
 		symbol,
 		typeInfo->TypeId,
 		typeInfo->ModuleBase,
-		addr);
+		addr,
+		false /* wantPointer */);
 exit:
 	return ret;
 }
@@ -756,6 +792,12 @@ static PyMethodDef dbgscript_MethodsDef[] =
 		dbgscript_create_typed_object,
 		METH_VARARGS,
 		PyDoc_STR("Return a TypedObject with a given type and address.")
+	},
+	{
+		"create_typed_pointer",
+		dbgscript_create_typed_pointer,
+		METH_VARARGS,
+		PyDoc_STR("Return a pointer to a TypedObject with a given type and address.")
 	},
 	{
 		"read_ptr",

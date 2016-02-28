@@ -196,7 +196,8 @@ buildArrayFromLocals(
 		symName,
 		entry->TypeId,
 		entry->ModuleBase,
-		entry->Offset);
+		entry->Offset,
+		false /* wantPointer */);
 
 	// In Lua, customary to have arrays start at 1.
 	//

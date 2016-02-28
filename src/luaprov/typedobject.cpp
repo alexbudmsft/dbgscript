@@ -114,7 +114,8 @@ AllocNewTypedObject(
 	_In_opt_z_ const char* name,
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
-	_In_ UINT64 virtualAddress)
+	_In_ UINT64 virtualAddress,
+	_In_ bool wantPointer)
 {
 	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
 	CHECK_ABORT(hostCtxt);
@@ -130,6 +131,7 @@ AllocNewTypedObject(
 		typeId,
 		moduleBase,
 		virtualAddress,
+		wantPointer,
 		typObj);
 	if (FAILED(hr))
 	{

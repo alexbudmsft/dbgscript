@@ -372,7 +372,8 @@ DbgScript_get_global(
 		symbol /* name */,
 		typeInfo->TypeId,
 		typeInfo->ModuleBase,
-		addr);
+		addr,
+		false /* wantPointer */);
 }
 
 //------------------------------------------------------------------------------
@@ -562,21 +563,17 @@ DbgScript_execute_command(
 }
 
 //------------------------------------------------------------------------------
-// Function: DbgScript_create_typed_object
-//
-// Synopsis:
-//
-//  DbgScript.create_typed_object(type, address) -> TypedObject
+// Function: createTypedObjectHelper
 //
 // Description:
 //
-//  Create a TypedObject from a type (String) and address (Integer).
+//  Helper to create a typed object or pointer.
 //
 static VALUE
-DbgScript_create_typed_object(
-	_In_ VALUE /* self */,
+createTypedObjectHelper(
 	_In_ VALUE type,
-	_In_ VALUE addr)
+	_In_ VALUE addr,
+	_In_ bool wantPointer)
 {
 	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
 	CHECK_ABORT(hostCtxt);
@@ -597,7 +594,49 @@ DbgScript_create_typed_object(
 		nullptr /* name */,
 		typeInfo->TypeId,
 		typeInfo->ModuleBase,
-		ui64Addr);
+		ui64Addr,
+		wantPointer);
+}
+
+//------------------------------------------------------------------------------
+// Function: DbgScript_create_typed_object
+//
+// Synopsis:
+//
+//  DbgScript.create_typed_object(type, address) -> TypedObject
+//
+// Description:
+//
+//  Create a TypedObject from a type (String) and address (Integer).
+//
+static VALUE
+DbgScript_create_typed_object(
+	_In_ VALUE /* self */,
+	_In_ VALUE type,
+	_In_ VALUE addr)
+{
+	return createTypedObjectHelper(type, addr, false /* wantPointer */);
+}
+
+//------------------------------------------------------------------------------
+// Function: DbgScript_create_typed_pointer
+//
+// Synopsis:
+//
+//  DbgScript.create_typed_pointer(type, address) -> TypedObject
+//
+// Description:
+//
+//  Create a typed pointer from a given type and address. 'type' is the base
+//  type from which to create a pointer. E.g. for int*, the base type is int.
+//
+static VALUE
+DbgScript_create_typed_pointer(
+	_In_ VALUE /* self */,
+	_In_ VALUE type,
+	_In_ VALUE addr)
+{
+	return createTypedObjectHelper(type, addr, true /* wantPointer */);
 }
 
 void
@@ -637,6 +676,9 @@ Init_DbgScript()
 	
 	rb_define_module_function(
 		module, "create_typed_object", RUBY_METHOD_FUNC(DbgScript_create_typed_object), 2 /* argc */);
+	
+	rb_define_module_function(
+		module, "create_typed_pointer", RUBY_METHOD_FUNC(DbgScript_create_typed_pointer), 2 /* argc */);
 	
 	rb_define_module_function(
 		module, "resolve_enum", RUBY_METHOD_FUNC(DbgScript_resolve_enum), 2 /* argc */);

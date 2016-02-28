@@ -169,6 +169,7 @@ DsInitializeTypedObject(
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
 	_In_ UINT64 virtualAddress,
+	_In_ bool wantPointer,
 	_Out_ DbgScriptTypedObject* typObj);
 
 _Check_return_ HRESULT

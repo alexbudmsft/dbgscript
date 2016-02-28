@@ -86,7 +86,8 @@ buildArrayFromLocals(
 		symName,
 		entry->TypeId,
 		entry->ModuleBase,
-		entry->Offset);
+		entry->Offset,
+		false /* wantPointer */);
 
 	rb_ary_store(stackArray, idx, localVar);
 	

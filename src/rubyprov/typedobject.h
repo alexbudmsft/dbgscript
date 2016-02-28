@@ -24,4 +24,5 @@ AllocTypedObject(
 	_In_opt_z_ const char* name,
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
-	_In_ UINT64 virtualAddress);
+	_In_ UINT64 virtualAddress,
+	_In_ bool wantPointer);

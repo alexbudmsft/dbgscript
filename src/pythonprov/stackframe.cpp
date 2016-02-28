@@ -33,7 +33,8 @@ buildTupleFromLocals(
 		symName,
 		entry->TypeId,
 		entry->ModuleBase,
-		entry->Offset);
+		entry->Offset,
+		false /* wantPointer */);
 	if (!typedObj)
 	{
 		// Exception has already been setup by callee.

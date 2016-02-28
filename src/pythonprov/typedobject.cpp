@@ -875,7 +875,8 @@ AllocTypedObject(
 	_In_opt_z_ const char* name,
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
-	_In_ UINT64 virtualAddress)
+	_In_ UINT64 virtualAddress,
+	_In_ bool wantPointer)
 {
 	PyObject* obj = nullptr;
 	PyObject* ret = nullptr;
@@ -902,6 +903,7 @@ AllocTypedObject(
 		typeId,
 		moduleBase,
 		virtualAddress,
+		wantPointer,
 		&typObj->Data);
 	if (FAILED(hr))
 	{

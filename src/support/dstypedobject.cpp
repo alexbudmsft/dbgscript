@@ -118,6 +118,7 @@ DsInitializeTypedObject(
 	_In_ ULONG typeId,
 	_In_ UINT64 moduleBase,
 	_In_ UINT64 virtualAddress,
+	_In_ bool wantPointer,
 	_Out_ DbgScriptTypedObject* typObj)
 {
 	HRESULT hr = S_OK;
@@ -164,7 +165,11 @@ DsInitializeTypedObject(
 	{
 		EXT_TYPED_DATA request = {};
 		EXT_TYPED_DATA response = {};
-		request.Operation = EXT_TDOP_SET_FROM_TYPE_ID_AND_U64;
+		
+		request.Operation = wantPointer ?
+			EXT_TDOP_SET_PTR_FROM_TYPE_ID_AND_U64 :
+			EXT_TDOP_SET_FROM_TYPE_ID_AND_U64;
+			
 		request.InData.ModBase = moduleBase;
 		request.InData.Offset = virtualAddress;
 		request.InData.TypeId = typeId;
@@ -180,14 +185,19 @@ DsInitializeTypedObject(
 		{
 			hostCtxt->DebugControl->Output(
 				DEBUG_OUTPUT_ERROR,
-				"Error: EXT_TDOP_SET_FROM_TYPE_ID_AND_U64 operation failed. Error 0x%08x.\n", hr);
+				"Error: EXT_TDOP_SET_%sFROM_TYPE_ID_AND_U64 operation failed. Error 0x%08x.\n",
+				wantPointer ? "PTR_" : "",
+				hr);
 			goto exit;
 		}
 
 		typObj->TypedData = response.OutData;
 		typObj->TypedDataValid = true;
 
-		assert(typObj->TypedData.Offset == virtualAddress);
+		if (!wantPointer)
+		{
+			assert(typObj->TypedData.Offset == virtualAddress);
+		}
 	}
 	else
 	{
@@ -467,6 +477,7 @@ DsTypedObjectGetRuntimeType(
 		typeInfo->TypeId,
 		typeInfo->ModuleBase,
 		objAddr,
+		false /* wantPointer */,
 		newTypObj);
 	if (FAILED(hr))
 	{
