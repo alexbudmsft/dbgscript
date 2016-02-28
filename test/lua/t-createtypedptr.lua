@@ -10,5 +10,5 @@ local tp = dbgscript.createTypedPointer('kernelbase!char', addr)
 
 -- Print the first few characters.
 --
-print (string.char(tp[0].value))  -- TODO: Unify .value in Python/Ruby/Lua
-print (string.char(tp[1].value))
+print (tp[0].value)
+print (tp[1].value)

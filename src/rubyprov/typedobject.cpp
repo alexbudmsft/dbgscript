@@ -152,6 +152,9 @@ rbValueFromCValue(
 		switch (typedData->BaseTypeId)
 		{
 		case DNTYPE_CHAR:
+			assert(typedData->Size == 1);
+			ret = rb_str_new((const char*)&cValue->Value.ByteVal, 1);
+			break;
 		case DNTYPE_INT8:
 		case DNTYPE_UINT8:
 			assert(typedData->Size == 1);

@@ -438,6 +438,9 @@ luaValueFromCValue(
 		switch (typedData->BaseTypeId)
 		{
 		case DNTYPE_CHAR:
+			assert(typedData->Size == 1);
+			lua_pushlstring(L, (const char*)&cValue->Value.ByteVal, 1);
+			break;
 		case DNTYPE_INT8:
 		case DNTYPE_UINT8:
 			assert(typedData->Size == 1);
