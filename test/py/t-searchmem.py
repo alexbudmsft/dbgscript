@@ -14,14 +14,14 @@ dbgscript.search_memory(car['name'].address-16, 100, b'FooCar', 2)
 # 4 is not a multiple of the pattern length.
 #
 try:
-  print (dbgscript.search_memory(car['name'].address-16, 100, b'FooCar', 4))
+  dbgscript.search_memory(car['name'].address-16, 100, b'FooCar', 4)
 except ValueError:
   print('Swallowed ValueError')
 
 # Try a non-existent pattern.
 #
 try:
-  print (dbgscript.search_memory(car['name'].address-16, 100, b'AbcDefAb', 4))
+  dbgscript.search_memory(car['name'].address-16, 100, b'AbcDefAb', 4)
 except LookupError:
   print('Swallowed LookupError')
 
@@ -29,6 +29,6 @@ except LookupError:
 # 3 byte granularity.
 #
 try:
-  print (dbgscript.search_memory(car['name'].address-16, 100, b'FooCar', 3))
+  dbgscript.search_memory(car['name'].address-16, 100, b'FooCar', 3)
 except LookupError:
   print('Swallowed LookupError')

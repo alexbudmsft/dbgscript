@@ -7,6 +7,7 @@ $<t-setup.txt
 *
 .logopen results\t-searchmem-result.txt
 !runscript -l py .\py\t-searchmem.py
+!runscript -l rb .\rb\t-searchmem.rb
 * Stop tracking results.
 *
 .logclose

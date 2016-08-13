@@ -82,7 +82,8 @@ results\t-createtypedptr-result.txt: \
 
 results\t-searchmem-result.txt: \
 	t-searchmem.txt \
-	py\t-searchmem.py
+	py\t-searchmem.py \
+	rb\t-searchmem.rb
 	call runtest.bat t-searchmem $(DMPNAME)
 
 results\t-lockdown-result.txt: t-lockdown.txt rb\t-lockdown.rb

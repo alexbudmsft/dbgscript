@@ -288,6 +288,67 @@ DbgScript_get_nearest_sym(
 }
 
 //------------------------------------------------------------------------------
+// Function: DbgScript_search_memory
+//
+// Synopsis:
+// 
+//  DbgScript.search_memory(
+//     [Integer] start,
+//     [Integer] size,
+//     [String] pattern,
+//     [Integer] pattern_granularity) -> Integer
+//
+// Description:
+//
+//  Search the address space from [start, start + size) for 'pattern'. Only
+//  matches at 'pattern_granularity' are considered. Returns location of match,
+//  or throws LookupError if not found.
+//
+//  The length of 'pattern' must be a multiple of 'pattern_granularity'.
+//
+static VALUE
+DbgScript_search_memory(
+	_In_ VALUE /* self */,
+	_In_ VALUE start,
+	_In_ VALUE size,
+	_In_ VALUE pattern,
+	_In_ VALUE pattern_granularity)
+{
+	DbgScriptHostContext* hostCtxt = GetRubyProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	UINT64 matchAddr = 0;
+	const UINT64 ui64Start = NUM2ULL(start);
+	const UINT64 ui64Size = NUM2ULL(size);
+	ULONG patGran = NUM2ULONG(pattern_granularity);
+
+	HRESULT hr = hostCtxt->DebugDataSpaces->SearchVirtual(
+		ui64Start,
+		ui64Size,
+		StringValuePtr(pattern),
+		RSTRING_LEN(pattern),
+		patGran,
+		&matchAddr);
+
+	if (FAILED(hr))
+	{
+		if (hr == E_INVALIDARG)
+		{
+			rb_raise(rb_eArgError, "Invalid argument");
+		}
+		else if (hr == HRESULT_FROM_NT(STATUS_NO_MORE_ENTRIES))
+		{
+			rb_raise(rb_eKeyError, "Pattern not found");
+		}
+		else
+		{
+			rb_raise(rb_eArgError, "Failed to search memory from offset %p, size %llu. Error 0x%x", start, size, hr);
+		}
+	}
+	return ULL2NUM(matchAddr);
+}
+
+//------------------------------------------------------------------------------
 // Function: DbgScript_resolve_enum
 //
 // Synopsis:
@@ -694,7 +755,10 @@ Init_DbgScript()
 	
 	rb_define_module_function(
 		module, "execute_command", RUBY_METHOD_FUNC(DbgScript_execute_command), 1 /* argc */);
-	
+
+	rb_define_module_function(
+		module, "search_memory", RUBY_METHOD_FUNC(DbgScript_search_memory), 4 /* argc */);
+
 	// Save off the module.
 	//
 	GetRubyProvGlobals()->DbgScriptModule = module;

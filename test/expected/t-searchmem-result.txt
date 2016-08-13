@@ -3,6 +3,10 @@ Opened log file 'results\t-searchmem-result.txt'
 Swallowed ValueError
 Swallowed LookupError
 Swallowed LookupError
+0:000> !runscript -l rb .\rb\t-searchmem.rb
+ArgumentError
+KeyError
+KeyError
 0:000> * Stop tracking results.
 0:000> *
 0:000> .logclose
