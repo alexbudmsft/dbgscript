@@ -674,6 +674,66 @@ dbgscript_getNearestSym(lua_State* L)
 }
 
 //------------------------------------------------------------------------------
+// Function: dbgscript_searchMemory
+//
+// Synopsis:
+// 
+//  dbgscript.searchMemory(
+//     [int] start,
+//     [int] size,
+//     [string] pattern,
+//     [int] pattern_granularity) -> Integer
+//
+// Description:
+//
+//  Search the address space from [start, start + size) for 'pattern'. Only
+//  matches at 'pattern_granularity' are considered. Returns location of match,
+//  or throws an error if not found.
+//
+//  The length of 'pattern' must be a multiple of 'pattern_granularity'.
+//
+static int
+dbgscript_searchMemory(lua_State* L)
+{
+	DbgScriptHostContext* hostCtxt = GetLuaProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+
+	UINT64 matchAddr = 0;
+	const UINT64 ui64Start = luaL_checkinteger(L, 1);
+	const UINT64 ui64Size = luaL_checkinteger(L, 2);
+	const char* pat = lua_tostring(L, 3);
+	const size_t cbPat = lua_rawlen(L, 3);
+	const UINT64 patGran = luaL_checkinteger(L, 4);
+
+	HRESULT hr = hostCtxt->DebugDataSpaces->SearchVirtual(
+		ui64Start,
+		ui64Size,
+		(void*)pat,
+		(ULONG)cbPat,
+		(ULONG)patGran,
+		&matchAddr);
+
+	if (FAILED(hr))
+	{
+		if (hr == E_INVALIDARG)
+		{
+			return LuaError(L, "Invalid argument");
+		}
+		else if (hr == HRESULT_FROM_NT(STATUS_NO_MORE_ENTRIES))
+		{
+			return LuaError(L, "Pattern not found");
+		}
+		else
+		{
+			return LuaError(L, "Failed to search memory from offset %p, size %llu. Error 0x%x", ui64Start, ui64Size, hr);
+		}
+	}
+
+	lua_pushinteger(L, matchAddr);
+	return 1;
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_getPeb
 //
 // Description:
@@ -732,6 +792,7 @@ static const luaL_Reg dbgscript[] =
 	{"readBytes", dbgscript_readBytes},
 	{"readString", dbgscript_readString},
 	{"readWideString", dbgscript_readWideString},
+	{"searchMemory", dbgscript_searchMemory},
 	{nullptr, nullptr}  // sentinel.
 };
 

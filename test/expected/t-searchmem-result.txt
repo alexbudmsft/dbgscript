@@ -7,6 +7,10 @@ Swallowed LookupError
 ArgumentError
 KeyError
 KeyError
+0:000> !runscript -l lua .\lua\t-searchmem.lua
+false
+false
+false
 0:000> * Stop tracking results.
 0:000> *
 0:000> .logclose

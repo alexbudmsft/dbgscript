@@ -302,7 +302,7 @@ DbgScript_get_nearest_sym(
 //
 //  Search the address space from [start, start + size) for 'pattern'. Only
 //  matches at 'pattern_granularity' are considered. Returns location of match,
-//  or throws LookupError if not found.
+//  or throws KeyError if not found.
 //
 //  The length of 'pattern' must be a multiple of 'pattern_granularity'.
 //
@@ -320,7 +320,7 @@ DbgScript_search_memory(
 	UINT64 matchAddr = 0;
 	const UINT64 ui64Start = NUM2ULL(start);
 	const UINT64 ui64Size = NUM2ULL(size);
-	ULONG patGran = NUM2ULONG(pattern_granularity);
+	const ULONG patGran = NUM2ULONG(pattern_granularity);
 
 	HRESULT hr = hostCtxt->DebugDataSpaces->SearchVirtual(
 		ui64Start,
@@ -342,7 +342,7 @@ DbgScript_search_memory(
 		}
 		else
 		{
-			rb_raise(rb_eArgError, "Failed to search memory from offset %p, size %llu. Error 0x%x", start, size, hr);
+			rb_raise(rb_eArgError, "Failed to search memory from offset %p, size %llu. Error 0x%x", ui64Start, ui64Size, hr);
 		}
 	}
 	return ULL2NUM(matchAddr);
