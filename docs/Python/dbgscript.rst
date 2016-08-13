@@ -81,7 +81,17 @@ namespace.
    Obtain the size of `type` in bytes. Behaves like ``sizeof`` operator in C.
    
    .. versionadded:: 1.0.4
+
+.. method:: search_memory(start, size, pattern, pattern_granularity) -> int
+
+    Search the address space from [start, start + size) for ``pattern``. Only
+    matches at ``pattern_granularity`` are considered. Returns location of match,
+    or throws LookupError if not found.
+
+    The length of ``pattern`` must be a multiple of ``pattern_granularity``.
    
+   .. versionadded:: 1.0.6
+
 .. method:: start_buffering()
 
    .. include:: ../shared/start_buffering.txt

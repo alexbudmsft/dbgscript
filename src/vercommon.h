@@ -4,7 +4,7 @@
 
 #define DBG_SCRIPT_VER_MAJ 1
 #define DBG_SCRIPT_VER_MIN 0
-#define DBG_SCRIPT_VER_BETA 5
+#define DBG_SCRIPT_VER_BETA 6
 
 #define STR2(x)  #x
 #define STR(x) STR2(x)

@@ -1,3 +1,9 @@
+1.0.6 (beta)
+------------
+
+* Add `dbgscript.search_memory` API. Searches memory for a pattern and returns
+  location on success.
+
 1.0.5 (beta)
 ------------
 
