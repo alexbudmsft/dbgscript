@@ -527,6 +527,73 @@ exit:
 }
 
 //------------------------------------------------------------------------------
+// Function: dbgscript_search_memory
+//
+// Synopsis:
+// 
+//  dbgscript.search_memory(
+//     [int] start,
+//     [int] size,
+//     [bytes] pattern,
+//     [int] pattern_granularity) -> int
+//
+// Description:
+//
+//  Search the address space from [start, start + size) for 'pattern'. Only
+//  matches at 'pattern_granularity' are considered. Returns location of match,
+//  or throws LookupError if not found.
+//
+//  The length of 'pattern' must be a multiple of 'pattern_granularity'.
+//
+static PyObject*
+dbgscript_search_memory(
+	_In_ PyObject* /*self*/,
+	_In_ PyObject* args)
+{
+	DbgScriptHostContext* hostCtxt = GetPythonProvGlobals()->HostCtxt;
+	CHECK_ABORT(hostCtxt);
+	PyObject* ret = nullptr;
+	UINT64 matchAddr = 0;
+	UINT64 start = 0;
+	UINT64 size = 0;
+	PyObject* pattern = nullptr;
+	ULONG patGran = 0;
+	if (!PyArg_ParseTuple(args, "KKSk:search_memory", &start, &size, &pattern, &patGran))
+	{
+		goto exit;
+	}
+
+	HRESULT hr = hostCtxt->DebugDataSpaces->SearchVirtual(
+		start,
+		size,
+		PyBytes_AsString(pattern),
+		(ULONG)PyBytes_Size(pattern),
+		patGran,
+		&matchAddr);
+
+	if (FAILED(hr))
+	{
+		if (hr == E_INVALIDARG)
+		{
+			PyErr_Format(PyExc_ValueError, "Invalid argument");
+		}
+		else if (hr == HRESULT_FROM_NT(STATUS_NO_MORE_ENTRIES))
+		{
+			PyErr_SetString(PyExc_LookupError, "Pattern not found");
+		}
+		else
+		{
+			PyErr_Format(PyExc_RuntimeError, "Failed to search memory from offset %p, size %llu. Error 0x%x", start, size, hr);
+		}
+		goto exit;
+	}
+
+	ret = PyLong_FromUnsignedLongLong(matchAddr);
+exit:
+	return ret;
+}
+
+//------------------------------------------------------------------------------
 // Function: dbgscript_get_threads
 //
 // Synopsis:
@@ -858,6 +925,12 @@ static PyMethodDef dbgscript_MethodsDef[] =
 		dbgscript_resolve_enum,
 		METH_VARARGS,
 		PyDoc_STR("Get an enum element's name based on its type and value.")
+	},
+	{
+		"search_memory",
+		dbgscript_search_memory,
+		METH_VARARGS,
+		PyDoc_STR("Search for a memory pattern in the address space.")
 	},
 	{NULL, NULL, 0, NULL}        /* Sentinel */
 };

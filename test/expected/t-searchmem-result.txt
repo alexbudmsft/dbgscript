@@ -1,0 +1,9 @@
+Opened log file 'results\t-searchmem-result.txt'
+0:000> !runscript -l py .\py\t-searchmem.py
+Swallowed ValueError
+Swallowed LookupError
+Swallowed LookupError
+0:000> * Stop tracking results.
+0:000> *
+0:000> .logclose
+Closing open log file results\t-searchmem-result.txt

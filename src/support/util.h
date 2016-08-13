@@ -22,6 +22,10 @@
 #include <dsthread.h>
 #include <dserrors.h>
 
+// NT Status codes.
+//
+#define STATUS_NO_MORE_ENTRIES 0x8000001A
+
 // Max length of string we support in read{wide}string APIs in characters.
 //
 const int MAX_READ_STRING_LEN = 2048;

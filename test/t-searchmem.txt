@@ -1,0 +1,14 @@
+* get_type_size API test
+* Beware of empty lines: they may repeat the previous command!
+*
+$<t-setup.txt
+*
+* Start tracking results.
+*
+.logopen results\t-searchmem-result.txt
+!runscript -l py .\py\t-searchmem.py
+* Stop tracking results.
+*
+.logclose
+* Exit
+q
