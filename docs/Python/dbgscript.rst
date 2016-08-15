@@ -84,12 +84,17 @@ namespace.
 
 .. method:: search_memory(start, size, pattern, pattern_granularity) -> int
 
-    Search the address space from [start, start + size) for ``pattern``. Only
-    matches at ``pattern_granularity`` are considered. Returns location of match,
-    or throws LookupError if not found.
+   Search the address space from [`start`, `start` + `size`) for `pattern`.
 
-    The length of ``pattern`` must be a multiple of ``pattern_granularity``.
-   
+   :param int start: Start of address space to search.
+   :param int size: Amount of bytes to search.
+   :param bytes pattern: Pattern to search for. `len(pattern)` must be a multiple of
+      `pattern_granularity`.
+   :param int pattern_granularity: Only consider matches at this granularity.
+   :return: location of match.
+   :rtype: int
+   :raises LookupError: if no match found.
+
    .. versionadded:: 1.0.6
 
 .. method:: start_buffering()

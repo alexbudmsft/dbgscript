@@ -80,12 +80,17 @@ DbgScript Module
 
 .. method:: DbgScript.search_memory(start, size, pattern, pattern_granularity) -> Integer
 
-    Search the address space from [start, start + size) for ``pattern``. Only
-    matches at ``pattern_granularity`` are considered. Returns location of match,
-    or throws ``KeyError`` if not found.
+   Search the address space from [`start`, `start` + `size`) for `pattern`.
 
-    The length of ``pattern`` must be a multiple of ``pattern_granularity``.
-   
+   :param Integer start: Start of address space to search.
+   :param Integer size: Amount of bytes to search.
+   :param String pattern: Pattern to search for. `pattern.size` must be a multiple of
+      `pattern_granularity`.
+   :param Integer pattern_granularity: Only consider matches at this granularity.
+   :return: location of match.
+   :rtype: Integer
+   :raises KeyError: if no match found.
+
    .. versionadded:: 1.0.6
 
 .. method:: DbgScript.start_buffering()
